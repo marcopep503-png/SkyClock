@@ -1,0 +1,12 @@
+# Common OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Environment files (may contain secrets)
+.env
+.env.*
+!.env.example
