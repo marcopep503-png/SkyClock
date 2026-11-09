@@ -1,0 +1,42 @@
+{
+  "name": "sky-clock-desktop",
+  "version": "1.6.0",
+  "description": "Sky Clock for Windows: clock and day/night tracker for every US time zone, sky extras (sun, golden hour, blue hour, moon), custom wake time, world time zones, tracked times, alarm and pomodoro timers.",
+  "main": "main.js",
+  "author": "Sky Clock",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.skyclock.desktop",
+    "productName": "Sky Clock",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "assets/**/*"
+    ],
+    "win": {
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "SkyClock-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "SkyClock-Portable-${version}.${ext}"
+    }
+  }
+}
