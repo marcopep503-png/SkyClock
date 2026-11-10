@@ -409,7 +409,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kprog{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:10.5px;font-weight:600}
 .kbar{flex:1;height:6px;border-radius:9px;background:rgba(20,23,58,.16);overflow:hidden}
 .kbar.big{flex:none;width:100%;height:9px}
-.kfill{height:100%;width:0;border-radius:9px;background:var(--kc);transition:width .3s ease}
+.kfill{height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5));transition:width .3s ease}   /* every checklist bar uses the hourly gradient the Black-mode bars have, in Sky mode too */
 .kwarn{display:inline-block;margin-top:6px;padding:1px 9px;border-radius:99px;background:#ffd27a;color:#3a2400;font-size:10.5px;font-weight:700;border:1px solid #c98a00}
 .kfriend{display:inline-block;margin-top:6px;padding:2px 9px;border-radius:99px;background:#d8f3e4;color:#0d3b24;font-size:10.5px;font-weight:700;border:1px solid #6cc59a}
 .ktagrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
@@ -519,6 +519,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kitr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;width:100%;margin-top:2px}
 .kitb{flex:1 1 80px;min-width:80px;display:flex;flex-direction:column;gap:3px}
 .kitb .kbar{flex:none;width:100%}
+.kclb .kfill,.kitb .kfill{background:linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5))}   /* the same hourly gradient the progress bars have in Black mode, shown in Sky mode too */
 .kit .kbody{gap:6px}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
