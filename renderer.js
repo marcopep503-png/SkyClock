@@ -499,8 +499,9 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kfcancel:hover{background:rgba(20,23,58,.1)}
 @keyframes kdrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.kform{animation:none}}
-.kcard{border:3px solid transparent;background:linear-gradient(#f4f6ff,#f4f6ff) padding-box,linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5)) border-box;box-shadow:inset 0 0 0 1.5px var(--kc)}
-.kcard:hover,.kcard:focus-visible{box-shadow:inset 0 0 0 1.5px var(--kc),0 5px 14px rgba(0,0,0,.4)}
+.kcy,.kov.kdi{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5)) border-box}
+.kcy{padding:0 7px}
+.kov.kdi{display:inline-block;padding:0 8px;border-radius:99px;font:700 11px system-ui,'Segoe UI',sans-serif;color:#000;opacity:1}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -1083,7 +1084,7 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
       const a0 = Math.max(0, n - kam(c)), s0 = Math.floor(a0 % 864e5 / 1000); dd.textContent = '';   // no day count for a card with no due date
       if (c.time) { tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, n) - n) / 1000)); }   // a due time: the "due in" text replaces the timer
       else { tmr.style.display = ''; tmr.textContent = p2(Math.floor(s0 / 3600)) + ':' + p2(Math.floor(s0 % 3600 / 60)) + ':' + p2(s0 % 60); ov.textContent = 'running'; }
-      ov.className = 'kov'; return;
+      ov.className = c.time ? 'kov kdi' : 'kov'; return;
     }
     if (ms == null) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; return; }
     const rem = ms - n, a = Math.abs(rem), days = Math.floor(a / 864e5), cyc = Math.floor(a % 864e5 / 1000);
