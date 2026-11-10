@@ -502,6 +502,11 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kcy,.kov.kdi{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5)) border-box}
 .kcy{padding:0 7px}
 .kov.kdi{display:inline-block;padding:0 8px;border-radius:99px;font:700 11px system-ui,'Segoe UI',sans-serif;color:#000;opacity:1}
+.kpan{overflow-x:hidden}
+.kit .kx{flex:none;overflow-wrap:anywhere;line-height:1.4;min-height:28px}   /* flex:none so the height set to fit the text is respected */
+.kphd .kin{flex:1;width:auto;min-width:0}
+.kform .kfx{overflow-wrap:anywhere;line-height:1.4}
+.kaddwrap{margin-top:12px}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -1147,7 +1152,8 @@ function openKan(id) {
   const remSw = mkSw('Only show the items still to do', true); setSw(remSw.i, kan.rem);
   const tuSw = mkSw('Show this card in the Time until list', true); setSw(tuSw.i, !!(c.tu || kan.inc)); tuSw.i.disabled = kan.inc; tuSw.i.onchange = () => { c.tu = tuSw.i.checked; tuSw.i.setAttribute('aria-checked', String(c.tu)); sync(); };
   remSw.i.onchange = () => { kan.rem = remSw.i.checked; remSw.i.setAttribute('aria-checked', String(kan.rem)); saveKan(); renderList(); };
-  const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  const grow = ta => { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + ta.offsetHeight - ta.clientHeight) + 'px'; ta.scrollTop = 0; };   // exactly as tall as the whole text, borders included
+  const growAll = () => pan.querySelectorAll('.kx,.kfx').forEach(grow);
   // a deleted checklist item: a warning with a brief Undo (newest first; each Undo puts one back where it was)
   const undoItems = [], kundo = h('div', 'undo kundo'); kundo.setAttribute('role', 'status'); let kundoT = 0;
   function showKundo() {
@@ -1198,12 +1204,12 @@ function openKan(id) {
     const total = c.items.length, done = c.items.filter(i => i.done).length, pct = total ? Math.round(100 * done / total) : 0, shown = kan.rem ? c.items.filter(i => !i.done) : c.items;
     pf.style.width = pct + '%'; ptxt.textContent = pct + '%'; psub.textContent = total ? done + ' of ' + total + ' done' : 'No items yet';
     list.replaceChildren(...(shown.length ? shown.map(itemRow) : [h('p', 'knote', total ? 'Everything is checked off 🎉' : 'Add the first item below.')]));
-    requestAnimationFrame(() => list.querySelectorAll('.kx').forEach(grow));   // size every item to its full text
+    requestAnimationFrame(growAll);   // size every item to its full text
   }
   const addWrap = h('div', 'kaddwrap');
   function showAddBtn() { const b = h('button', 'kaddbtn', '+ Add an item'); b.type = 'button'; b.onclick = showForm; addWrap.replaceChildren(b); }
   function showForm() {   // the styled "new item" card with a due-at time
-    const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item');
+    const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item'); ni.oninput = () => grow(ni); requestAnimationFrame(() => grow(ni));
     const nt = h('input', 'kin kitime'); nt.type = 'time'; nt.setAttribute('aria-label', 'Due time for the new item');
     const add = h('button', 'kfadd', 'Add'), cancel = h('button', 'kfcancel', '×'); add.type = cancel.type = 'button'; cancel.setAttribute('aria-label', 'Cancel');
     const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nt.value || '', done: false }); sync(); renderList(); showForm(); };   // the form reopens so you can add several in a row
@@ -1223,6 +1229,8 @@ function openKan(id) {
   m.addEventListener('keydown', e => { if (e.key === 'Escape') closeKan(); });
   m.addEventListener('pointerdown', e => { if (e.target === m) closeKan(); });
   shell.append(m); m.focus(); requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('open')));
+  setTimeout(growAll, 340);   // once the pop-up has finished animating in
+  try { let lw = 0; new ResizeObserver(() => { const w = list.clientWidth; if (w !== lw) { lw = w; growAll(); } }).observe(pan); new ResizeObserver(() => { const w = list.clientWidth; if (w !== lw) { lw = w; growAll(); } }).observe(list); } catch (e) {}   // re-fit the text whenever the width changes (a scrollbar appearing, the window resizing, a phone turning)
 }
 
 // ---- the two faces of the box
