@@ -298,7 +298,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .trf{display:flex;justify-content:flex-end;margin-top:6px}
 .tin{flex:none;width:100%;padding:5px 8px;font-size:13px;border-radius:8px}
 .ctl + .tin{margin-top:8px}
-.tip{position:absolute;left:0;top:0;z-index:30;max-width:260px;padding:7px 10px;border-radius:10px;background:rgba(14,17,40,.95);border:1px solid rgba(255,255,255,.26);box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12px;line-height:1.35;word-break:break-word;white-space:pre-line;pointer-events:none;opacity:0;visibility:hidden;transform:translateY(5px) scale(.97);transition:opacity .18s ease,transform .18s ease,visibility 0s linear .18s}
+.tip{position:absolute;left:0;top:0;z-index:60;max-width:260px;padding:7px 10px;border-radius:10px;background:rgba(14,17,40,.95);border:1px solid rgba(255,255,255,.26);box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12px;line-height:1.35;word-break:break-word;white-space:pre-line;pointer-events:none;opacity:0;visibility:hidden;transform:translateY(5px) scale(.97);transition:opacity .18s ease,transform .18s ease,visibility 0s linear .18s}
 .tip.on{opacity:1;visibility:visible;transform:none;transition:opacity .18s ease,transform .18s ease,visibility 0s}
 .shell{--eb:#8fd0ff;--ebs:rgba(143,208,255,.4);--ebg:rgba(10,14,40,.6)}
 .shell.grain{--eb:#c6a3ff;--ebs:rgba(198,163,255,.4);--ebg:rgba(0,0,0,.65)}
@@ -583,7 +583,7 @@ function setPlanning(on, revert) {
   if (on) planSnap = JSON.stringify(tracked);
   else {
     if (revert && planSnap) { try { tracked = JSON.parse(planSnap); } catch (e) {} }   // every edit, deletion and addition made while planning is undone
-    else tracked.forEach(t => { delete t.prev; delete t.hist; });                                       // switching off normally clears the "was" notes
+    else tracked.forEach(t => { delete t.prev; delete t.hist; delete t.fut; });                                       // switching off normally clears the "was" notes
     trash = []; planSnap = null; save();
   }
   try { GM_setValue('plan', planning); GM_setValue('planSnap', planSnap); } catch (e) {}
@@ -1073,10 +1073,12 @@ function kanDerived() {   // only the cards picked with the ⏱ button (or every
 const kMonth = h('div', 'kmonth'), flipBtn = h('button', 'add sm2 flipb', '🗂 Flip over to the Kanban ⟲'), flipBack = h('button', 'add sm2 flipb', '⟲ Flip back to Time until');
 const incSw = mkSw('Add every card to the Time until list (or pick single cards with their ⏱ button)', true); setSw(incSw.i, kan.inc);
 incSw.i.onchange = () => { kan.inc = incSw.i.checked; incSw.i.setAttribute('aria-checked', String(kan.inc)); saveKan(); build(); };
+const REP_TIP = 'A repeating card starts over by itself instead of being finished once. An interval card begins a new cycle of the same length as soon as its end date passes, and the cycle number goes up. It never shows the ⚠ old-month warning; you get a friendly reminder of when it was made instead.';
+const kTip = (el, text) => { el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') showTip(el, text); }); el.addEventListener('pointerleave', hideTip); };   // hover pop-up (computers only)
 function kTpl(catId) {   // the dashed template for a new card
   const t = h('input'); t.type = 'text'; t.maxLength = 120; t.placeholder = '+ New card…'; t.setAttribute('aria-label', 'New card text, ' + kcat(catId).name);
   const d = h('input'); d.type = 'date'; d.setAttribute('aria-label', 'Due date'); const tm = h('input'); tm.type = 'time'; tm.setAttribute('aria-label', 'Due time');
-  const add = h('button', 'add sm2', 'Add card'), rp = catId === 'proactive' ? mkSw('🔁 Repeating card', true) : null;
+  const add = h('button', 'add sm2', 'Add card'), rp = catId === 'proactive' ? mkSw('🔁 Repeating card', true) : null; if (rp) kTip(rp.lab, REP_TIP);
   const go = () => { const title = t.value.trim(); if (!title) { t.focus(); return; } kan.cards.push({ id: kid(), title, cat: catId, due: d.value || '', time: tm.value || '', assigned: kdayStr(Date.now()), mode: '', rep: !!(rp && rp.i.checked), start: '', end: '', cycle: 1, tags: [], items: [] }); t.value = ''; d.value = ''; tm.value = ''; if (rp) setSw(rp.i, false); saveKan(); kanRender(); if (kan.inc) build(); };
   add.onclick = go; t.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
   return h('div', 'ktpl', null, t, h('div', 'ktr', null, d, tm, add), ...(rp ? [h('div', 'ktr', null, rp.lab)] : []));
@@ -1085,9 +1087,9 @@ const kSecs = KCATS.map(cat => { const cnt = h('span', 'kcnt'), list = h('div', 
 let kanRefs = [], kanDay = '', kanLast = 0;
 function kCard(c) {
   const box = h('div', 'kcard'); box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
-  const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
+  const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), elp = h('span', 'kov bad'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
-  box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov), dt, ipb);
+  box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);
   if (pct != null) { const f = h('div', 'kfill'); f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
   const itRefs = [], timed = c.items.filter(i => i.time);
   if (timed.length) {   // a small labelled section: each checklist item's due time (gradient border) beside its own progress bar
@@ -1101,12 +1103,16 @@ function kCard(c) {
   tu.title = kan.inc ? 'In the Time until list (every card is added)' : c.tu ? 'In the Time until list: tap to remove it' : 'Add this card to the Time until list' + (c.time ? '' : ' (give it a due time first)'); tu.setAttribute('aria-label', tu.title); tu.setAttribute('aria-pressed', String(!!(c.tu || kan.inc)));
   tu.onclick = e => { e.stopPropagation(); if (kan.inc) return; c.tu = !c.tu; saveKan(); kanRender(); build(); }; tu.addEventListener('keydown', e => e.stopPropagation()); box.append(tu);
   box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
-  kanRefs.push({ c, dd, tmr, ov, dt, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
+  kanRefs.push({ c, dd, tmr, ov, elp, dt, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
 }
 function kanRender() {
   kanRefs = [];
   kSecs.forEach(s => { const cards = kan.cards.filter(c => c.cat === s.cat.id).sort((a, b) => (kdue(a) == null ? 9e15 : kdue(a)) - (kdue(b) == null ? 9e15 : kdue(b))); s.cnt.textContent = cards.length; s.list.replaceChildren(...cards.map(kCard), s.tpl); });
   kanTick(Date.now(), true);
+}
+function kOver(c, n, dd, tmr, ov) {   // no due date: it counts as overdue since the card was made, so the elapsed time counts up
+  const a = Math.max(0, n - kam(c)), d0 = Math.floor(a / 864e5), s = Math.floor(a % 864e5 / 1000);
+  dd.textContent = d0 + (d0 === 1 ? ' day' : ' days'); tmr.style.display = ''; tmr.textContent = p2(Math.floor(s / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60); ov.textContent = 'overdue'; ov.className = 'kov bad';
 }
 function kanTick(n, force) {   // the days-left counters and their small 24-hour cycle timers
   if (!force && n - kanLast < 1000) return; kanLast = n;
@@ -1114,18 +1120,19 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
   if (dk !== kanDay) { kanDay = dk; kMonth.textContent = MONTH_ICON[+dk.slice(5, 7) - 1] + ' ' + new Intl.DateTimeFormat('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }).format(new Date(n)); if (!force) { kanRender(); return; } }
   let rolled = false;
   kanRefs.forEach(r => r.its.forEach(x => kitUpd(x, n, dk))); kanPop.forEach(x => kitUpd(x, n, dk));
-  kanRefs.forEach(({ c, dd, tmr, ov, dt, ip }) => {
+  kanRefs.forEach(({ c, dd, tmr, ov, elp, dt, ip }) => {
     if (kRoll(c, n)) rolled = true;
     dt.textContent = kdtText(c); ip.box.style.display = 'none';
     const ms = kdue(c);
     if (c.cat === 'done') { dd.textContent = '✓ Done'; tmr.style.display = 'none'; ov.textContent = ''; return; }
-    if (kmode(c) === 'none') {   // no due date: a running timer counts up from when the card was made
-      const a0 = Math.max(0, n - kam(c)), s0 = Math.floor(a0 % 864e5 / 1000); dd.textContent = '';   // no day count for a card with no due date
-      if (c.time) { tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, n) - n) / 1000)); }   // a due time: the "due in" text replaces the timer
-      else { tmr.style.display = ''; tmr.textContent = p2(Math.floor(s0 / 3600)) + ':' + p2(Math.floor(s0 % 3600 / 60)) + ':' + p2(s0 % 60); ov.textContent = 'running'; }
-      ov.className = c.time ? 'kov kdi' : 'kov'; return;
+    let el = '';   // due daily at a clock time with no due date: once today's time has passed, the elapsed time is added to the red text (the countdown to the next one keeps running)
+    if (!kdd(c) && c.time && kmode(c) !== 'interval') { const tm = zonedMs(dk, c.time); if (n >= tm) el = 'overdue ' + fmt(Math.floor((n - tm) / 1000)) + ' since ' + ktime(c.time); }
+    elp.textContent = el;   // the red elapsed text sits beside the countdown, outside its border
+    if (kmode(c) === 'none') {   // no due date: it counts up from when the card was made
+      if (c.time) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, n) - n) / 1000)) + ''; ov.className = 'kov kdi'; return; }   // a due time: the "due in" text replaces the timer
+      kOver(c, n, dd, tmr, ov); return;
     }
-    if (ms == null) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; return; }
+    if (ms == null) { if (kmode(c) === 'date') kOver(c, n, dd, tmr, ov); else { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; } return; }
     const rem = ms - n, a = Math.abs(rem), days = Math.floor(a / 864e5), cyc = Math.floor(a % 864e5 / 1000);
     dd.textContent = (rem < 0 && days ? '−' : '') + days + (days === 1 ? ' day' : ' days'); tmr.style.display = '';
     tmr.textContent = p2(Math.floor(cyc / 3600)) + ':' + p2(Math.floor(cyc % 3600 / 60)) + ':' + p2(cyc % 60);
@@ -1161,7 +1168,7 @@ function openKan(id) {
   const ei = h('input', 'kin'); ei.type = 'date'; ei.value = c.end; ei.setAttribute('aria-label', 'Interval ends'); ei.onchange = () => { c.end = ei.value; sync(); };
   const tnote = h('span', 'ksub', 'No due date: repeats every day'), tlab = h('span', null, 'Due time'), fDue = fld('Due date', di), fTime = h('label', 'kfld', null, tlab, tm, tnote), fStart = fld('Starts', si), fEnd = fld('Ends', ei);
   const qk = h('div', 'kq', null, h('span', 'ksub', 'Quick length:'), ...[['1 week', 7], ['2 weeks', 14], ['1 month', 30]].map(([l, dn]) => { const b = h('button', 'cf', l); b.type = 'button'; b.onclick = () => { if (!c.start) { c.start = kdayStr(Date.now()); si.value = c.start; } c.end = kaddDays(c.start, dn - 1); ei.value = c.end; sync(); }; return b; }));
-  const repSw = mkSw('🔁 Repeating card', true); setSw(repSw.i, c.rep);
+  const repSw = mkSw('🔁 Repeating card', true); setSw(repSw.i, c.rep); kTip(repSw.lab, REP_TIP);
   const repNote = h('p', 'knote', 'A repeating card never shows the ⚠ warning. When it was made in an earlier month, you get a friendly reminder of when instead, and an interval starts over (the same length) each time it ends.');
   repSw.i.onchange = () => { c.rep = repSw.i.checked; repSw.i.setAttribute('aria-checked', String(c.rep)); sync(); };
   function showMode() { const m = kmode(c); tnote.style.display = (m === 'date' && !c.due) || m === 'none' ? '' : 'none'; tnote.textContent = m === 'none' ? 'Optional: due every day at this time, beside the running timer' : 'No due date: repeats every day'; fDue.style.display = m === 'date' ? '' : 'none'; fStart.style.display = fEnd.style.display = qk.style.display = m === 'interval' ? '' : 'none'; fTime.style.display = ''; tlab.textContent = m === 'interval' ? 'Ends at (time)' : 'Due time'; mSel.value = m; }
@@ -1388,7 +1395,7 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
     const q = i.value.split(':').map(Number);
     if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
     const v = q[0] * 60 + q[1];
-    (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
+    (t.hist = t.hist || []).push(t.v); t.fut = []; t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
     save(); build();
   };
   i.addEventListener('input', sync); i.addEventListener('change', sync);
@@ -1398,9 +1405,14 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
   const un = h('button', 'pun', '↶'); un.type = 'button';
   if (t.hist && t.hist.length) {   // each press steps back one edit; the "was" time then shows the one before that
     const back = t.hist[t.hist.length - 1]; un.title = 'Undo the last change and go back to ' + hl(Math.floor(back / 60), back % 60); un.setAttribute('aria-label', un.title);
-    un.onclick = () => { t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+    un.onclick = () => { (t.fut = t.fut || []).push(t.v); t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
   } else un.style.display = 'none';
-  return h('span', 'pedit', null, i, ok, un);
+  const rd = h('button', 'pun', '↷'); rd.type = 'button';   // redo: steps forward again after an undo
+  if (t.fut && t.fut.length) {
+    const fwd = t.fut[t.fut.length - 1]; rd.title = 'Redo: go forward to ' + hl(Math.floor(fwd / 60), fwd % 60); rd.setAttribute('aria-label', rd.title);
+    rd.onclick = () => { (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = t.fut.pop(); delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+  } else rd.style.display = 'none';
+  return h('span', 'pedit', null, i, ok, un, rd);
 }
 function trashRow(t) {   // the dashed box that stands where a deleted countdown was
   const l = hl(Math.floor(t.v / 60), t.v % 60), live = h('b'), undo = h('button', null, 'Undo');
