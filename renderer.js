@@ -499,7 +499,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kfcancel:hover{background:rgba(20,23,58,.1)}
 @keyframes kdrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.kform{animation:none}}
-.kcy,.kov.kdi{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5)) border-box}
+.kcy,.kov.kdi,.kitp{border:2.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5)) border-box}
 .kcy{padding:0 7px}
 .kov.kdi{display:inline-block;padding:0 8px;border-radius:99px;font:700 11px system-ui,'Segoe UI',sans-serif;color:#000;opacity:1}
 .kpan{overflow-x:hidden}
@@ -507,6 +507,19 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kphd .kin{flex:1;width:auto;min-width:0}
 .kform .kfx{overflow-wrap:anywhere;line-height:1.4}
 .kaddwrap{margin-top:12px}
+.kcl{margin-top:10px;padding-top:8px;border-top:1px dashed rgba(20,23,58,.3)}
+.kcll{margin-bottom:6px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;opacity:.7}
+.kclrow{margin:8px 0 10px}
+.kclt{margin-bottom:5px;font-size:12.5px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.kclrow.done .kclt{text-decoration:line-through;opacity:.55}
+.kclb{display:flex;align-items:center;gap:10px}
+.kclb .kbar{flex:1;min-width:40px}
+.kitp{flex:none;padding:0 8px;border-radius:99px;font:700 11px system-ui,'Segoe UI',sans-serif;color:#000;white-space:nowrap;text-shadow:none}
+.kclr{display:block;margin-top:4px;font-size:10.5px;opacity:.75;font-variant-numeric:tabular-nums;line-height:1.3}
+.kitr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;width:100%;margin-top:2px}
+.kitb{flex:1 1 80px;min-width:80px;display:flex;flex-direction:column;gap:3px}
+.kitb .kbar{flex:none;width:100%}
+.kit .kbody{gap:6px}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -1019,6 +1032,14 @@ const kdate = ds => { const [y, m, d] = ds.split('-').map(Number); return new In
 const MONTH_ICON = ['❄️', '💝', '🍀', '🌷', '🌸', '☀️', '🎆', '🌻', '🍎', '🎃', '🍂', '🎄'];   // one emoji per month, Jan to Dec, shown beside the Kanban title
 const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayStr(Date.now()).slice(0, 4); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', ...(y !== cy ? { year: 'numeric' } : {}) }).format(Date.UTC(y, m - 1, 15)); };
 const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
+function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight up to its due time; it restarts at midnight, so it tracks again the next day
+  const it = x.it;
+  if (it.done) { x.f.style.width = '100%'; x.rem.textContent = '✓ done'; return; }
+  const due = zonedMs(dk, it.time), st = zonedMs(dk, '00:00');
+  if (n >= due) { x.f.style.width = '100%'; x.rem.textContent = 'Time passed · tracks again tomorrow'; return; }
+  x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (n - st) / (due - st))) : 100) + '%';
+  x.rem.textContent = fmt(Math.round((due - n) / 1000)) + ' left today';
+}
 const knext = (c, n) => { const td = kdayStr(n); let ms = zonedMs(td, c.time); if (ms <= n) ms = zonedMs(kaddDays(td, 1), c.time); return ms; };   // the next time this clock time comes round
 const kdtText = c => {   // the small line under a card's title
   const m = kmode(c), rp = c.rep ? ' · 🔁 repeats' : '', at = c.time ? ktime(c.time) : 'end of day';
@@ -1062,13 +1083,19 @@ function kCard(c) {
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
   box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov), dt, ipb);
   if (pct != null) { const f = h('div', 'kfill'); f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
+  const itRefs = [], timed = c.items.filter(i => i.time);
+  if (timed.length) {   // a small labelled section: each checklist item's due time (gradient border) beside its own progress bar
+    const cl = h('div', 'kcl', null, h('div', 'kcll', '☑ Checklist due times'));
+    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'); cl.append(h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), h('div', 'kclb', null, h('span', 'kitp', '⏰ ' + ktime(it.time)), h('div', 'kbar', null, f)), rem)); itRefs.push({ it, f, rem }); });
+    box.append(cl);
+  }
   if (c.tags.length) box.append(h('div', 'ktagrow', null, ...c.tags.map(t => h('span', 'ktag', t))));
   if (kwarn(c)) box.append(h('div', null, null, c.rep ? h('span', 'kfriend', '💌 Friendly reminder: you made this card in ' + kmonthName(c.assigned) + ' (' + kdate(c.assigned) + ')') : h('span', 'kwarn', '⚠ Assigned in ' + kmonthName(c.assigned))));   // a repeating card gets a friendly note instead of the warning
   const tu = h('button', 'ktu', '⏱'); tu.type = 'button'; tu.classList.toggle('on', !!(c.tu || kan.inc));
   tu.title = kan.inc ? 'In the Time until list (every card is added)' : c.tu ? 'In the Time until list: tap to remove it' : 'Add this card to the Time until list' + (c.time ? '' : ' (give it a due time first)'); tu.setAttribute('aria-label', tu.title); tu.setAttribute('aria-pressed', String(!!(c.tu || kan.inc)));
   tu.onclick = e => { e.stopPropagation(); if (kan.inc) return; c.tu = !c.tu; saveKan(); kanRender(); build(); }; tu.addEventListener('keydown', e => e.stopPropagation()); box.append(tu);
   box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
-  kanRefs.push({ c, dd, tmr, ov, dt, ip: { box: ipb, f: ipf, t: ipt } }); return box;
+  kanRefs.push({ c, dd, tmr, ov, dt, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
 }
 function kanRender() {
   kanRefs = [];
@@ -1080,6 +1107,7 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
   const dk = kdayStr(n);
   if (dk !== kanDay) { kanDay = dk; kMonth.textContent = MONTH_ICON[+dk.slice(5, 7) - 1] + ' ' + new Intl.DateTimeFormat('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }).format(new Date(n)); if (!force) { kanRender(); return; } }
   let rolled = false;
+  kanRefs.forEach(r => r.its.forEach(x => kitUpd(x, n, dk))); kanPop.forEach(x => kitUpd(x, n, dk));
   kanRefs.forEach(({ c, dd, tmr, ov, dt, ip }) => {
     if (kRoll(c, n)) rolled = true;
     dt.textContent = kdtText(c); ip.box.style.display = 'none';
@@ -1103,8 +1131,8 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
 }
 
 // ---- the animated pop-up with a card's details and checklist
-let kmod = null;
-function closeKan() { if (!kmod) return; const m = kmod; kmod = null; m.classList.remove('open'); setTimeout(() => m.remove(), 260); }
+let kmod = null, kanPop = [];
+function closeKan() { if (!kmod) return; const m = kmod; kmod = null; kanPop = []; m.classList.remove('open'); setTimeout(() => m.remove(), 260); }
 function openKan(id) {
   const c = kan.cards.find(x => x.id === id); if (!c) return;
   if (kmod) { kmod.remove(); kmod = null; }
@@ -1176,7 +1204,8 @@ function openKan(id) {
     const rm = h('button', 'kdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove item: ' + it.text);
     const due = h('button', 'kdueat' + (it.time ? '' : ' none'), it.time ? '⏰ due at ' + ktime(it.time) : '+ due time'); due.type = 'button';
     due.setAttribute('aria-label', it.time ? 'Change due time, currently ' + ktime(it.time) : 'Add a due time');
-    const body = h('div', 'kbody', null, tx, due);
+    const bf = h('div', 'kfill'), brem = h('span', 'kclr'), bw = h('div', 'kitb', null, h('div', 'kbar', null, bf), brem);   // the due time with its progress bar beside it
+    const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time ? [bw] : []))); if (it.time) kanPop.push({ it, f: bf, rem: brem });
     cb.onchange = () => { it.done = cb.checked; sync(); renderList(); };
     tx.oninput = () => grow(tx);
     tx.onchange = () => { it.text = tx.value.trim() || 'Item'; tx.value = it.text; sync(); };
@@ -1186,7 +1215,7 @@ function openKan(id) {
       ft.onchange = () => { it.time = ft.value; sync(); renderList(); };
       ft.onblur = () => renderList();
       ft.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); renderList(); } else if (e.key === 'Enter') ft.blur(); });
-      body.replaceChild(ft, due); ft.focus();
+      due.replaceWith(ft); ft.focus();
     };
     const doRemove = () => { const i = c.items.indexOf(it); if (i < 0) return; undoItems.push({ it, i }); c.items = c.items.filter(z => z !== it); sync(); renderList(); showKundo(); timeKundo(); };
     rm.onclick = () => {   // first tap only asks; nothing is removed until "Remove" (then the warning with Undo appears)
@@ -1203,8 +1232,10 @@ function openKan(id) {
   function renderList() {
     const total = c.items.length, done = c.items.filter(i => i.done).length, pct = total ? Math.round(100 * done / total) : 0, shown = kan.rem ? c.items.filter(i => !i.done) : c.items;
     pf.style.width = pct + '%'; ptxt.textContent = pct + '%'; psub.textContent = total ? done + ' of ' + total + ' done' : 'No items yet';
+    kanPop = [];
     list.replaceChildren(...(shown.length ? shown.map(itemRow) : [h('p', 'knote', total ? 'Everything is checked off 🎉' : 'Add the first item below.')]));
     requestAnimationFrame(growAll);   // size every item to its full text
+    kanPop.forEach(x => kitUpd(x, Date.now(), kdayStr(Date.now())));
   }
   const addWrap = h('div', 'kaddwrap');
   function showAddBtn() { const b = h('button', 'kaddbtn', '+ Add an item'); b.type = 'button'; b.onclick = showForm; addWrap.replaceChildren(b); }
