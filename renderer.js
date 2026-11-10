@@ -63,6 +63,10 @@ const clockFmt = x => { const H = Math.floor(x / 3600), M = Math.floor(x % 3600 
 const load = () => { try { return JSON.parse(GM_getValue('times', '[]')).map(x => typeof x === 'number' ? { v: x } : x); } catch (e) { return []; } };
 let tracked = load();
 const save = () => { try { GM_setValue('times', JSON.stringify(tracked)); } catch (e) {} };
+// planning mode: lets you change a countdown's time, and keeps a dashed Undo box for every deleted countdown until you switch it off
+let planning = false, trash = [], trashRows = [];
+try { planning = GM_getValue('plan', false) === true; if (planning) trash = JSON.parse(GM_getValue('trash', '[]')).filter(x => x && typeof x.v === 'number'); } catch (e) { trash = []; }
+const saveTrash = () => { try { GM_setValue('trash', JSON.stringify(trash)); } catch (e) {} };
 
 // ---------- time zones: sunrise/sunset location + general work-culture notes (broad tendencies, not rules) ----------
 const ZONES = [
@@ -237,6 +241,13 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .cf.yes{background:rgba(239,68,68,.55);border-color:rgba(255,130,130,.6)}
 .undo{display:none;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.35);font-size:12px}
 .undo button{padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.2);font-weight:700;font-size:12px}
+.tuh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.tuh .ttl{margin:0}
+.sw.plan .tk::after{font-size:10px;font-weight:700;line-height:14px;text-align:center;color:#3b3f86;text-shadow:none}
+.sw.plan input:checked + .tk::after{content:"✓"}
+.ptime{width:auto;flex:none;padding:3px 6px;font-size:14px;border-radius:8px}
+.tx{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;padding:8px 10px;border:2px dashed rgba(255,255,255,.4);border-radius:10px;font-size:11.5px;line-height:1.4;color:rgba(232,235,246,.72);text-shadow:none}
+.tx b{display:block;margin-top:2px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:rgba(236,239,250,.9)}
+.tx button{flex:none;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.2);font-weight:700;font-size:12px}
 .shell.docked .grip{display:none}.shell.docked .hd{cursor:default}.shell.docked{border-radius:14px}
 .alt{font:700 26px/1.1 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;text-align:center;margin:10px 0 2px}
 .alt.ring{color:#ffd27a;animation:ring 1s ease-in-out infinite alternate}
@@ -424,6 +435,13 @@ const alarmCard = h('section', 'g', null, h('div', 'ttl', 'Alarm timer'), h('div
 const phName = h('span'), phLeft = h('span'), fill = h('div', 'fill');
 const inp = h('input'); inp.type = 'time'; inp.setAttribute('aria-label', 'Custom time');
 const addBtn = h('button', 'add', 'Add'), chipBox = h('div', 'chips'), tl = h('div'), undoBar = h('div', 'undo');
+const planSw = mkSw('Planning'); planSw.lab.classList.add('plan'); setSw(planSw.i, planning);
+planSw.lab.title = 'Planning mode: change the time of a countdown, and keep an Undo box for every deleted countdown until you switch this off';
+planSw.i.onchange = () => {
+  planning = planSw.i.checked; planSw.i.setAttribute('aria-checked', String(planning));
+  if (!planning) trash = [];                           // switching it off clears the Undo boxes for good
+  try { GM_setValue('plan', planning); } catch (e) {} saveTrash(); build();
+};
 const evRise = h('b', 'hot', '--'), evSet = h('b', null, '--');
 const hourRows = Array.from({ length: 6 }, () => ({ l: h('span'), v: h('b') }));
 const evBox = h('div', null, null,
@@ -830,7 +848,7 @@ const wrap = h('div', 'wrap', null,
   locCard,
   h('section', 'g', null, phTitle,
     h('div', 'phs', null, ...phEls.map(x => x.box)), editor, h('div', 'bar', null, fill), h('div', 'row', null, phName, phLeft), wakeNote, fxRow, fxBox),
-  h('section', 'g', null, h('div', 'ttl', 'Time until'), h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl),
+  h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl),
   alarmCard,
   pomoCard,
   zoneKey,
@@ -868,15 +886,17 @@ function showTip(el, text) {
 }
 function hideTip() { tip.classList.toggle('on', false); }
 function build() {
-  tracked.sort((a, b) => a.v - b.v); rows = [];
-  if (!tracked.length) { tl.replaceChildren(h('p', 'note', 'Nothing tracked yet.')); return; }
-  tl.replaceChildren(...tracked.map(t => {
+  tracked.sort((a, b) => a.v - b.v); rows = []; trashRows = [];
+  const list = [...tracked.map(t => ({ t })), ...(planning ? trash.map(t => ({ t, del: true })) : [])].sort((a, b) => a.t.v - b.t.v);
+  if (!list.length) { tl.replaceChildren(h('p', 'note', 'Nothing tracked yet.')); return; }
+  tl.replaceChildren(...list.map(({ t, del }) => {
+    if (del) return trashRow(t);
     const l = hl(Math.floor(t.v / 60), t.v % 60), x = h('button', 'x', '×'), f = h('div', 'fill');
     const cdMain = h('span'), cdSup = h('sup'), cd = h('b', 'cd', null, cdMain, cdSup); cdSup.style.display = 'none';
     x.setAttribute('aria-label', 'Remove ' + (t.title || l));
     const ok = h('button', 'x ok', '✓'); ok.title = 'Got it: hides this check, elapsed time keeps counting'; ok.setAttribute('aria-label', 'Done with ' + l); ok.style.display = 'none';
     // the time with its title under it; long titles are shortened with an ellipsis and hovering shows them in full
-    const tsp = h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp), lblBox = h('div', 'tlb', null, tr1, tt);
+    const tsp = planning ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp), lblBox = h('div', 'tlb', null, tr1, tt);
     const showTitle = () => { tt.textContent = t.title || 'add a title'; tt.className = 'tt' + (t.title ? '' : ' empty'); };
     showTitle();
     lblBox.addEventListener('mouseenter', () => { if (t.title) showTip(lblBox, t.title); });
@@ -913,9 +933,39 @@ function build() {
 }
 // Remove keeps the whole timer object (including its original length), so Undo puts the progress bar back where it belongs.
 let undoList = [], undoTimer = 0;
+function mkTimeEdit(t) {   // planning mode: the time itself is editable
+  const i = h('input', 'tin ptime'); i.type = 'time'; i.value = p2(Math.floor(t.v / 60)) + ':' + p2(t.v % 60); i.setAttribute('aria-label', 'Change the time of this countdown');
+  i.onchange = () => {
+    const q = i.value.split(':').map(Number);
+    if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
+    const v = q[0] * 60 + q[1];
+    if (v === t.v) return;
+    if (tracked.some(z => z !== t && z.v === v && (z.title || '') === (t.title || ''))) { build(); return; }   // same time and title already exists
+    t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
+    save(); build();
+  };
+  return i;
+}
+function trashRow(t) {   // the dashed box that stands where a deleted countdown was
+  const l = hl(Math.floor(t.v / 60), t.v % 60), live = h('b'), undo = h('button', null, 'Undo');
+  undo.setAttribute('aria-label', 'Undo deleting ' + (t.title || l));
+  undo.onclick = () => { trash = trash.filter(z => z !== t); saveTrash(); if (!tracked.includes(t)) { tracked.push(t); save(); } build(); };
+  trashRows.push({ t, live });
+  return h('div', 'tx', null, h('div', null, null, h('span', null, 'Deleted · ' + (t.title ? t.title + ' · ' : '') + l), live), undo);
+}
+function trashTick(n, sod) {   // keeps each dashed box's countdown or elapsed time running
+  const nowS = Math.floor(n / 1000);
+  trashRows.forEach(r => {
+    const t = r.t; let d = t.v * 60 - sod; if (d < 0) d += 86400;
+    const since = (86400 - d) % 86400, os = nowS - since, fin = !!t.el && (os * 1000 >= t.armed - 1000 || since <= sod);
+    r.live.textContent = fin ? '-' + (since < 60 ? since + 's' : fmt(since)) + ' elapsed' : fmt(d) + ' left';
+  });
+}
 function removeT(t) {
   const i = tracked.indexOf(t); if (i < 0) return;
-  tracked.splice(i, 1); save(); build();
+  tracked.splice(i, 1); save();
+  if (planning) { trash.push(t); saveTrash(); build(); return; }   // planning mode: a dashed Undo box stays in its place
+  build();
   undoList.push(t); showUndo();
   clearTimeout(undoTimer); undoTimer = setTimeout(() => { undoList = []; showUndo(); }, 8000);
 }
@@ -1336,6 +1386,7 @@ function tick() {
   pmTick(n);
   alarmTick(n);
   if (pendingSounds.length && AC && AC.state === 'running') flushPending();
+  trashTick(n, sod);
   rows.forEach(r => {
     const t = r.t, nowS = Math.floor(n / 1000);
     let d = t.v * 60 - sod; if (d < 0) d += 86400;
