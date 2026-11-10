@@ -67,6 +67,8 @@ const save = () => { try { GM_setValue('times', JSON.stringify(tracked)); } catc
 let planning = false, trash = [], trashRows = [];
 try { planning = GM_getValue('plan', false) === true; if (planning) trash = JSON.parse(GM_getValue('trash', '[]')).filter(x => x && typeof x.v === 'number'); } catch (e) { trash = []; }
 const saveTrash = () => { try { GM_setValue('trash', JSON.stringify(trash)); } catch (e) {} };
+let planSnap = null;   // how your countdowns looked when planning mode was switched on, so "Undo all" can put them back
+try { if (planning) { planSnap = GM_getValue('planSnap', null); if (typeof planSnap !== 'string') { planSnap = JSON.stringify(tracked); GM_setValue('planSnap', planSnap); } } } catch (e) { planSnap = null; }
 
 // ---------- time zones: sunrise/sunset location + general work-culture notes (broad tendencies, not rules) ----------
 const ZONES = [
@@ -442,11 +444,24 @@ const inp = h('input'); inp.type = 'time'; inp.setAttribute('aria-label', 'Custo
 const addBtn = h('button', 'add', 'Add'), chipBox = h('div', 'chips'), tl = h('div'), undoBar = h('div', 'undo');
 const planSw = mkSw('Planning'); planSw.lab.classList.add('plan'); setSw(planSw.i, planning);
 planSw.lab.title = 'Planning mode: change the time of a countdown, and keep an Undo box for every deleted countdown until you switch this off';
-planSw.i.onchange = () => {
-  planning = planSw.i.checked; planSw.i.setAttribute('aria-checked', String(planning));
-  if (!planning) { trash = []; tracked.forEach(t => { delete t.prev; }); save(); }   // switching it off clears the Undo boxes and the "was" notes for good
-  try { GM_setValue('plan', planning); } catch (e) {} saveTrash(); build();
-};
+function setPlanning(on, revert) {
+  planning = on; setSw(planSw.i, on);
+  if (on) planSnap = JSON.stringify(tracked);
+  else {
+    if (revert && planSnap) { try { tracked = JSON.parse(planSnap); } catch (e) {} }   // every edit, deletion and addition made while planning is undone
+    else tracked.forEach(t => { delete t.prev; });                                       // switching off normally clears the "was" notes
+    trash = []; planSnap = null; save();
+  }
+  try { GM_setValue('plan', planning); GM_setValue('planSnap', planSnap); } catch (e) {}
+  saveTrash(); planBar.style.display = on ? '' : 'none'; build();
+}
+const planBtn = h('button', 'add sm2', 'Undo all changes & exit planning'), planYes = h('button', 'cf yes', 'Undo all'), planNo = h('button', 'cf', 'Keep planning');
+const planConf = h('div', 'conf big', null, h('span', null, 'Undo every change made in planning mode and exit it?'), planYes, planNo); planConf.style.display = 'none';
+const planBar = h('div', null, null, planBtn, planConf); planBar.style.margin = '0 0 10px'; planBar.style.display = planning ? '' : 'none';
+planBtn.onclick = () => { planBtn.style.display = 'none'; planConf.style.display = 'flex'; };
+planNo.onclick = () => { planConf.style.display = 'none'; planBtn.style.display = ''; };
+planYes.onclick = () => { planConf.style.display = 'none'; planBtn.style.display = ''; setPlanning(false, true); };
+planSw.i.onchange = () => setPlanning(planSw.i.checked, false);
 const evRise = h('b', 'hot', '--'), evSet = h('b', null, '--');
 const hourRows = Array.from({ length: 6 }, () => ({ l: h('span'), v: h('b') }));
 const evBox = h('div', null, null,
@@ -853,7 +868,7 @@ const wrap = h('div', 'wrap', null,
   locCard,
   h('section', 'g', null, phTitle,
     h('div', 'phs', null, ...phEls.map(x => x.box)), editor, h('div', 'bar', null, fill), h('div', 'row', null, phName, phLeft), wakeNote, fxRow, fxBox),
-  h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl),
+  h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl),
   alarmCard,
   pomoCard,
   zoneKey,
