@@ -411,6 +411,26 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kbar.big{flex:none;width:100%;height:9px}
 .kfill{height:100%;width:0;border-radius:9px;background:var(--kc);transition:width .3s ease}
 .kwarn{display:inline-block;margin-top:6px;padding:1px 9px;border-radius:99px;background:#ffd27a;color:#3a2400;font-size:10.5px;font-weight:700;border:1px solid #c98a00}
+.kfriend{display:inline-block;margin-top:6px;padding:2px 9px;border-radius:99px;background:#d8f3e4;color:#0d3b24;font-size:10.5px;font-weight:700;border:1px solid #6cc59a}
+.ktagrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.ktag{padding:1px 8px;border-radius:99px;background:rgba(20,23,58,.09);color:#14173a;font-size:10.5px;font-weight:600;border:1px solid rgba(20,23,58,.18);text-shadow:none}
+.ktags{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.ktags .ktag{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:3px 8px}
+.ktags .ktag b{font-size:14px;line-height:1;opacity:.6}
+.ktdd{margin:4px 0 6px}
+.ktdd>summary{cursor:pointer;padding:6px 10px;border-radius:9px;background:#e8ecff;border:1px solid rgba(20,23,58,.35);font-weight:700;font-size:12.5px;list-style:none}
+.ktdd>summary::-webkit-details-marker{display:none}
+.ktdd>summary::after{content:'▾';float:right}
+.ktdd[open]>summary::after{content:'▴'}
+.ktdd .kin{margin-top:6px}
+.ktdd .ktaglist{max-height:240px;overflow-y:auto;margin-top:6px}
+.ktg{margin:5px 0;border:1px solid rgba(20,23,58,.2);border-radius:9px;background:#fff;padding:5px 8px}
+.ktg summary{cursor:pointer;font-weight:700;font-size:12.5px}
+.ktgb{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 3px}
+.kpick{padding:3px 9px;border-radius:99px;background:#eef1ff;color:#14173a;border:1px solid rgba(20,23,58,.25);font-size:12px;font-weight:600;text-shadow:none}
+.kpick.on{background:var(--kc);border-color:var(--kc)}
+.kpick:disabled{opacity:.45;cursor:not-allowed}
+.kq{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-2px 0 8px}
 .ktpl{margin:7px 0 6px;padding:8px;border-radius:10px;border:2px dashed rgba(255,255,255,.6);background:rgba(150,152,165,.32)}
 .ktpl>input{width:100%}
 .ktr{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -479,6 +499,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kfcancel:hover{background:rgba(20,23,58,.1)}
 @keyframes kdrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.kform{animation:none}}
+.kcard{border:3px solid transparent;background:linear-gradient(#f4f6ff,#f4f6ff) padding-box,linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5)) border-box;box-shadow:inset 0 0 0 1.5px var(--kc)}
+.kcard:hover,.kcard:focus-visible{box-shadow:inset 0 0 0 1.5px var(--kc),0 5px 14px rgba(0,0,0,.4)}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -954,9 +976,11 @@ const fxBox = h('div', 'fxbox', null, ...fxDefs.map(x => x[2].box));
 const KCATS = [{ id: 'backlog', name: 'Backlog', color: '#8ea0d8' }, { id: 'progress', name: 'In progress', color: '#ffa51f' }, { id: 'proactive', name: 'Proactive', color: '#b07cff' }, { id: 'done', name: 'Done', color: '#34c98a' }];
 const kcat = id => KCATS.find(c => c.id === id) || KCATS[0];
 const kid = () => Math.random().toString(36).slice(2, 9);
+const KTAGS = [["🏠 Home", ["🧹 Cleaning", "🧺 Laundry", "🍽️ Dishes", "🛏️ Bedroom", "🛁 Bathroom", "🍳 Kitchen", "🛋️ Living room", "🔧 Repairs", "🪴 Houseplants", "🗑️ Trash & recycling", "📦 Decluttering", "🛒 Groceries", "💡 Utilities", "🔑 Rent & mortgage", "🪟 Windows", "🧯 Safety checks"]], ["💪 Health & fitness", ["🏃 Running", "🏋️ Strength", "🧘 Yoga", "🚶 Walking", "🚴 Cycling", "🏊 Swimming", "🥗 Healthy eating", "💧 Hydration", "😴 Sleep", "💊 Medication", "🩺 Doctor", "🦷 Dentist", "👁️ Eye care", "🧠 Mental health", "🤸 Stretching", "⚖️ Weight goals"]], ["💼 Work", ["📧 Email", "📞 Calls", "📅 Meetings", "📝 Reports", "📊 Spreadsheets", "🧑‍💻 Coding", "🎯 Goals", "🚀 Projects", "🤝 Clients", "📈 Planning", "🗂️ Filing", "⏰ Deadlines", "🧾 Invoices", "🎤 Presentations", "🧑‍🏫 Training", "🔍 Research"]], ["🎓 School & learning", ["📚 Studying", "✏️ Homework", "📖 Reading", "🧪 Science", "🧮 Math", "🌍 Languages", "🎒 School", "🏫 Class", "📝 Exams", "🔬 Lab work", "🎓 Degree", "💭 Ideas", "🖊️ Essays", "🃏 Flashcards", "🎧 Lectures", "👩‍🏫 Tutoring"]], ["💰 Money", ["💵 Budget", "🏦 Banking", "💳 Credit cards", "🧾 Bills", "📉 Debt", "💹 Investing", "🐷 Savings", "🧮 Taxes", "🛡️ Insurance", "🛍️ Shopping", "🏷️ Sales & deals", "🪙 Side income", "🎁 Donations", "📒 Expenses"]], ["👨‍👩‍👧 Family", ["👶 Kids", "👴 Parents", "🍼 Baby", "🎂 Birthdays", "💞 Partner", "🏡 Family time", "📱 Check-ins", "🧸 Playdates", "🚌 School run", "🎁 Gifts", "👵 Grandparents", "🧑‍🍼 Childcare"]], ["👫 Friends & community", ["🍻 Hangouts", "☎️ Catch up", "💌 Thank-you notes", "🎉 Parties", "🤗 Support a friend", "🗓️ Plans", "🫶 Volunteering", "🗣️ Community", "🏘️ Neighbors", "🤝 Networking"]], ["🐾 Pets", ["🐕 Dog", "🐈 Cat", "🐠 Fish", "🦜 Birds", "🐇 Small pets", "🦴 Pet food", "🧼 Grooming", "💉 Vet", "🦮 Dog walks", "🐴 Horses", "🪣 Litter & cages"]], ["🍎 Food & cooking", ["🥘 Meal prep", "🍲 Cooking", "🥪 Lunch", "🥞 Breakfast", "🍝 Dinner", "🍰 Baking", "🥦 Produce", "🧊 Pantry", "📋 Meal plan", "☕ Coffee", "🍷 Dining out", "🥤 Smoothies", "🍱 Packed lunches"]], ["✈️ Travel", ["✈️ Flights", "🧳 Packing", "🏨 Hotels", "🗺️ Itinerary", "🚗 Road trip", "🛂 Passport & docs", "🏖️ Vacation", "🏕️ Camping", "🥾 Hiking", "📸 Trip photos", "🚆 Trains & buses", "🎟️ Tickets"]], ["🚗 Car & errands", ["🚗 Car care", "⛽ Gas", "🛞 Tires", "🚿 Car wash", "🛠️ Maintenance", "📮 Post office", "🏪 Errands", "🧾 Returns", "📦 Packages", "🏛️ Government & DMV", "✂️ Haircut", "👕 Dry cleaning", "🔋 Battery & charging"]], ["🎨 Hobbies & creative", ["🎨 Art", "✍️ Writing", "📷 Photography", "🎸 Music", "🎹 Practice", "🎮 Gaming", "🧶 Crafts", "🧩 Puzzles", "🎬 Movies", "📺 Shows", "🎲 Board games", "🪡 Sewing", "🏺 Collecting", "📓 Journaling", "🎙️ Podcasting", "🎭 Theater"]], ["🌱 Garden & outdoors", ["🌱 Gardening", "💦 Watering", "🌳 Yard work", "🍅 Vegetables", "🌷 Flowers", "🌿 Herbs", "🚜 Mowing", "🏞️ Outdoors", "🐝 Pollinators", "🍂 Leaves & cleanup"]], ["🧖 Self-care & mind", ["🛀 Self-care", "📵 Screen break", "🙏 Gratitude", "🧘‍♂️ Meditation", "💆 Relaxing", "🎧 Podcasts", "🌅 Morning routine", "🌙 Evening routine", "❤️ Kindness", "🪞 Reflection", "🌬️ Breathing", "☀️ Fresh air"]], ["💻 Tech & admin", ["💾 Backups", "🔐 Passwords", "📱 Phone", "💻 Computer", "🔄 Updates", "🖨️ Printing", "📶 Wi-Fi", "📂 Organizing files", "🗃️ Paperwork", "✉️ Mail", "📲 Apps", "🧑‍🔧 Tech support"]], ["🎉 Celebrations & seasons", ["🎄 Holidays", "🎃 Halloween", "🦃 Thanksgiving", "🎆 New Year", "💝 Valentine's", "🐣 Easter", "🇺🇸 Fourth of July", "🎓 Graduation", "💍 Wedding", "🎁 Gift ideas", "🎈 Party planning", "🌸 Spring cleaning", "🏖️ Summer plans", "🍁 Fall prep", "⛄ Winter prep"]], ["🙏 Faith & values", ["🛐 Prayer", "⛪ Worship", "📜 Scripture", "🤲 Giving", "🕯️ Quiet time", "🕊️ Peace"]], ["⚡ Productivity", ["🔁 Habits", "⭐ Priority", "🧭 Planning ahead", "🕐 Time blocks", "📌 Reminders", "🔥 Streaks", "✅ Quick wins", "🐸 Hard thing first", "🗓️ Weekly review", "🏁 Milestones", "🧠 Brain dump", "🔕 Focus time"]], ["🆘 Urgent & life admin", ["🚨 Urgent", "🩹 First aid", "⚖️ Legal", "🪪 ID & renewals", "🧰 Emergency kit", "🔔 Renewals", "📑 Contracts", "🏥 Appointments", "🧾 Records"]]];   // the tag bank: [group, [tags]], each tag is an emoji and a name (a card keeps up to 8)
 const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof s === 'string' && re.test(s);
 const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
 const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
+  mode: ['date', 'interval', 'none'].includes(c.mode) ? c.mode : '', rep: !!c.rep, start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
   items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done })) });
 let kan = { cards: [], inc: false, rem: false, side: 'time' };
 try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time' }; } catch (e) {}
@@ -969,11 +993,33 @@ function zonedMs(ds, ts) {
   const off = ms => { const p = kzf.formatToParts(new Date(ms)), g = t => +p.find(x => x.type === t).value; return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - ms; };
   const guess = Date.UTC(y, m - 1, d, H, M); return guess - off(guess - off(guess));
 }
-const kdue = c => { if (!c.due) return null; const key = c.due + ' ' + (c.time || '23:59') + TZ; if (c._k !== key) { c._k = key; c._ms = zonedMs(c.due, c.time || '23:59'); } return c._ms; };
+// how a card is timed: a due date, an interval (from one date to the next), or none (a running timer counts up from when it was made). A Proactive card with no due date counts up by itself.
+const kmode = c => c.mode || (c.due ? 'date' : c.cat === 'proactive' ? 'none' : 'date');
+const kdd = c => { const m = kmode(c); return m === 'interval' ? c.end : m === 'date' ? c.due : ''; };   // the date it is due: the end of its interval, or its due date
+const kdue = (c, n) => { const d = kdd(c); if (!d) { if (c.time && kmode(c) === 'date') { const now = n == null ? Date.now() : n, td = kdayStr(now); let ms = zonedMs(td, c.time); if (ms <= now) ms = zonedMs(kaddDays(td, 1), c.time); return ms; } return null; }   // a due time with no due date repeats every day: it counts down to the next time that clock time comes round
+  const key = d + ' ' + (c.time || '23:59') + TZ; if (c._k !== key) { c._k = key; c._ms = zonedMs(d, c.time || '23:59'); } return c._ms; };
+const kam = c => { const key = c.assigned + TZ; if (c._ak !== key) { c._ak = key; c._am = zonedMs(c.assigned, '00:00'); } return c._am; };   // when the card was made
+const kst = c => { const key = c.start + TZ; if (c._sk !== key) { c._sk = key; c._sm = zonedMs(c.start, '00:00'); } return c._sm; };   // when its interval starts
+const kdn = ds => { const [y, m, d] = ds.split('-').map(Number); return Date.UTC(y, m - 1, d, 12); };
+const kaddDays = (ds, n) => { const t = new Date(kdn(ds) + n * 864e5); return t.getUTCFullYear() + '-' + p2(t.getUTCMonth() + 1) + '-' + p2(t.getUTCDate()); };
+const kdiff = (a, b) => Math.round((kdn(b) - kdn(a)) / 864e5);
+function kRoll(c, n) {   // a repeating interval that has run out starts over, the same length
+  if (!c.rep || kmode(c) !== 'interval' || !c.start || !c.end || c.cat === 'done') return false;
+  const len = Math.max(0, kdiff(c.start, c.end)); let moved = false, guard = 0;
+  while (kdue(c) != null && kdue(c) <= n && guard++ < 500) { c.start = kaddDays(c.end, 1); c.end = kaddDays(c.start, len); c.cycle = (c.cycle || 1) + 1; moved = true; }
+  return moved;
+}
 const kdate = ds => { const [y, m, d] = ds.split('-').map(Number); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(Date.UTC(y, m - 1, d, 12)); };
 const MONTH_ICON = ['❄️', '💝', '🍀', '🌷', '🌸', '☀️', '🎆', '🌻', '🍎', '🎃', '🍂', '🎄'];   // one emoji per month, Jan to Dec, shown beside the Kanban title
 const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayStr(Date.now()).slice(0, 4); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', ...(y !== cy ? { year: 'numeric' } : {}) }).format(Date.UTC(y, m - 1, 15)); };
 const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
+const knext = (c, n) => { const td = kdayStr(n); let ms = zonedMs(td, c.time); if (ms <= n) ms = zonedMs(kaddDays(td, 1), c.time); return ms; };   // the next time this clock time comes round
+const kdtText = c => {   // the small line under a card's title
+  const m = kmode(c), rp = c.rep ? ' · 🔁 repeats' : '', at = c.time ? ktime(c.time) : 'end of day';
+  if (m === 'interval') return (c.start && c.end ? kdate(c.start) + ' → ' + kdate(c.end) + ' · ' + at : 'Set the start and end dates') + (c.rep ? ' · 🔁 cycle ' + (c.cycle || 1) : '');
+  if (m === 'none') return 'No due date · running since ' + kdate(c.assigned) + (c.time ? ' · due daily at ' + ktime(c.time) : '') + rp;
+  return (c.due ? kdate(c.due) + ' · ' + at : c.time ? 'No due date · every day at ' + ktime(c.time) : 'No due date') + rp;
+};
 const kwarn = c => c.cat !== 'done' && c.assigned && c.assigned.slice(0, 7) < kdayStr(Date.now()).slice(0, 7);   // assigned in an earlier month than this one
 
 // card and checklist times become extra slots in the Time until list (only while that option is on)
@@ -984,7 +1030,7 @@ function kanDerived() {   // only the cards picked with the ⏱ button (or every
   kan.cards.forEach(c => {
     if (c.cat === 'done' || !(kan.inc || c.tu)) return;
     const col = kcat(c.cat).color;
-    if (c.time) out.push(kanSlot(c.id, c.time, '🗂 ' + c.title + (c.due ? ' · due ' + kdate(c.due) : ''), col));
+    if (c.time) out.push(kanSlot(c.id, c.time, '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdate(kdd(c)) : ''), col));
     c.items.forEach(it => { if (!it.done && it.time) out.push(kanSlot(c.id + ':' + it.id, it.time, '☑ ' + it.text + ' · ' + c.title, col)); });
   });
   return out;
@@ -997,24 +1043,26 @@ incSw.i.onchange = () => { kan.inc = incSw.i.checked; incSw.i.setAttribute('aria
 function kTpl(catId) {   // the dashed template for a new card
   const t = h('input'); t.type = 'text'; t.maxLength = 120; t.placeholder = '+ New card…'; t.setAttribute('aria-label', 'New card text, ' + kcat(catId).name);
   const d = h('input'); d.type = 'date'; d.setAttribute('aria-label', 'Due date'); const tm = h('input'); tm.type = 'time'; tm.setAttribute('aria-label', 'Due time');
-  const add = h('button', 'add sm2', 'Add card');
-  const go = () => { const title = t.value.trim(); if (!title) { t.focus(); return; } kan.cards.push({ id: kid(), title, cat: catId, due: d.value || '', time: tm.value || '', assigned: kdayStr(Date.now()), items: [] }); t.value = ''; d.value = ''; tm.value = ''; saveKan(); kanRender(); if (kan.inc) build(); };
+  const add = h('button', 'add sm2', 'Add card'), rp = catId === 'proactive' ? mkSw('🔁 Repeating card', true) : null;
+  const go = () => { const title = t.value.trim(); if (!title) { t.focus(); return; } kan.cards.push({ id: kid(), title, cat: catId, due: d.value || '', time: tm.value || '', assigned: kdayStr(Date.now()), mode: '', rep: !!(rp && rp.i.checked), start: '', end: '', cycle: 1, tags: [], items: [] }); t.value = ''; d.value = ''; tm.value = ''; if (rp) setSw(rp.i, false); saveKan(); kanRender(); if (kan.inc) build(); };
   add.onclick = go; t.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-  return h('div', 'ktpl', null, t, h('div', 'ktr', null, d, tm, add));
+  return h('div', 'ktpl', null, t, h('div', 'ktr', null, d, tm, add), ...(rp ? [h('div', 'ktr', null, rp.lab)] : []));
 }
 const kSecs = KCATS.map(cat => { const cnt = h('span', 'kcnt'), list = h('div', 'klist'), box = h('div', 'ksec', null, h('div', 'ksh', null, h('span', null, cat.name), cnt), list); box.style.setProperty('--kc', cat.color); box.setAttribute('role', 'group'); box.setAttribute('aria-label', cat.name); return { cat, cnt, list, box, tpl: kTpl(cat.id) }; });
 let kanRefs = [], kanDay = '', kanLast = 0;
 function kCard(c) {
   const box = h('div', 'kcard'); box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
   const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
-  box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov), h('div', 'kdt', c.due ? kdate(c.due) + ' · ' + (c.time ? ktime(c.time) : 'end of day') : 'No due date'));
+  const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
+  box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov), dt, ipb);
   if (pct != null) { const f = h('div', 'kfill'); f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
-  if (kwarn(c)) box.append(h('div', null, null, h('span', 'kwarn', '⚠ Assigned in ' + kmonthName(c.assigned))));
+  if (c.tags.length) box.append(h('div', 'ktagrow', null, ...c.tags.map(t => h('span', 'ktag', t))));
+  if (kwarn(c)) box.append(h('div', null, null, c.rep ? h('span', 'kfriend', '💌 Friendly reminder: you made this card in ' + kmonthName(c.assigned) + ' (' + kdate(c.assigned) + ')') : h('span', 'kwarn', '⚠ Assigned in ' + kmonthName(c.assigned))));   // a repeating card gets a friendly note instead of the warning
   const tu = h('button', 'ktu', '⏱'); tu.type = 'button'; tu.classList.toggle('on', !!(c.tu || kan.inc));
   tu.title = kan.inc ? 'In the Time until list (every card is added)' : c.tu ? 'In the Time until list: tap to remove it' : 'Add this card to the Time until list' + (c.time ? '' : ' (give it a due time first)'); tu.setAttribute('aria-label', tu.title); tu.setAttribute('aria-pressed', String(!!(c.tu || kan.inc)));
   tu.onclick = e => { e.stopPropagation(); if (kan.inc) return; c.tu = !c.tu; saveKan(); kanRender(); build(); }; tu.addEventListener('keydown', e => e.stopPropagation()); box.append(tu);
   box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
-  kanRefs.push({ c, dd, tmr, ov }); return box;
+  kanRefs.push({ c, dd, tmr, ov, dt, ip: { box: ipb, f: ipf, t: ipt } }); return box;
 }
 function kanRender() {
   kanRefs = [];
@@ -1025,15 +1073,27 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
   if (!force && n - kanLast < 1000) return; kanLast = n;
   const dk = kdayStr(n);
   if (dk !== kanDay) { kanDay = dk; kMonth.textContent = MONTH_ICON[+dk.slice(5, 7) - 1] + ' ' + new Intl.DateTimeFormat('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }).format(new Date(n)); if (!force) { kanRender(); return; } }
-  kanRefs.forEach(({ c, dd, tmr, ov }) => {
+  let rolled = false;
+  kanRefs.forEach(({ c, dd, tmr, ov, dt, ip }) => {
+    if (kRoll(c, n)) rolled = true;
+    dt.textContent = kdtText(c); ip.box.style.display = 'none';
     const ms = kdue(c);
     if (c.cat === 'done') { dd.textContent = '✓ Done'; tmr.style.display = 'none'; ov.textContent = ''; return; }
+    if (kmode(c) === 'none') {   // no due date: a running timer counts up from when the card was made
+      const a0 = Math.max(0, n - kam(c)), s0 = Math.floor(a0 % 864e5 / 1000); dd.textContent = '';   // no day count for a card with no due date
+      if (c.time) { tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, n) - n) / 1000)); }   // a due time: the "due in" text replaces the timer
+      else { tmr.style.display = ''; tmr.textContent = p2(Math.floor(s0 / 3600)) + ':' + p2(Math.floor(s0 % 3600 / 60)) + ':' + p2(s0 % 60); ov.textContent = 'running'; }
+      ov.className = 'kov'; return;
+    }
     if (ms == null) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; return; }
     const rem = ms - n, a = Math.abs(rem), days = Math.floor(a / 864e5), cyc = Math.floor(a % 864e5 / 1000);
     dd.textContent = (rem < 0 && days ? '−' : '') + days + (days === 1 ? ' day' : ' days'); tmr.style.display = '';
     tmr.textContent = p2(Math.floor(cyc / 3600)) + ':' + p2(Math.floor(cyc % 3600 / 60)) + ':' + p2(cyc % 60);
-    ov.textContent = rem < 0 ? 'overdue' : c.due === dk ? 'due today' : ''; ov.className = 'kov' + (rem < 0 ? ' bad' : '');
+    ov.textContent = rem < 0 ? 'overdue' : kdd(c) === dk ? 'due today' : !kdd(c) ? 'daily' : ''; ov.className = 'kov' + (rem < 0 ? ' bad' : '');
+    const st = kmode(c) === 'interval' && c.start ? kst(c) : null;
+    if (st != null && ms > st) { const fr = Math.max(0, Math.min(1, (n - st) / (ms - st))); ip.box.style.display = ''; ip.f.style.width = (fr * 100) + '%'; ip.t.textContent = Math.round(fr * 100) + '% of this interval'; }
   });
+  if (rolled) saveKan();
 }
 
 // ---- the animated pop-up with a card's details and checklist
@@ -1048,11 +1108,40 @@ function openKan(id) {
   const ti = h('input', 'kin kti'); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
   const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
   const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
-  sel.onchange = () => { c.cat = sel.value; col(); sync(); renderList(); };   // the thin borders follow the category right away
-  const di = h('input', 'kin'); di.type = 'date'; di.value = c.due; di.onchange = () => { c.due = di.value; sync(); };
+  sel.onchange = () => { c.cat = sel.value; col(); sync(); renderList(); showMode(); };   // the thin borders follow the category right away
+  const di = h('input', 'kin'); di.type = 'date'; di.value = c.due; di.onchange = () => { c.due = di.value; sync(); showMode(); };
   const tm = h('input', 'kin'); tm.type = 'time'; tm.value = c.time; tm.onchange = () => { c.time = tm.value; sync(); };
   const ai = h('input', 'kin'); ai.type = 'date'; ai.value = c.assigned; ai.onchange = () => { if (ai.value) { c.assigned = ai.value; sync(); } };
   const fld = (lab, el) => h('label', 'kfld', null, h('span', null, lab), el);
+  // deadline type: a due date, an interval (from one date to the next), or none at all (a running timer counts up from when the card was made)
+  const mSel = h('select', 'kin'); mSel.setAttribute('aria-label', 'Deadline type');
+  [['date', 'Due date'], ['interval', 'Interval (one date to the next)'], ['none', 'No due date (running timer)']].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; mSel.append(o); });
+  mSel.value = kmode(c);
+  const si = h('input', 'kin'); si.type = 'date'; si.value = c.start; si.setAttribute('aria-label', 'Interval starts'); si.onchange = () => { c.start = si.value; sync(); };
+  const ei = h('input', 'kin'); ei.type = 'date'; ei.value = c.end; ei.setAttribute('aria-label', 'Interval ends'); ei.onchange = () => { c.end = ei.value; sync(); };
+  const tnote = h('span', 'ksub', 'No due date: repeats every day'), tlab = h('span', null, 'Due time'), fDue = fld('Due date', di), fTime = h('label', 'kfld', null, tlab, tm, tnote), fStart = fld('Starts', si), fEnd = fld('Ends', ei);
+  const qk = h('div', 'kq', null, h('span', 'ksub', 'Quick length:'), ...[['1 week', 7], ['2 weeks', 14], ['1 month', 30]].map(([l, dn]) => { const b = h('button', 'cf', l); b.type = 'button'; b.onclick = () => { if (!c.start) { c.start = kdayStr(Date.now()); si.value = c.start; } c.end = kaddDays(c.start, dn - 1); ei.value = c.end; sync(); }; return b; }));
+  const repSw = mkSw('🔁 Repeating card', true); setSw(repSw.i, c.rep);
+  const repNote = h('p', 'knote', 'A repeating card never shows the ⚠ warning. When it was made in an earlier month, you get a friendly reminder of when instead, and an interval starts over (the same length) each time it ends.');
+  repSw.i.onchange = () => { c.rep = repSw.i.checked; repSw.i.setAttribute('aria-checked', String(c.rep)); sync(); };
+  function showMode() { const m = kmode(c); tnote.style.display = (m === 'date' && !c.due) || m === 'none' ? '' : 'none'; tnote.textContent = m === 'none' ? 'Optional: due every day at this time, beside the running timer' : 'No due date: repeats every day'; fDue.style.display = m === 'date' ? '' : 'none'; fStart.style.display = fEnd.style.display = qk.style.display = m === 'interval' ? '' : 'none'; fTime.style.display = ''; tlab.textContent = m === 'interval' ? 'Ends at (time)' : 'Due time'; mSel.value = m; }
+  mSel.onchange = () => { c.mode = mSel.value; if (c.mode === 'interval') { if (!c.start) c.start = kdayStr(Date.now()); if (!c.end) c.end = kaddDays(c.start, 6); si.value = c.start; ei.value = c.end; } showMode(); sync(); };
+  // tags: a big bank grouped by area of life, with search; a card keeps up to 8
+  const openG = new Set(), tagSel = h('div', 'ktags'), tagQ = h('input', 'kin'), tagList = h('div', 'ktaglist'), tagCnt = h('span', 'ksub');
+  tagQ.type = 'search'; tagQ.placeholder = 'Search tags (e.g. dog, budget, garden)…'; tagQ.setAttribute('aria-label', 'Search tags');
+  function renderTags() {
+    const q = tagQ.value.trim().toLowerCase(), full = c.tags.length >= 8; tagCnt.textContent = c.tags.length + ' of 8';
+    tagSel.replaceChildren(...(c.tags.length ? c.tags.map(t => { const b = h('button', 'ktag', t + ' '), x = h('b', null, '×'); b.type = 'button'; b.append(x); b.setAttribute('aria-label', 'Remove tag ' + t); b.onclick = () => { c.tags = c.tags.filter(z => z !== t); sync(); renderTags(); }; return b; }) : [h('span', 'ksub', 'No tags yet. Pick some below.')]));
+    tagList.replaceChildren(...KTAGS.map(([g, arr]) => {
+      const shown = q ? arr.filter(t => t.toLowerCase().includes(q) || g.toLowerCase().includes(q)) : arr;
+      if (!shown.length) return null;
+      const det = h('details', 'ktg', null, h('summary', null, g + ' · ' + shown.length), h('div', 'ktgb', null, ...shown.map(t => { const on = c.tags.includes(t), b = h('button', 'kpick' + (on ? ' on' : ''), t); b.type = 'button'; b.setAttribute('aria-pressed', String(on)); b.disabled = !on && full; b.onclick = () => { c.tags = on ? c.tags.filter(z => z !== t) : [...c.tags, t]; sync(); renderTags(); }; return b; })));
+      det.open = !!q || openG.has(g); det.addEventListener('toggle', () => { if (tagQ.value.trim()) return; if (det.open) openG.add(g); else openG.delete(g); });
+      return det;
+    }).filter(Boolean));
+  }
+  tagQ.oninput = renderTags;
+  const tagDD = h('details', 'ktdd', null, h('summary', null, '➕ Browse the tag bank'), tagQ, tagList);   // the whole bank sits in one dropdown, closed until you want it
   const pf = h('div', 'kfill'), pbar = h('div', 'kbar big', null, pf), ptxt = h('b', 'kpct'), psub = h('span', 'ksub'), list = h('div', 'kitems');
   const remSw = mkSw('Only show the items still to do', true); setSw(remSw.i, kan.rem);
   const tuSw = mkSw('Show this card in the Time until list', true); setSw(tuSw.i, !!(c.tu || kan.inc)); tuSw.i.disabled = kan.inc; tuSw.i.onchange = () => { c.tu = tuSw.i.checked; tuSw.i.setAttribute('aria-checked', String(c.tu)); sync(); };
@@ -1127,9 +1216,9 @@ function openKan(id) {
   const conf = h('div', 'conf', null, h('span', null, 'Delete this card and its checklist?'), yes, no); conf.style.display = 'none'; del.style.marginTop = '12px';
   del.onclick = () => { del.style.display = 'none'; conf.style.display = 'flex'; }; no.onclick = () => { conf.style.display = 'none'; del.style.display = ''; };
   yes.onclick = () => { kan.cards = kan.cards.filter(z => z !== c); closeKan(); sync(); };
-  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Due date', di), fld('Due time', tm), fld('Assigned', ai)),
-    tuSw.lab, remSw.lab, h('div', 'kchead', null, h('span', null, '☑ Checklist'), psub), h('div', 'kpr', null, ptxt, pbar), list, kundo, addWrap, del, conf);
-  renderList();
+  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fTime, fld('Assigned', ai)), qk, repSw.lab, repNote,
+    tuSw.lab, remSw.lab, h('div', 'kchead', null, h('span', null, '🏷 Tags'), tagCnt), tagSel, tagDD, h('div', 'kchead', null, h('span', null, '☑ Checklist'), psub), h('div', 'kpr', null, ptxt, pbar), list, kundo, addWrap, del, conf);
+  renderList(); renderTags(); showMode();
   m.addEventListener('keydown', e => { if (e.key === 'Escape') closeKan(); });
   m.addEventListener('pointerdown', e => { if (e.target === m) closeKan(); });
   shell.append(m); m.focus(); requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('open')));
