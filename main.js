@@ -19,12 +19,13 @@ const onScreen = b => b && [b.x, b.y, b.width, b.height].every(Number.isFinite) 
 });
 
 // ---------- keyboard shortcuts (work from anywhere, even while the window is hidden) ----------
-const DEFAULT_KEYS = { toggle: 'Alt+Shift+K', theme: 'Alt+Shift+B', quit: 'Alt+Shift+Q' };
+const DEFAULT_KEYS = { toggle: 'Alt+Shift+K', theme: 'Alt+Shift+B', flip: 'Alt+Shift+F', quit: 'Alt+Shift+Q' };
 let shortcuts = { ...DEFAULT_KEYS };
-const scOk = { toggle: false, theme: false, quit: false };          // did Windows let us have that key combination?
+const scOk = { toggle: false, theme: false, flip: false, quit: false };          // did Windows let us have that key combination?
 const quitApp = () => { quitting = true; app.quit(); };
 const toggleTheme = () => { if (win) win.webContents.send('theme:toggle'); };   // the page switches Sky <-> Black
-const actions = { toggle: () => toggle(), theme: toggleTheme, quit: quitApp };
+const flipBoard = () => { if (win) win.webContents.send('flip:toggle'); };   // the page flips Time until <-> Kanban
+const actions = { toggle: () => toggle(), theme: toggleTheme, flip: flipBoard, quit: quitApp };
 const MODS = ['Ctrl', 'Control', 'CommandOrControl', 'CmdOrCtrl', 'Alt', 'Option', 'AltGr', 'Shift', 'Super', 'Meta', 'Command', 'Cmd'];
 const BLOCKED = ['ctrl+c', 'ctrl+v', 'ctrl+x', 'ctrl+z', 'ctrl+y', 'ctrl+a', 'ctrl+s', 'alt+f4', 'alt+tab'];
 function validAccel(a) {                               // '' means "off"
@@ -46,6 +47,7 @@ function registerAll() {
 const scSnapshot = () => ({
   toggle: { accel: shortcuts.toggle, ok: scOk.toggle },
   theme: { accel: shortcuts.theme, ok: scOk.theme },
+  flip: { accel: shortcuts.flip, ok: scOk.flip },
   quit: { accel: shortcuts.quit, ok: scOk.quit },
 });
 
@@ -68,6 +70,7 @@ function rebuildMenu() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: (win.isVisible() ? 'Hide Sky Clock' : 'Show Sky Clock') + hint('toggle'), click: toggle },
     { label: 'Switch Sky / Black' + hint('theme'), click: toggleTheme },
+    { label: 'Flip Time until / Kanban' + hint('flip'), click: flipBoard },
     { label: 'Always on top', type: 'checkbox', checked: win.isAlwaysOnTop(), click: i => setPin(i.checked) },
     { label: 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings(loginOpts()).openAtLogin, click: i => setAutostart(i.checked) },
     { type: 'separator' },
@@ -100,6 +103,7 @@ function createWindow() {
     if (key === 'w') { e.preventDefault(); win.close(); }
     else if (key === 'q') { e.preventDefault(); quitApp(); }
     else if (key === 'b') { e.preventDefault(); toggleTheme(); }
+    else if (key === 'f') { e.preventDefault(); flipBoard(); }
   });
   win.loadFile(path.join(__dirname, 'index.html'));
   win.once('ready-to-show', () => { if (!process.argv.includes('--hidden')) win.show(); });

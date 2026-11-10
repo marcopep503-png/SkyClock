@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld('skyclock', {
   resetShortcuts: () => ipcRenderer.invoke('shortcuts:reset'),
   pauseShortcuts: on => ipcRenderer.send('shortcuts:pause', !!on),
   onTheme: cb => ipcRenderer.on('theme:toggle', () => cb()),
+  onFlip: cb => ipcRenderer.on('flip:toggle', () => cb()),
 });

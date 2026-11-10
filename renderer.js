@@ -602,14 +602,14 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
 const scRows = SC.map(([k, label]) => { const b = h('button', 'add sm2', '…'); scBtn[k] = b; return h('div', 'ev', null, h('span', null, label), b); });
 const scReset = h('button', 'add sm2', 'Reset to defaults');
 const shortcutCard = h('section', 'g', null, h('div', 'ttl', 'Keyboard shortcuts'), ...scRows, scMsg, scReset,
-  h('p', 'note', 'Tap a shortcut, then press the new keys. Also, while this window is selected: Ctrl+W hides it, Ctrl+B switches Sky / Black and Ctrl+Q quits.'));
+  h('p', 'note', 'Tap a shortcut, then press the new keys. Also, while this window is selected: Ctrl+W hides it, Ctrl+B switches Sky / Black, Ctrl+F flips Time until / Kanban and Ctrl+Q quits.'));
 shortcutCard.style.display = skc && skc.getShortcuts ? '' : 'none';
 let scState = null, scRec = null;
 function scShow() {
@@ -650,6 +650,7 @@ addEventListener('keydown', e => {
 addEventListener('pointerdown', e => { if (scRec && !e.composedPath().includes(scBtn[scRec])) scStop(); }, true);
 if (skc && skc.getShortcuts) skc.getShortcuts().then(s => { scState = s; scShow(); });
 if (skc && skc.onTheme) skc.onTheme(() => applyMode(mode === 'sky' ? 'grain' : 'sky', true));   // the Sky / Black keybind
+if (skc && skc.onFlip) skc.onFlip(() => flipTo(kan.side === 'kanban' ? 'time' : 'kanban'));   // the Time until / Kanban keybind
 
 // ---------- pomodoro card (focus sessions of up to 7 pomodoros, with per-day averages) ----------
 const PM_MAX = 7, PM_PRESETS = [[5, '5 min'], [10, '10 min'], [15, '15 min'], [25, '25 min'], [45, '45 min'], [60, '1 hr']];   // same buttons as the alarm timer
