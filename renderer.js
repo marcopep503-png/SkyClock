@@ -1042,7 +1042,7 @@ function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight u
   const it = x.it;
   if (it.done) { x.f.style.width = '100%'; x.rem.textContent = '✓ done'; return; }
   const due = zonedMs(dk, it.time), st = zonedMs(dk, '00:00');
-  if (n >= due) { x.f.style.width = '100%'; x.rem.textContent = 'Time passed · tracks again tomorrow'; return; }
+  if (n >= due) { x.f.style.width = '100%'; x.rem.textContent = 'Time passed · overdue ' + fmt(Math.floor((n - due) / 1000)) + ' · tracks again tomorrow'; return; }
   x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (n - st) / (due - st))) : 100) + '%';
   x.rem.textContent = fmt(Math.round((due - n) / 1000)) + ' left today';
 }
