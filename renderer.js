@@ -244,7 +244,12 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .tuh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.tuh .ttl{margin:0}
 .sw.plan .tk::after{font-size:10px;font-weight:700;line-height:14px;text-align:center;color:#3b3f86;text-shadow:none}
 .sw.plan input:checked + .tk::after{content:"✓"}
-.ptime{width:auto;flex:none;padding:3px 6px;font-size:14px;border-radius:8px}
+.ptime{width:122px;min-width:122px;flex:none;padding:3px 6px;font-size:14px;border-radius:8px}
+.pedit{display:inline-flex;flex:none;align-items:center;gap:6px;white-space:nowrap}
+.pok{flex:none;width:26px;height:26px;padding:0;border-radius:8px;background:rgba(123,228,149,.22);border:1px solid rgba(123,228,149,.6);color:#7be495;font-weight:700;font-size:15px;text-shadow:none}
+.pok:disabled{opacity:.35;cursor:default}
+.trt{row-gap:4px}
+.tprev{font-size:10.5px;color:rgba(232,235,246,.72);text-shadow:none;white-space:nowrap}
 .tx{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;padding:8px 10px;border:2px dashed rgba(255,255,255,.4);border-radius:10px;font-size:11.5px;line-height:1.4;color:rgba(232,235,246,.72);text-shadow:none}
 .tx b{display:block;margin-top:2px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:rgba(236,239,250,.9)}
 .tx button{flex:none;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.2);font-weight:700;font-size:12px}
@@ -439,7 +444,7 @@ const planSw = mkSw('Planning'); planSw.lab.classList.add('plan'); setSw(planSw.
 planSw.lab.title = 'Planning mode: change the time of a countdown, and keep an Undo box for every deleted countdown until you switch this off';
 planSw.i.onchange = () => {
   planning = planSw.i.checked; planSw.i.setAttribute('aria-checked', String(planning));
-  if (!planning) trash = [];                           // switching it off clears the Undo boxes for good
+  if (!planning) { trash = []; tracked.forEach(t => { delete t.prev; }); save(); }   // switching it off clears the Undo boxes and the "was" notes for good
   try { GM_setValue('plan', planning); } catch (e) {} saveTrash(); build();
 };
 const evRise = h('b', 'hot', '--'), evSet = h('b', null, '--');
@@ -896,7 +901,7 @@ function build() {
     x.setAttribute('aria-label', 'Remove ' + (t.title || l));
     const ok = h('button', 'x ok', '✓'); ok.title = 'Got it: hides this check, elapsed time keeps counting'; ok.setAttribute('aria-label', 'Done with ' + l); ok.style.display = 'none';
     // the time with its title under it; long titles are shortened with an ellipsis and hovering shows them in full
-    const tsp = planning ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp), lblBox = h('div', 'tlb', null, tr1, tt);
+    const tsp = planning ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60))] : [])), lblBox = h('div', 'tlb', null, tr1, tt);
     const showTitle = () => { tt.textContent = t.title || 'add a title'; tt.className = 'tt' + (t.title ? '' : ' empty'); };
     showTitle();
     lblBox.addEventListener('mouseenter', () => { if (t.title) showTip(lblBox, t.title); });
@@ -933,18 +938,23 @@ function build() {
 }
 // Remove keeps the whole timer object (including its original length), so Undo puts the progress bar back where it belongs.
 let undoList = [], undoTimer = 0;
-function mkTimeEdit(t) {   // planning mode: the time itself is editable
-  const i = h('input', 'tin ptime'); i.type = 'time'; i.value = p2(Math.floor(t.v / 60)) + ':' + p2(t.v % 60); i.setAttribute('aria-label', 'Change the time of this countdown');
-  i.onchange = () => {
+function mkTimeEdit(t) {   // planning mode: pick a new time, then press the check mark beside it to apply it
+  const i = h('input', 'ptime'); i.type = 'time'; const cur = p2(Math.floor(t.v / 60)) + ':' + p2(t.v % 60); i.value = cur; i.setAttribute('aria-label', 'New time for this countdown');
+  const ok = h('button', 'pok', '✓'); ok.type = 'button'; ok.disabled = true; ok.title = 'Apply the new time'; ok.setAttribute('aria-label', 'Apply the new time');
+  const sync = () => { ok.disabled = !i.value || i.value === cur; };
+  const apply = () => {
+    if (ok.disabled) return;
     const q = i.value.split(':').map(Number);
     if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
     const v = q[0] * 60 + q[1];
-    if (v === t.v) return;
     if (tracked.some(z => z !== t && z.v === v && (z.title || '') === (t.title || ''))) { build(); return; }   // same time and title already exists
-    t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
+    t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
     save(); build();
   };
-  return i;
+  i.addEventListener('input', sync); i.addEventListener('change', sync);
+  i.addEventListener('keydown', e => { if (e.key === 'Enter') { sync(); apply(); } else if (e.key === 'Escape') { i.value = cur; sync(); } });
+  ok.onclick = apply;
+  return h('span', 'pedit', null, i, ok);
 }
 function trashRow(t) {   // the dashed box that stands where a deleted countdown was
   const l = hl(Math.floor(t.v / 60), t.v % 60), live = h('b'), undo = h('button', null, 'Undo');
