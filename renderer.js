@@ -243,6 +243,10 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .cf.yes{background:rgba(239,68,68,.55);border-color:rgba(255,130,130,.6)}
 .undo{display:none;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.35);font-size:12px}
 .undo button{padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.2);font-weight:700;font-size:12px}
+.kundo{margin:8px 0 4px}
+.kpan .kundo{background:#fff3dc;color:#14173a;border-left:3px solid #ffb347;text-shadow:none}
+.kpan .kundo button{background:#14173a;color:#fff}
+.kit .kconf{flex:1;margin:0}
 .tuh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.tuh .ttl{margin:0}
 .sw.plan .tk::after{font-size:10px;font-weight:700;line-height:14px;text-align:center;color:#3b3f86;text-shadow:none}
 .sw.plan input:checked + .tk::after{content:"✓"}
@@ -338,13 +342,6 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .fxl{font-size:11.5px;opacity:.92;margin-top:6px;line-height:1.4}
 .fxl.sm{opacity:.7}
 .fxel{color:#ff8a3d;font-weight:700;font-variant-numeric:tabular-nums}
-.fxcv{flex:none;width:24px;height:24px;padding:0;border-radius:8px;background:transparent;display:inline-flex;align-items:center;justify-content:center}
-.fxcv:hover{background:rgba(255,255,255,.16)}
-.fxcv::before{content:'';width:8px;height:8px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:translateY(-2px) rotate(45deg);transition:transform .2s ease}
-.fxp.collapsed .fxcv::before{transform:translateX(-2px) rotate(-45deg)}
-.fxp.collapsed>:not(.fxh){display:none!important}
-.fxp.collapsed .fxh{margin-bottom:0}
-@media (prefers-reduced-motion:reduce){.fxcv::before{transition:none}}
 .fxmoon{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .fxmoon b{display:block;font-size:12.8px}
 .fxmoon span{font-size:11.5px;opacity:.85}
@@ -388,8 +385,100 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .trk.fxtip:hover{text-decoration:none}
 .shell:not(.grain) .trl{background:linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5));text-shadow:0 1px 2px rgba(0,0,0,.5)}
 @media (prefers-reduced-motion:reduce){.trl{animation:none}}
+.flipb{width:100%;margin:0 0 10px}
+.flip{perspective:1000px}
+.flip>section{transition:transform .22s ease-in}
+.flip>.fout{transform:rotateY(90deg)}
+.flip>.fin{animation:kflip .28s ease-out}
+@keyframes kflip{from{transform:rotateY(-90deg)}to{transform:rotateY(0)}}
+.tt.nokan{cursor:default}
+.kmonth{font:700 19px/1.2 system-ui,'Segoe UI',sans-serif;text-align:center;margin:0 0 6px;letter-spacing:.3px}
+.kopt{margin:8px 0 2px}
+.ksec{margin-top:10px;padding:8px 8px 4px;border-radius:12px;border:1px solid var(--kc);border-left-width:4px;background:rgba(0,0,0,.22)}
+.ksh{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:12.5px;color:var(--kc);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.kcnt{min-width:20px;text-align:center;padding:0 7px;border-radius:99px;background:var(--kc);color:#14173a;font-size:11px}
+.kcard{position:relative;margin:7px 0;padding:8px 10px;border-radius:10px;background:#f4f6ff;color:#14173a;text-shadow:none;border:1.5px solid var(--kc);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .2s ease}
+.kcard:hover,.kcard:focus-visible{transform:translateY(-1px);box-shadow:0 5px 14px rgba(0,0,0,.4)}
+.kt{font-weight:700;font-size:13px;word-break:break-word}
+.kdue{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:5px}
+.kd{font-weight:800;font-size:13px;color:#000}
+.kcy{font:700 11px ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;color:#000;background:#fff;border:1px solid rgba(0,0,0,.3);border-radius:99px;padding:1px 8px}
+.kov{font-size:10.5px;font-weight:700;color:#14173a;opacity:.8}
+.kov.bad{color:#b3122a;opacity:1}
+.kdt{font-size:11px;color:#14173a;opacity:.75;margin-top:2px}
+.kprog{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:10.5px;font-weight:600}
+.kbar{flex:1;height:6px;border-radius:9px;background:rgba(20,23,58,.16);overflow:hidden}
+.kbar.big{flex:none;width:100%;height:9px}
+.kfill{height:100%;width:0;border-radius:9px;background:var(--kc);transition:width .3s ease}
+.kwarn{display:inline-block;margin-top:6px;padding:1px 9px;border-radius:99px;background:#ffd27a;color:#3a2400;font-size:10.5px;font-weight:700;border:1px solid #c98a00}
+.ktpl{margin:7px 0 6px;padding:8px;border-radius:10px;border:2px dashed rgba(255,255,255,.6);background:rgba(150,152,165,.32)}
+.ktpl>input{width:100%}
+.ktr{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ktr input{flex:1 1 110px}
+.kmod{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(5,6,20,0);transition:background .22s ease}
+.kmod.open{background:rgba(5,6,20,.62)}
+.kpan{width:100%;max-width:460px;max-height:92%;overflow-y:auto;padding:12px;border-radius:14px;background:#f4f6ff;color:#14173a;text-shadow:none;border:2px solid var(--kc);box-shadow:0 14px 40px rgba(0,0,0,.55);opacity:0;transform:translateY(16px) scale(.92);transition:opacity .22s ease,transform .28s cubic-bezier(.3,1.4,.4,1),border-color .2s ease}
+.kmod.open .kpan{opacity:1;transform:none}
+.kphd{display:flex;align-items:center;gap:8px}
+.kclose{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(20,23,58,.12);color:#14173a;font-size:20px;line-height:1}
+.kin{flex:none;width:100%;padding:5px 7px;border-radius:8px;border:1px solid rgba(20,23,58,.35);background:#fff;color:#14173a;color-scheme:light;font-size:16px}
+.kti{font-weight:700}
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.kfld{display:flex;flex-direction:column;gap:2px;font-size:11px;font-weight:600}
+.kpr{margin:6px 0 8px}
+.kpct{font-size:16px}
+.ksub{margin-left:8px;font-size:11.5px;opacity:.8}
+.kit{display:flex;align-items:center;gap:6px;margin:6px 0;padding:5px 7px;border-radius:8px;border:1px solid var(--kc);background:#fff;transition:border-color .2s ease}
+.kit input[type=checkbox]{flex:none;width:18px;height:18px;padding:0;accent-color:var(--kc)}
+.kit .kx{flex:1;min-width:0;width:auto;border-color:transparent;background:transparent}
+.kit.done .kx{text-decoration:line-through;opacity:.55}
+.kitime{flex:none;width:auto;max-width:120px}
+.kdel{flex:none;width:26px;height:26px;border-radius:50%;background:rgba(179,18,42,.12);color:#b3122a;font-size:17px;line-height:1}
+.knote{font-size:12px;opacity:.75;margin:8px 0}
+.kadd{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.kadd .kin:first-child{flex:1 1 150px;width:auto}
+.kpan .add,.shell.grain .kpan .add{background:#e8ecff;color:#14173a;border-color:rgba(20,23,58,.45)}
+.kpan .cf{background:rgba(20,23,58,.1);color:#14173a;border-color:rgba(20,23,58,.35)}
+.kpan .cf.yes{background:#d6293e;color:#fff;border-color:#d6293e}
+.kpan .conf{color:#14173a}
+.kpan .sw{color:#14173a;text-shadow:none}
+.kpan .sw .tk{background:rgba(20,23,58,.2);border-color:rgba(20,23,58,.4)}
+@media (prefers-reduced-motion:reduce){.flip>section,.kcard,.kpan,.kmod,.kfill{transition:none}.flip>.fin{animation:none}}
+.ktu{position:absolute;top:6px;right:6px;width:24px;height:24px;padding:0;border-radius:50%;background:rgba(20,23,58,.08);color:#14173a;border:1px solid rgba(20,23,58,.3);font-size:13px;line-height:1;opacity:.55;text-shadow:none}
+.ktu.on{opacity:1;background:var(--kc);border-color:var(--kc)}
+.kcard .kt{padding-right:30px}
+.tr.tkan{border:1px solid var(--kc);border-radius:10px;padding:8px 9px 4px;margin:7px 0}
 .synct{width:100%;margin:8px 0;padding:8px;min-height:84px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:16px/1.3 ui-monospace,Consolas,monospace;word-break:break-all;resize:vertical}
 .syn .ctl{flex-wrap:wrap}
+.kchead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:12px 0 2px;font-weight:700;font-size:14px}
+.kpr{display:flex;align-items:center;gap:10px;margin:6px 0 10px}
+.kpr .kbar.big{flex:1;width:auto;height:8px}
+.kpct{flex:none;min-width:36px;font-size:12px;font-weight:700}
+.kit{display:flex;align-items:flex-start;gap:10px;margin:2px 0;padding:6px;border:0;border-radius:8px;background:transparent}
+.kit:hover{background:rgba(20,23,58,.06)}
+.kit input[type=checkbox]{margin-top:4px}
+.kbody{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.kit .kx,.kform .kfx{display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:14px;line-height:1.35;color:#14173a;padding:3px 5px;border:1px solid transparent;border-radius:6px;background:transparent}
+.kit .kx:focus{background:#fff;border-color:var(--kc)}
+.kit.done .kx{text-decoration:line-through;opacity:.55}
+.kdueat{display:inline-flex;align-items:center;gap:5px;padding:1px 9px;border-radius:99px;background:rgba(20,23,58,.07);border:1px solid var(--kc);color:#14173a;font-size:11px;font-weight:700;text-shadow:none}
+.kdueat.none{border-style:dashed;opacity:.6;font-weight:600}
+.kdueat:hover{opacity:1;background:rgba(20,23,58,.14)}
+.kit .kdel{margin-top:2px;opacity:.5}.kit:hover .kdel{opacity:1}
+.kaddbtn{margin-top:8px;padding:7px 14px;border-radius:8px;background:rgba(20,23,58,.08);border:1px solid rgba(20,23,58,.2);color:#14173a;font-weight:600;font-size:13px;text-shadow:none}
+.kaddbtn:hover{background:rgba(20,23,58,.15)}
+.kform{margin-top:8px;padding:10px;border-radius:12px;background:#fff;border:1.5px solid var(--kc);box-shadow:0 4px 14px rgba(20,23,58,.18);animation:kdrop .22s ease-out}
+.kform .kfx{border-color:rgba(20,23,58,.2);padding:6px 8px;min-height:54px}
+.kform .kfx:focus{border-color:var(--kc)}
+.kfdue{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:700;color:#14173a}
+.kfdue .kitime{max-width:130px}
+.kfact{display:flex;align-items:center;gap:8px;margin-top:10px}
+.kfadd{padding:6px 16px;border-radius:8px;background:var(--kc);color:#14173a;font-weight:700;font-size:13px;border:0;text-shadow:none}
+.kfadd:hover{filter:brightness(.95)}
+.kfcancel{width:30px;height:30px;border-radius:50%;background:transparent;color:#14173a;font-size:20px;line-height:1}
+.kfcancel:hover{background:rgba(20,23,58,.1)}
+@keyframes kdrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.kform{animation:none}}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -562,7 +651,7 @@ try { locCard.open = GM_getValue('locOpen', false) === true; } catch (e) {}
 locCard.addEventListener('toggle', () => { try { GM_setValue('locOpen', locCard.open); } catch (e) {} });
 // ---------- sync between devices: a code made on one device is pasted into the site on another ----------
 // (a static site has no server or account, so the code carries the data itself. Per-device things stay put: location, running alarm/pomodoro, window state.)
-const SYNC_KEYS = ['fx', 'sleep', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pomo'];
+const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pomo'];
 const synBox = h('textarea', 'synct'); synBox.rows = 4; synBox.spellcheck = false; synBox.setAttribute('autocapitalize', 'off'); synBox.setAttribute('autocorrect', 'off');
 synBox.setAttribute('aria-label', 'Sync code'); synBox.placeholder = 'Your sync code appears here, or paste a code from another device';
 const synGet = h('button', 'add sm2', 'Get code from this device'), synUse = h('button', 'add sm2', 'Use this code here');
@@ -851,24 +940,220 @@ function fxTick(n, force) {
 }
 const fxDefs = [['sun', '☀️ Sun now', pSun], ['gold', '🌇 Golden hour', pGold], ['blue', '🔵 Blue hour', pBlue], ['moon', '🌙 Moon', pMoon]];
 const fxRow = h('div', 'fxrow'); fxRow.setAttribute('role', 'group'); fxRow.setAttribute('aria-label', 'Sky extras for your location');
-let fxc = {}; try { fxc = JSON.parse(GM_getValue('fxc', 'null')) || {}; } catch (e) {}   // which boxes are folded up (only their title row shows)
 fxDefs.forEach(([k, label, pn]) => {
-  const sw = mkSw(label, true); setSw(sw.i, fx[k]); pn.box.style.display = fx[k] ? '' : 'none';
-  sw.i.onchange = () => { fx[k] = sw.i.checked; sw.i.setAttribute('aria-checked', String(fx[k])); pn.box.style.display = fx[k] ? '' : 'none'; try { GM_setValue('fx', JSON.stringify(fx)); } catch (e) {} fxTick(Date.now(), true); };
-  const cv = h('button', 'fxcv'); cv.type = 'button'; const nm = label.replace(/^\S+\s/, '');   // the v-shaped arrow inside the box: fold it up or open it again
-  const setC = c => { pn.box.classList.toggle('collapsed', c); cv.setAttribute('aria-expanded', String(!c)); cv.setAttribute('aria-label', (c ? 'Expand ' : 'Collapse ') + nm); cv.title = c ? 'Open' : 'Fold up'; };
-  setC(!!fxc[k]);
-  cv.onclick = () => { fxc[k] = !fxc[k]; setC(fxc[k]); try { GM_setValue('fxc', JSON.stringify(fxc)); } catch (e) {} };
-  pn.box.querySelector('.fxh').prepend(cv);
+  const sw = mkSw(label, true), nm = label.replace(/^\S+\s/, ''), inSw = mkSw('', true);   // the same switch twice: once in the top row and once inside the box itself
+  inSw.lab.querySelector('.sl').remove(); inSw.lab.title = 'Turn ' + nm + ' off'; inSw.i.setAttribute('aria-label', 'Turn ' + nm + ' off');
+  const apply = v => { fx[k] = !!v; setSw(sw.i, fx[k]); setSw(inSw.i, fx[k]); pn.box.style.display = fx[k] ? '' : 'none'; try { GM_setValue('fx', JSON.stringify(fx)); } catch (e) {} fxTick(Date.now(), true); };
+  setSw(sw.i, fx[k]); setSw(inSw.i, fx[k]); pn.box.style.display = fx[k] ? '' : 'none';
+  sw.i.onchange = () => apply(sw.i.checked); inSw.i.onchange = () => apply(inSw.i.checked);
+  pn.box.querySelector('.fxh').prepend(inSw.lab);
   fxRow.append(sw.lab);
 });
 const fxBox = h('div', 'fxbox', null, ...fxDefs.map(x => x[2].box));
+// ---------- Kanban: the flip side of the Time until box ----------
+const KCATS = [{ id: 'backlog', name: 'Backlog', color: '#8ea0d8' }, { id: 'progress', name: 'In progress', color: '#ffa51f' }, { id: 'proactive', name: 'Proactive', color: '#b07cff' }, { id: 'done', name: 'Done', color: '#34c98a' }];
+const kcat = id => KCATS.find(c => c.id === id) || KCATS[0];
+const kid = () => Math.random().toString(36).slice(2, 9);
+const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof s === 'string' && re.test(s);
+const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
+const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
+  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done })) });
+let kan = { cards: [], inc: false, rem: false, side: 'time' };
+try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time' }; } catch (e) {}
+const saveKan = () => { try { GM_setValue('kanban', JSON.stringify(kan, (k, v) => (k[0] === '_' ? undefined : v))); } catch (e) {} };
+// a date and a clock time in the chosen time zone, as a moment (cached on the card)
+let kzf = null, kzt = '';
+function zonedMs(ds, ts) {
+  const [y, m, d] = ds.split('-').map(Number), [H, M] = ts.split(':').map(Number);
+  if (kzt !== TZ || !kzf) { kzt = TZ; kzf = F({ year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' }); }
+  const off = ms => { const p = kzf.formatToParts(new Date(ms)), g = t => +p.find(x => x.type === t).value; return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - ms; };
+  const guess = Date.UTC(y, m - 1, d, H, M); return guess - off(guess - off(guess));
+}
+const kdue = c => { if (!c.due) return null; const key = c.due + ' ' + (c.time || '23:59') + TZ; if (c._k !== key) { c._k = key; c._ms = zonedMs(c.due, c.time || '23:59'); } return c._ms; };
+const kdate = ds => { const [y, m, d] = ds.split('-').map(Number); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(Date.UTC(y, m - 1, d, 12)); };
+const MONTH_ICON = ['❄️', '💝', '🍀', '🌷', '🌸', '☀️', '🎆', '🌻', '🍎', '🎃', '🍂', '🎄'];   // one emoji per month, Jan to Dec, shown beside the Kanban title
+const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayStr(Date.now()).slice(0, 4); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', ...(y !== cy ? { year: 'numeric' } : {}) }).format(Date.UTC(y, m - 1, 15)); };
+const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
+const kwarn = c => c.cat !== 'done' && c.assigned && c.assigned.slice(0, 7) < kdayStr(Date.now()).slice(0, 7);   // assigned in an earlier month than this one
+
+// card and checklist times become extra slots in the Time until list (only while that option is on)
+const kanSlots = new Map();
+const kanSlot = (id, time, title, col) => { const v = +time.slice(0, 2) * 60 + +time.slice(3); let s = kanSlots.get(id); if (!s || s.v !== v) { s = { v, kan: true, el: false }; kanSlots.set(id, s); } s.title = title; s.col = col; return s; };
+function kanDerived() {   // only the cards picked with the ⏱ button (or every card, if that switch is on)
+  const out = [];
+  kan.cards.forEach(c => {
+    if (c.cat === 'done' || !(kan.inc || c.tu)) return;
+    const col = kcat(c.cat).color;
+    if (c.time) out.push(kanSlot(c.id, c.time, '🗂 ' + c.title + (c.due ? ' · due ' + kdate(c.due) : ''), col));
+    c.items.forEach(it => { if (!it.done && it.time) out.push(kanSlot(c.id + ':' + it.id, it.time, '☑ ' + it.text + ' · ' + c.title, col)); });
+  });
+  return out;
+}
+
+// ---- the board
+const kMonth = h('div', 'kmonth'), flipBtn = h('button', 'add sm2 flipb', '🗂 Flip over to the Kanban ⟲'), flipBack = h('button', 'add sm2 flipb', '⟲ Flip back to Time until');
+const incSw = mkSw('Add every card to the Time until list (or pick single cards with their ⏱ button)', true); setSw(incSw.i, kan.inc);
+incSw.i.onchange = () => { kan.inc = incSw.i.checked; incSw.i.setAttribute('aria-checked', String(kan.inc)); saveKan(); build(); };
+function kTpl(catId) {   // the dashed template for a new card
+  const t = h('input'); t.type = 'text'; t.maxLength = 120; t.placeholder = '+ New card…'; t.setAttribute('aria-label', 'New card text, ' + kcat(catId).name);
+  const d = h('input'); d.type = 'date'; d.setAttribute('aria-label', 'Due date'); const tm = h('input'); tm.type = 'time'; tm.setAttribute('aria-label', 'Due time');
+  const add = h('button', 'add sm2', 'Add card');
+  const go = () => { const title = t.value.trim(); if (!title) { t.focus(); return; } kan.cards.push({ id: kid(), title, cat: catId, due: d.value || '', time: tm.value || '', assigned: kdayStr(Date.now()), items: [] }); t.value = ''; d.value = ''; tm.value = ''; saveKan(); kanRender(); if (kan.inc) build(); };
+  add.onclick = go; t.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  return h('div', 'ktpl', null, t, h('div', 'ktr', null, d, tm, add));
+}
+const kSecs = KCATS.map(cat => { const cnt = h('span', 'kcnt'), list = h('div', 'klist'), box = h('div', 'ksec', null, h('div', 'ksh', null, h('span', null, cat.name), cnt), list); box.style.setProperty('--kc', cat.color); box.setAttribute('role', 'group'); box.setAttribute('aria-label', cat.name); return { cat, cnt, list, box, tpl: kTpl(cat.id) }; });
+let kanRefs = [], kanDay = '', kanLast = 0;
+function kCard(c) {
+  const box = h('div', 'kcard'); box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
+  const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
+  box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov), h('div', 'kdt', c.due ? kdate(c.due) + ' · ' + (c.time ? ktime(c.time) : 'end of day') : 'No due date'));
+  if (pct != null) { const f = h('div', 'kfill'); f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
+  if (kwarn(c)) box.append(h('div', null, null, h('span', 'kwarn', '⚠ Assigned in ' + kmonthName(c.assigned))));
+  const tu = h('button', 'ktu', '⏱'); tu.type = 'button'; tu.classList.toggle('on', !!(c.tu || kan.inc));
+  tu.title = kan.inc ? 'In the Time until list (every card is added)' : c.tu ? 'In the Time until list: tap to remove it' : 'Add this card to the Time until list' + (c.time ? '' : ' (give it a due time first)'); tu.setAttribute('aria-label', tu.title); tu.setAttribute('aria-pressed', String(!!(c.tu || kan.inc)));
+  tu.onclick = e => { e.stopPropagation(); if (kan.inc) return; c.tu = !c.tu; saveKan(); kanRender(); build(); }; tu.addEventListener('keydown', e => e.stopPropagation()); box.append(tu);
+  box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
+  kanRefs.push({ c, dd, tmr, ov }); return box;
+}
+function kanRender() {
+  kanRefs = [];
+  kSecs.forEach(s => { const cards = kan.cards.filter(c => c.cat === s.cat.id).sort((a, b) => (kdue(a) == null ? 9e15 : kdue(a)) - (kdue(b) == null ? 9e15 : kdue(b))); s.cnt.textContent = cards.length; s.list.replaceChildren(...cards.map(kCard), s.tpl); });
+  kanTick(Date.now(), true);
+}
+function kanTick(n, force) {   // the days-left counters and their small 24-hour cycle timers
+  if (!force && n - kanLast < 1000) return; kanLast = n;
+  const dk = kdayStr(n);
+  if (dk !== kanDay) { kanDay = dk; kMonth.textContent = MONTH_ICON[+dk.slice(5, 7) - 1] + ' ' + new Intl.DateTimeFormat('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }).format(new Date(n)); if (!force) { kanRender(); return; } }
+  kanRefs.forEach(({ c, dd, tmr, ov }) => {
+    const ms = kdue(c);
+    if (c.cat === 'done') { dd.textContent = '✓ Done'; tmr.style.display = 'none'; ov.textContent = ''; return; }
+    if (ms == null) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; return; }
+    const rem = ms - n, a = Math.abs(rem), days = Math.floor(a / 864e5), cyc = Math.floor(a % 864e5 / 1000);
+    dd.textContent = (rem < 0 && days ? '−' : '') + days + (days === 1 ? ' day' : ' days'); tmr.style.display = '';
+    tmr.textContent = p2(Math.floor(cyc / 3600)) + ':' + p2(Math.floor(cyc % 3600 / 60)) + ':' + p2(cyc % 60);
+    ov.textContent = rem < 0 ? 'overdue' : c.due === dk ? 'due today' : ''; ov.className = 'kov' + (rem < 0 ? ' bad' : '');
+  });
+}
+
+// ---- the animated pop-up with a card's details and checklist
+let kmod = null;
+function closeKan() { if (!kmod) return; const m = kmod; kmod = null; m.classList.remove('open'); setTimeout(() => m.remove(), 260); }
+function openKan(id) {
+  const c = kan.cards.find(x => x.id === id); if (!c) return;
+  if (kmod) { kmod.remove(); kmod = null; }
+  const m = h('div', 'kmod'), pan = h('div', 'kpan'); m.append(pan); kmod = m; m.tabIndex = -1; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Card details');
+  const col = () => pan.style.setProperty('--kc', kcat(c.cat).color); col();
+  const sync = () => { saveKan(); kanRender(); build(); };
+  const ti = h('input', 'kin kti'); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
+  const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
+  const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
+  sel.onchange = () => { c.cat = sel.value; col(); sync(); renderList(); };   // the thin borders follow the category right away
+  const di = h('input', 'kin'); di.type = 'date'; di.value = c.due; di.onchange = () => { c.due = di.value; sync(); };
+  const tm = h('input', 'kin'); tm.type = 'time'; tm.value = c.time; tm.onchange = () => { c.time = tm.value; sync(); };
+  const ai = h('input', 'kin'); ai.type = 'date'; ai.value = c.assigned; ai.onchange = () => { if (ai.value) { c.assigned = ai.value; sync(); } };
+  const fld = (lab, el) => h('label', 'kfld', null, h('span', null, lab), el);
+  const pf = h('div', 'kfill'), pbar = h('div', 'kbar big', null, pf), ptxt = h('b', 'kpct'), psub = h('span', 'ksub'), list = h('div', 'kitems');
+  const remSw = mkSw('Only show the items still to do', true); setSw(remSw.i, kan.rem);
+  const tuSw = mkSw('Show this card in the Time until list', true); setSw(tuSw.i, !!(c.tu || kan.inc)); tuSw.i.disabled = kan.inc; tuSw.i.onchange = () => { c.tu = tuSw.i.checked; tuSw.i.setAttribute('aria-checked', String(c.tu)); sync(); };
+  remSw.i.onchange = () => { kan.rem = remSw.i.checked; remSw.i.setAttribute('aria-checked', String(kan.rem)); saveKan(); renderList(); };
+  const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  // a deleted checklist item: a warning with a brief Undo (newest first; each Undo puts one back where it was)
+  const undoItems = [], kundo = h('div', 'undo kundo'); kundo.setAttribute('role', 'status'); let kundoT = 0;
+  function showKundo() {
+    const last = undoItems[undoItems.length - 1];
+    if (!last) { kundo.style.display = 'none'; return; }
+    const b = h('button', null, 'Undo'); b.type = 'button'; b.setAttribute('aria-label', 'Undo: put back ' + last.it.text);
+    b.onclick = () => {
+      const r = undoItems.pop();
+      if (r && !c.items.includes(r.it)) { c.items.splice(Math.min(r.i, c.items.length), 0, r.it); sync(); renderList(); }
+      timeKundo(); showKundo();
+    };
+    const t = last.it.text.length > 40 ? last.it.text.slice(0, 40) + '…' : last.it.text;
+    kundo.replaceChildren(h('span', null, '⚠ Item deleted: “' + t + '”' + (undoItems.length > 1 ? ' (+' + (undoItems.length - 1) + ' more)' : '')), b);
+    kundo.style.display = 'flex';
+  }
+  function timeKundo() { clearTimeout(kundoT); if (undoItems.length) kundoT = setTimeout(() => { undoItems.length = 0; showKundo(); }, 8000); }   // brief: the warning fades after 8 seconds
+  function itemRow(it) {
+    const cb = h('input'); cb.type = 'checkbox'; cb.checked = it.done; cb.setAttribute('aria-label', 'Done: ' + it.text);
+    const tx = h('textarea', 'kin kx'); tx.rows = 1; tx.maxLength = 200; tx.value = it.text; tx.setAttribute('aria-label', 'Item text');
+    const rm = h('button', 'kdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove item: ' + it.text);
+    const due = h('button', 'kdueat' + (it.time ? '' : ' none'), it.time ? '⏰ due at ' + ktime(it.time) : '+ due time'); due.type = 'button';
+    due.setAttribute('aria-label', it.time ? 'Change due time, currently ' + ktime(it.time) : 'Add a due time');
+    const body = h('div', 'kbody', null, tx, due);
+    cb.onchange = () => { it.done = cb.checked; sync(); renderList(); };
+    tx.oninput = () => grow(tx);
+    tx.onchange = () => { it.text = tx.value.trim() || 'Item'; tx.value = it.text; sync(); };
+    tx.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); tx.blur(); } });
+    due.onclick = () => {   // swap the pill for a time picker
+      const ft = h('input', 'kin kitime'); ft.type = 'time'; ft.value = it.time; ft.setAttribute('aria-label', 'Item due time');
+      ft.onchange = () => { it.time = ft.value; sync(); renderList(); };
+      ft.onblur = () => renderList();
+      ft.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); renderList(); } else if (e.key === 'Enter') ft.blur(); });
+      body.replaceChild(ft, due); ft.focus();
+    };
+    const doRemove = () => { const i = c.items.indexOf(it); if (i < 0) return; undoItems.push({ it, i }); c.items = c.items.filter(z => z !== it); sync(); renderList(); showKundo(); timeKundo(); };
+    rm.onclick = () => {   // first tap only asks; nothing is removed until "Remove" (then the warning with Undo appears)
+      const yes = h('button', 'cf yes', 'Remove'), no = h('button', 'cf', 'Keep'); yes.type = no.type = 'button';
+      const conf = h('div', 'conf kconf', null, h('span', null, 'Remove this item?'), yes, no), parts = [cb, body, rm]; let timer = 0;
+      const back = () => { clearTimeout(timer); conf.remove(); parts.forEach(e => { e.style.display = ''; }); };
+      yes.onclick = () => { clearTimeout(timer); doRemove(); };
+      no.onclick = back;
+      parts.forEach(e => { e.style.display = 'none'; }); row.append(conf); timer = setTimeout(back, 6000); no.focus();
+    };
+    const row = h('div', 'kit' + (it.done ? ' done' : ''), null, cb, body, rm);
+    return row;
+  }
+  function renderList() {
+    const total = c.items.length, done = c.items.filter(i => i.done).length, pct = total ? Math.round(100 * done / total) : 0, shown = kan.rem ? c.items.filter(i => !i.done) : c.items;
+    pf.style.width = pct + '%'; ptxt.textContent = pct + '%'; psub.textContent = total ? done + ' of ' + total + ' done' : 'No items yet';
+    list.replaceChildren(...(shown.length ? shown.map(itemRow) : [h('p', 'knote', total ? 'Everything is checked off 🎉' : 'Add the first item below.')]));
+    requestAnimationFrame(() => list.querySelectorAll('.kx').forEach(grow));   // size every item to its full text
+  }
+  const addWrap = h('div', 'kaddwrap');
+  function showAddBtn() { const b = h('button', 'kaddbtn', '+ Add an item'); b.type = 'button'; b.onclick = showForm; addWrap.replaceChildren(b); }
+  function showForm() {   // the styled "new item" card with a due-at time
+    const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item');
+    const nt = h('input', 'kin kitime'); nt.type = 'time'; nt.setAttribute('aria-label', 'Due time for the new item');
+    const add = h('button', 'kfadd', 'Add'), cancel = h('button', 'kfcancel', '×'); add.type = cancel.type = 'button'; cancel.setAttribute('aria-label', 'Cancel');
+    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nt.value || '', done: false }); sync(); renderList(); showForm(); };   // the form reopens so you can add several in a row
+    add.onclick = go; cancel.onclick = showAddBtn;
+    ni.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.stopPropagation(); showAddBtn(); } });
+    addWrap.replaceChildren(h('div', 'kform', null, ni, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt), h('div', 'kfact', null, add, cancel)));
+    ni.focus();
+  }
+  showAddBtn();
+  const del = h('button', 'add sm2', 'Delete card'), yes = h('button', 'cf yes', 'Delete'), no = h('button', 'cf', 'Keep');
+  const conf = h('div', 'conf', null, h('span', null, 'Delete this card and its checklist?'), yes, no); conf.style.display = 'none'; del.style.marginTop = '12px';
+  del.onclick = () => { del.style.display = 'none'; conf.style.display = 'flex'; }; no.onclick = () => { conf.style.display = 'none'; del.style.display = ''; };
+  yes.onclick = () => { kan.cards = kan.cards.filter(z => z !== c); closeKan(); sync(); };
+  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Due date', di), fld('Due time', tm), fld('Assigned', ai)),
+    tuSw.lab, remSw.lab, h('div', 'kchead', null, h('span', null, '☑ Checklist'), psub), h('div', 'kpr', null, ptxt, pbar), list, kundo, addWrap, del, conf);
+  renderList();
+  m.addEventListener('keydown', e => { if (e.key === 'Escape') closeKan(); });
+  m.addEventListener('pointerdown', e => { if (e.target === m) closeKan(); });
+  shell.append(m); m.focus(); requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('open')));
+}
+
+// ---- the two faces of the box
+const timeSec = h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), flipBtn, planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl);
+const kanSec = h('section', 'g kan', null, flipBack, kMonth, h('p', 'note', 'Tap a card to open its checklist.'), h('div', 'kopt', null, incSw.lab), ...kSecs.map(s => s.box)); kanSec.style.display = 'none';
+const flipBox = h('div', 'flip', null, timeSec, kanSec);
+function flipTo(side, instant) {   // the box turns over like a card
+  kan.side = side; saveKan();
+  const from = side === 'kanban' ? timeSec : kanSec, to = side === 'kanban' ? kanSec : timeSec;
+  if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { from.style.display = 'none'; to.style.display = ''; return; }
+  from.classList.add('fout');
+  setTimeout(() => { from.style.display = 'none'; from.classList.remove('fout'); to.style.display = ''; to.classList.add('fin'); setTimeout(() => to.classList.remove('fin'), 320); }, 220);
+}
+flipBtn.onclick = () => flipTo('kanban'); flipBack.onclick = () => flipTo('time');
+function kanInit() { kanRender(); if (kan.side === 'kanban') flipTo('kanban', true); }
 const wrap = h('div', 'wrap', null,
   h('section', 'g c', null, seg, cTime, cDate, cBadge),
   locCard,
   h('section', 'g', null, phTitle,
     h('div', 'phs', null, ...phEls.map(x => x.box)), editor, h('div', 'bar', null, fill), h('div', 'row', null, phName, phLeft), wakeNote, fxRow, fxBox),
-  h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl),
+  flipBox,
   alarmCard,
   pomoCard,
   zoneKey,
@@ -907,7 +1192,7 @@ function showTip(el, text) {
 function hideTip() { tip.classList.toggle('on', false); }
 function build() {
   tracked.sort((a, b) => a.v - b.v); rows = []; trashRows = [];
-  const list = [...tracked.map(t => ({ t })), ...(planning ? trash.map(t => ({ t, del: true })) : [])].sort((a, b) => a.t.v - b.t.v);
+  const list = [...tracked.map(t => ({ t })), ...kanDerived().map(t => ({ t })), ...(planning ? trash.map(t => ({ t, del: true })) : [])].sort((a, b) => a.t.v - b.t.v);
   if (!list.length) { tl.replaceChildren(h('p', 'note', 'Nothing tracked yet.')); return; }
   tl.replaceChildren(...list.map(({ t, del }) => {
     if (del) return trashRow(t);
@@ -916,7 +1201,7 @@ function build() {
     x.setAttribute('aria-label', 'Remove ' + (t.title || l));
     const ok = h('button', 'x ok', '✓'); ok.title = 'Got it: hides this check, elapsed time keeps counting'; ok.setAttribute('aria-label', 'Done with ' + l); ok.style.display = 'none';
     // the time with its title under it; long titles are shortened with an ellipsis and hovering shows them in full
-    const tsp = planning ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60))] : [])), lblBox = h('div', 'tlb', null, tr1, tt);
+    const tsp = planning && !t.kan ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60))] : [])), lblBox = h('div', 'tlb', null, tr1, tt);
     const showTitle = () => { tt.textContent = t.title || 'add a title'; tt.className = 'tt' + (t.title ? '' : ' empty'); };
     showTitle();
     lblBox.addEventListener('mouseenter', () => { if (t.title) showTip(lblBox, t.title); });
@@ -946,6 +1231,7 @@ function build() {
       no.onclick = cancel;
       head.style.display = 'none'; row.insertBefore(conf, head); timer = setTimeout(cancel, 5000);
     };
+    if (t.kan) { x.textContent = '🗂'; x.title = 'From your Kanban board: tap to open it'; x.setAttribute('aria-label', 'Open the Kanban board'); x.onclick = () => flipTo('kanban'); tt.onclick = null; tt.classList.add('nokan'); row.classList.add('tkan'); row.style.setProperty('--kc', t.col || '#8ea0d8'); }   // a slot that comes from the Kanban
     ok.onclick = () => { const e = rows.find(z => z.t === t); if (e && e.os) { t.ack = e.os; save(); } };   // acknowledge: back to the normal countdown
     rows.push({ t, cd, cdMain, cdSup, f, row, ok, chips, chipRow, tr1, chipT: 0, os: 0, last: NaN, p: 0, first: true });
     return row;
@@ -1407,6 +1693,7 @@ function tick() {
   hourRows.forEach((r, k) => { r.l.textContent = hl((H + k + 1) % 24, 0); r.v.textContent = fmt(3600 * (k + 1) - (M * 60 + S)); });
   chips(H);
   fxTick(n);
+  kanTick(n);
   pmTick(n);
   alarmTick(n);
   if (pendingSounds.length && AC && AC.state === 'running') flushPending();
@@ -1583,7 +1870,7 @@ locGeo.onclick = () => {
   }).catch(() => { locMsg.textContent = 'Could not find your location. Pick your time zone above instead.'; });
 };
 renderLoc();
-pmRender(); renderZone(); build(); applyMode(mode, false); place();
+pmRender(); renderZone(); build(); applyMode(mode, false); place(); kanInit();
 (document.body || document.documentElement).appendChild(panel);
 unlockAudio(true); setInterval(tick, 250);
 setInterval(() => { if (!panel.isConnected) (document.body || document.documentElement).appendChild(panel); }, 2000);
