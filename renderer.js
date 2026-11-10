@@ -468,6 +468,9 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .ktu.on{opacity:1;background:var(--kc);border-color:var(--kc)}
 .kcard .kt{padding-right:30px}
 .tr.tkan{border:1px solid var(--kc);border-radius:10px;padding:8px 9px 4px;margin:7px 0}
+.pun{flex:none;width:26px;height:26px;padding:0;border-radius:8px;background:rgba(255,210,122,.2);border:1px solid rgba(255,210,122,.6);color:#ffd27a;font-weight:700;font-size:15px;text-shadow:none}
+.indrow{margin:0 0 10px}
+.noind .trkr,.noind .trl{display:none!important}   /* only the Time until box: the Day and night boxes keep their LIVE badges */
 .synct{width:100%;margin:8px 0;padding:8px;min-height:84px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:16px/1.3 ui-monospace,Consolas,monospace;word-break:break-all;resize:vertical}
 .syn .ctl{flex-wrap:wrap}
 .kchead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:12px 0 2px;font-weight:700;font-size:14px}
@@ -580,7 +583,7 @@ function setPlanning(on, revert) {
   if (on) planSnap = JSON.stringify(tracked);
   else {
     if (revert && planSnap) { try { tracked = JSON.parse(planSnap); } catch (e) {} }   // every edit, deletion and addition made while planning is undone
-    else tracked.forEach(t => { delete t.prev; });                                       // switching off normally clears the "was" notes
+    else tracked.forEach(t => { delete t.prev; delete t.hist; });                                       // switching off normally clears the "was" notes
     trash = []; planSnap = null; save();
   }
   try { GM_setValue('plan', planning); GM_setValue('planSnap', planSnap); } catch (e) {}
@@ -602,7 +605,7 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
@@ -650,6 +653,7 @@ addEventListener('keydown', e => {
 addEventListener('pointerdown', e => { if (scRec && !e.composedPath().includes(scBtn[scRec])) scStop(); }, true);
 if (skc && skc.getShortcuts) skc.getShortcuts().then(s => { scState = s; scShow(); });
 if (skc && skc.onTheme) skc.onTheme(() => applyMode(mode === 'sky' ? 'grain' : 'sky', true));   // the Sky / Black keybind
+if (skc && skc.onInd) skc.onInd(() => applyInd(!ind));   // the dots & LIVE badges keybind
 if (skc && skc.onFlip) skc.onFlip(() => flipTo(kan.side === 'kanban' ? 'time' : 'kanban'));   // the Time until / Kanban keybind
 
 // ---------- pomodoro card (focus sessions of up to 7 pomodoros, with per-day averages) ----------
@@ -1267,7 +1271,12 @@ function openKan(id) {
 }
 
 // ---- the two faces of the box
-const timeSec = h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), flipBtn, planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl);
+// ---------- switch the dots and LIVE badges on or off (for a calmer view) ----------
+let ind = true; try { ind = GM_getValue('ind', true) !== false; } catch (e) {}
+const indSw = mkSw('Show the dots & LIVE badges (Time until)', true), indRow = h('div', 'indrow', null, indSw.lab); setSw(indSw.i, ind);
+function applyInd(v) { ind = !!v; setSw(indSw.i, ind); shell.classList.toggle('noind', !ind); try { GM_setValue('ind', ind); } catch (e) {} }
+indSw.i.onchange = () => applyInd(indSw.i.checked);
+const timeSec = h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), flipBtn, indRow, planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl);
 const kanSec = h('section', 'g kan', null, flipBack, kMonth, h('p', 'note', 'Tap a card to open its checklist.'), h('div', 'kopt', null, incSw.lab), ...kSecs.map(s => s.box)); kanSec.style.display = 'none';
 const flipBox = h('div', 'flip', null, timeSec, kanSec);
 function flipTo(side, instant) {   // the box turns over like a card
@@ -1379,13 +1388,19 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
     const q = i.value.split(':').map(Number);
     if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
     const v = q[0] * 60 + q[1];
-    t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
+    (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
     save(); build();
   };
   i.addEventListener('input', sync); i.addEventListener('change', sync);
   i.addEventListener('keydown', e => { if (e.key === 'Enter') { sync(); apply(); } else if (e.key === 'Escape') { i.value = cur; sync(); } });
   ok.onclick = apply;
-  return h('span', 'pedit', null, i, ok);
+  if (t.prev != null && !(t.hist && t.hist.length)) t.hist = [t.prev];   // times saved before undo existed
+  const un = h('button', 'pun', '↶'); un.type = 'button';
+  if (t.hist && t.hist.length) {   // each press steps back one edit; the "was" time then shows the one before that
+    const back = t.hist[t.hist.length - 1]; un.title = 'Undo the last change and go back to ' + hl(Math.floor(back / 60), back % 60); un.setAttribute('aria-label', un.title);
+    un.onclick = () => { t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+  } else un.style.display = 'none';
+  return h('span', 'pedit', null, i, ok, un);
 }
 function trashRow(t) {   // the dashed box that stands where a deleted countdown was
   const l = hl(Math.floor(t.v / 60), t.v % 60), live = h('b'), undo = h('button', null, 'Undo');
@@ -2001,7 +2016,7 @@ locGeo.onclick = () => {
   }).catch(() => { locMsg.textContent = 'Could not find your location. Pick your time zone above instead.'; });
 };
 renderLoc();
-pmRender(); renderZone(); build(); applyMode(mode, false); place(); kanInit();
+pmRender(); renderZone(); build(); applyMode(mode, false); place(); kanInit(); applyInd(ind);
 (document.body || document.documentElement).appendChild(panel);
 unlockAudio(true); setInterval(tick, 250);
 setInterval(() => { if (!panel.isConnected) (document.body || document.documentElement).appendChild(panel); }, 2000);
