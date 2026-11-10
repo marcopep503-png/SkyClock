@@ -442,8 +442,8 @@ const alarmCard = h('section', 'g', null, h('div', 'ttl', 'Alarm timer'), h('div
 const phName = h('span'), phLeft = h('span'), fill = h('div', 'fill');
 const inp = h('input'); inp.type = 'time'; inp.setAttribute('aria-label', 'Custom time');
 const addBtn = h('button', 'add', 'Add'), chipBox = h('div', 'chips'), tl = h('div'), undoBar = h('div', 'undo');
-const planSw = mkSw('Planning'); planSw.lab.classList.add('plan'); setSw(planSw.i, planning);
-planSw.lab.title = 'Planning mode: change the time of a countdown, and keep an Undo box for every deleted countdown until you switch this off';
+const planSw = mkSw('Re-planning'); planSw.lab.classList.add('plan'); setSw(planSw.i, planning);
+planSw.lab.title = 'Re-planning mode: change the time of a countdown, and keep an Undo box for every deleted countdown until you switch this off';
 function setPlanning(on, revert) {
   planning = on; setSw(planSw.i, on);
   if (on) planSnap = JSON.stringify(tracked);
@@ -455,8 +455,8 @@ function setPlanning(on, revert) {
   try { GM_setValue('plan', planning); GM_setValue('planSnap', planSnap); } catch (e) {}
   saveTrash(); planBar.style.display = on ? '' : 'none'; build();
 }
-const planBtn = h('button', 'add sm2', 'Undo all changes & exit planning'), planYes = h('button', 'cf yes', 'Undo all'), planNo = h('button', 'cf', 'Keep planning');
-const planConf = h('div', 'conf big', null, h('span', null, 'Undo every change made in planning mode and exit it?'), planYes, planNo); planConf.style.display = 'none';
+const planBtn = h('button', 'add sm2', 'Undo all changes & exit re-planning'), planYes = h('button', 'cf yes', 'Undo all'), planNo = h('button', 'cf', 'Keep re-planning');
+const planConf = h('div', 'conf big', null, h('span', null, 'Undo every change made in re-planning mode and exit it?'), planYes, planNo); planConf.style.display = 'none';
 const planBar = h('div', null, null, planBtn, planConf); planBar.style.margin = '0 0 10px'; planBar.style.display = planning ? '' : 'none';
 planBtn.onclick = () => { planBtn.style.display = 'none'; planConf.style.display = 'flex'; };
 planNo.onclick = () => { planConf.style.display = 'none'; planBtn.style.display = ''; };
@@ -962,7 +962,6 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
     const q = i.value.split(':').map(Number);
     if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
     const v = q[0] * 60 + q[1];
-    if (tracked.some(z => z !== t && z.v === v && (z.title || '') === (t.title || ''))) { build(); return; }   // same time and title already exists
     t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
     save(); build();
   };
@@ -1048,7 +1047,7 @@ alCancel.onclick = endAlarm; alDone.onclick = endAlarm; alAgain.onclick = () => 
 
 function addT(v) {
   const title = tIn.value.trim();
-  if (tracked.some(t => t.v === v && (t.title || '') === title)) return;
+  if (!planning && tracked.some(t => t.v === v && (t.title || '') === title)) return;   // duplicates are allowed while re-planning
   tracked.push({ v, title, el: false }); tIn.value = ''; save(); build();
 }
 addBtn.onclick = () => { if (!inp.value) return; const q = inp.value.split(':').map(Number); addT(q[0] * 60 + q[1]); };
