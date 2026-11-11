@@ -1026,10 +1026,10 @@ const KTAGS = [["🏠 Home", ["🧹 Cleaning", "🧺 Laundry", "🍽️ Dishes",
 const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof s === 'string' && re.test(s);
 const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
 const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
-  mode: ['date', 'interval', 'none'].includes(c.mode) ? c.mode : '', rep: !!c.rep, start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
-  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done })) });
-let kan = { cards: [], inc: false, rem: false, side: 'time' };
-try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time' }; } catch (e) {}
+  mode: ['date', 'interval', 'none'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
+  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
+let kan = { cards: [], inc: false, rem: false, side: 'time', sp: {} };   // sp: the saved progress-bar spans of Kanban times on the Time until side, kept with the cards
+try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time', sp: v.sp && typeof v.sp === 'object' && !Array.isArray(v.sp) ? v.sp : {} }; } catch (e) {}
 const saveKan = () => { try { GM_setValue('kanban', JSON.stringify(kan, (k, v) => (k[0] === '_' ? undefined : v))); } catch (e) {} };
 // a date and a clock time in the chosen time zone, as a moment (cached on the card)
 let kzf = null, kzt = '';
@@ -1044,7 +1044,7 @@ const kmode = c => c.mode || (c.due ? 'date' : c.cat === 'proactive' ? 'none' : 
 const kdd = c => { const m = kmode(c); return m === 'interval' ? c.end : m === 'date' ? c.due : ''; };   // the date it is due: the end of its interval, or its due date
 const kdue = (c, n) => { const d = kdd(c); if (!d) { if (c.time && kmode(c) === 'date') { const now = n == null ? Date.now() : n, td = kdayStr(now); let ms = zonedMs(td, c.time); if (ms <= now) ms = zonedMs(kaddDays(td, 1), c.time); return ms; } return null; }   // a due time with no due date repeats every day: it counts down to the next time that clock time comes round
   const key = d + ' ' + (c.time || '23:59') + TZ; if (c._k !== key) { c._k = key; c._ms = zonedMs(d, c.time || '23:59'); } return c._ms; };
-const kam = c => { const key = c.assigned + TZ; if (c._ak !== key) { c._ak = key; c._am = zonedMs(c.assigned, '00:00'); } return c._am; };   // when the card was made
+const kam = c => { const key = (c.rst || c.assigned) + TZ; if (c._ak !== key) { c._ak = key; c._am = zonedMs(c.rst || c.assigned, '00:00'); } return c._am; };   // when the card was made
 const kst = c => { const key = c.start + TZ; if (c._sk !== key) { c._sk = key; c._sm = zonedMs(c.start, '00:00'); } return c._sm; };   // when its interval starts
 const kdn = ds => { const [y, m, d] = ds.split('-').map(Number); return Date.UTC(y, m - 1, d, 12); };
 const kaddDays = (ds, n) => { const t = new Date(kdn(ds) + n * 864e5); return t.getUTCFullYear() + '-' + p2(t.getUTCMonth() + 1) + '-' + p2(t.getUTCDate()); };
@@ -1060,13 +1060,29 @@ const kdatew = ds => { const [y, m, d] = ds.split('-').map(Number); return new I
 const MONTH_ICON = ['❄️', '💝', '🍀', '🌷', '🌸', '☀️', '🎆', '🌻', '🍎', '🎃', '🍂', '🎄'];   // one emoji per month, Jan to Dec, shown beside the Kanban title
 const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayStr(Date.now()).slice(0, 4); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', ...(y !== cy ? { year: 'numeric' } : {}) }).format(Date.UTC(y, m - 1, 15)); };
 const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
+let kanDirty = false;
 function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight up to its due time; it restarts at midnight, so it tracks again the next day
-  const it = x.it;
-  if (it.done) { x.f.style.width = '100%'; x.rem.textContent = '✓ done'; return; }
-  const due = zonedMs(dk, it.time), st = zonedMs(dk, '00:00');
-  if (n >= due) { x.f.style.width = '100%'; x.rem.textContent = 'Time passed · overdue ' + fmt(Math.floor((n - due) / 1000)) + ' · tracks again tomorrow'; return; }
-  x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (n - st) / (due - st))) : 100) + '%';
-  x.rem.textContent = fmt(Math.round((due - n) / 1000)) + ' left today';
+  const it = x.it; let nn = n, dd = dk;
+  if (it.done) { if (!it.dat) { it.dat = n; kanDirty = true; } nn = it.dat; dd = kdayStr(nn); }   // a checked item is frozen at the moment it was checked; unchecking it lets it jump back to where it would be now
+  const due = zonedMs(dd, it.time), st = zonedMs(dd, '00:00'), pre = it.done ? '✓ done · ' : '';
+  if (nn >= due) { x.f.style.width = '100%'; x.rem.textContent = pre + 'Time passed · overdue ' + fmt(Math.floor((nn - due) / 1000)) + (it.done ? '' : ' · tracks again tomorrow'); return; }
+  x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (nn - st) / (due - st))) : 100) + '%';
+  x.rem.textContent = pre + fmt(Math.round((due - nn) / 1000)) + (it.done ? ' left when checked' : ' left today');
+}
+const kFrozen = c => c.cat === 'done' || (c.items.length > 0 && c.items.every(i => i.done));   // checked off as complete, or its checklist is 100%: the main countdown stands still
+function kBoundary(c) {   // when a frozen card starts over by itself: only a card with no due date (each day) or a repeating interval card. Every other card stays frozen until you uncheck it.
+  if (kmode(c) === 'interval') return c.rep && c.start && c.end ? kdue(c) : 0;
+  if (kdd(c)) return 0;
+  const d = kdayStr(c.fz);
+  if (c.time) { const b = zonedMs(d, c.time); return b > c.fz ? b : zonedMs(kaddDays(d, 1), c.time); }
+  return zonedMs(kaddDays(d, 1), '00:00');
+}
+function kReset(c, n) {   // unchecks the card and its checklist and starts the countdown again from the top
+  if (!c.fz) return false;
+  const b = kBoundary(c); if (!b || b <= c.fz || n < b) return false;
+  c.items.forEach(i => { i.done = false; i.dat = 0; });
+  if (c.cat === 'done') c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog';
+  c.fz = 0; c.rst = kdayStr(n); return true;
 }
 const knext = (c, n) => { const td = kdayStr(n); let ms = zonedMs(td, c.time); if (ms <= n) ms = zonedMs(kaddDays(td, 1), c.time); return ms; };   // the next time this clock time comes round
 const kdtText = c => {   // the small line under a card's title
@@ -1080,16 +1096,16 @@ const kwarn = c => c.cat !== 'done' && c.assigned && c.assigned.slice(0, 7) < kd
 // card and checklist times become extra slots in the Time until list (only while that option is on)
 const kanSlots = new Map();
 // the progress bar of a Kanban time on the Time until side keeps its place across refreshes and restarts: its span and start are saved
-let kanSpan = {}; try { const v = JSON.parse(GM_getValue('kanspan', '{}')); if (v && typeof v === 'object') kanSpan = v; } catch (e) {}
-const saveSlot = t => { if (!t.kan) { save(); return; } kanSpan[t.id] = { v: t.v, span: t.span, dur0: t.dur0, armed: t.armed }; try { GM_setValue('kanspan', JSON.stringify(kanSpan)); } catch (e) {} };
+const kanSpan = kan.sp; try { const v = JSON.parse(GM_getValue('kanspan', '{}')); if (v && typeof v === 'object') Object.keys(v).forEach(k => { if (!kanSpan[k]) kanSpan[k] = v[k]; }); } catch (e) {}   // (an earlier version kept these in their own entry)
+const saveSlot = t => { if (!t.kan) { save(); return; } kanSpan[t.id] = { v: t.v, span: t.span, dur0: t.dur0, armed: t.armed }; saveKan(); };
 const kanSlot = (id, time, title, col) => { const v = +time.slice(0, 2) * 60 + +time.slice(3); let s = kanSlots.get(id); if (!s || s.v !== v) { s = { v, kan: true, el: false, id }; const st = kanSpan[id]; if (st && st.v === v && st.span) { s.span = st.span; s.dur0 = st.dur0; s.armed = st.armed; } kanSlots.set(id, s); } s.title = title; s.col = col; return s; };
 function kanDerived() {   // only the cards picked with the ⏱ button (or every card, if that switch is on)
   const out = [];
   kan.cards.forEach(c => {
-    if (c.cat === 'done' || !(kan.inc || c.tu)) return;
+    if (!(kan.inc || c.tu)) return;
     const col = kcat(c.cat).color;
-    if (c.time) out.push(kanSlot(c.id, c.time, '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdatew(kdd(c)) : ''), col));
-    c.items.forEach(it => { if (!it.done && it.time) out.push(kanSlot(c.id + ':' + it.id, it.time, '☑ ' + it.text + ' · ' + c.title, col)); });
+    if (c.time) { const sl = kanSlot(c.id, c.time, (c.fz ? '✓ ' : '') + '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdatew(kdd(c)) : ''), col); sl.frz = c.fz || 0; out.push(sl); }   // frz: its countdown stands still while the card is complete
+    c.items.forEach(it => { if (!it.time) return; if (it.done && !it.dat) it.dat = Date.now(); const sl = kanSlot(c.id + ':' + it.id, it.time, (it.done ? '✓ ' : '☑ ') + it.text + ' · ' + c.title, col); sl.frz = it.done ? it.dat : 0; out.push(sl); });   // a checked item or a completed card stays listed with its bar frozen where it was completed
   });
   return out;
 }
@@ -1143,29 +1159,36 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
   if (!force && n - kanLast < 1000) return; kanLast = n;
   const dk = kdayStr(n);
   if (dk !== kanDay) { kanDay = dk; kMonth.textContent = MONTH_ICON[+dk.slice(5, 7) - 1] + ' ' + new Intl.DateTimeFormat('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }).format(new Date(n)); if (!force) { kanRender(); return; } }
-  let rolled = false;
+  let rolled = false, fzChanged = false, regroup = false; kanDirty = false;
+  kanRefs.forEach(({ c }) => {   // first: a card with no due date (or a repeating one) starts over by itself; then freeze or unfreeze each card's main countdown
+    if (kReset(c, n)) { regroup = true; rolled = true; }
+    const fr = kFrozen(c);
+    if (fr && !c.fz) { c.fz = n; rolled = true; fzChanged = true; } else if (!fr && c.fz) { c.fz = 0; rolled = true; fzChanged = true; }
+  });
+  if (regroup) { saveKan(); kanRender(); build(); return; }
   kanRefs.forEach(r => r.its.forEach(x => kitUpd(x, n, dk))); kanPop.forEach(x => kitUpd(x, n, dk));
   kanRefs.forEach(({ c, dd, tmr, ov, elp, dt, ip }) => {
     if (kRoll(c, n)) rolled = true;
-    dt.textContent = kdtText(c); ip.box.style.display = 'none';
-    const ms = kdue(c);
-    if (c.cat === 'done') { dd.textContent = '✓ Done'; tmr.style.display = 'none'; ov.textContent = ''; return; }
+    const nF = c.fz || n, dF = kdayStr(nF);   // a complete card shows its countdown as it was when it was completed
+    dt.textContent = kdtText(c) + (c.fz ? ' · ' + (c.cat === 'done' ? '✓ Done · frozen' : '☑ 100% · frozen') : ''); ip.box.style.display = 'none';
+    const ms = kdue(c, nF);
     let el = '';   // due daily at a clock time with no due date: once today's time has passed, the elapsed time is added to the red text (the countdown to the next one keeps running)
-    if (!kdd(c) && c.time && kmode(c) !== 'interval') { const tm = zonedMs(dk, c.time); if (n >= tm) el = 'overdue ' + fmt(Math.floor((n - tm) / 1000)) + ' since ' + ktime(c.time); }
+    if (!kdd(c) && c.time && kmode(c) !== 'interval') { const tm = zonedMs(dF, c.time); if (nF >= tm) el = 'overdue ' + fmt(Math.floor((nF - tm) / 1000)) + ' since ' + ktime(c.time); }
     elp.textContent = el;   // the red elapsed text sits beside the countdown, outside its border
     if (kmode(c) === 'none') {   // no due date: it counts up from when the card was made
-      if (c.time) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, n) - n) / 1000)) + ''; ov.className = 'kov kdi'; return; }   // a due time: the "due in" text replaces the timer
-      kOver(c, n, dd, tmr, ov); return;
+      if (c.time) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, nF) - nF) / 1000)) + ''; ov.className = 'kov kdi'; return; }   // a due time: the "due in" text replaces the timer
+      kOver(c, nF, dd, tmr, ov); return;
     }
-    if (ms == null) { if (kmode(c) === 'date') kOver(c, n, dd, tmr, ov); else { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; } return; }
-    const rem = ms - n, a = Math.abs(rem), days = Math.floor(a / 864e5), cyc = Math.floor(a % 864e5 / 1000);
+    if (ms == null) { if (kmode(c) === 'date') kOver(c, nF, dd, tmr, ov); else { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = ''; } return; }
+    const rem = ms - nF, a = Math.abs(rem), days = Math.floor(a / 864e5), cyc = Math.floor(a % 864e5 / 1000);
     dd.textContent = (rem < 0 && days ? '−' : '') + days + (days === 1 ? ' day' : ' days'); tmr.style.display = '';
     tmr.textContent = p2(Math.floor(cyc / 3600)) + ':' + p2(Math.floor(cyc % 3600 / 60)) + ':' + p2(cyc % 60);
-    ov.textContent = rem < 0 ? 'overdue' : kdd(c) === dk ? 'due today' : !kdd(c) ? 'daily' : ''; ov.className = 'kov' + (rem < 0 ? ' bad' : '');
+    ov.textContent = rem < 0 ? 'overdue' : kdd(c) === dF ? 'due today' : !kdd(c) ? 'daily' : ''; ov.className = 'kov' + (rem < 0 ? ' bad' : '');
     const st = kmode(c) === 'interval' && c.start ? kst(c) : null;
-    if (st != null && ms > st) { const fr = Math.max(0, Math.min(1, (n - st) / (ms - st))); ip.box.style.display = ''; ip.f.style.width = (fr * 100) + '%'; ip.t.textContent = Math.round(fr * 100) + '% of this interval'; }
+    if (st != null && ms > st) { const fr = Math.max(0, Math.min(1, (nF - st) / (ms - st))); ip.box.style.display = ''; ip.f.style.width = (fr * 100) + '%'; ip.t.textContent = Math.round(fr * 100) + '% of this interval'; }
   });
-  if (rolled) saveKan();
+  if (rolled || kanDirty) saveKan();
+  if (fzChanged) build();   // the Time until rows pick up the frozen / running state
 }
 
 // ---- the animated pop-up with a card's details and checklist
@@ -1180,7 +1203,7 @@ function openKan(id) {
   const ti = h('input', 'kin kti'); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
   const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
   const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
-  sel.onchange = () => { c.cat = sel.value; col(); sync(); renderList(); showMode(); };   // the thin borders follow the category right away
+  sel.onchange = () => { if (sel.value === 'done' && c.cat !== 'done') c.pcat = c.cat; c.cat = sel.value; col(); sync(); renderList(); showMode(); };   // the thin borders follow the category right away
   const di = h('input', 'kin'); di.type = 'date'; di.value = c.due; di.onchange = () => { c.due = di.value; sync(); showMode(); };
   const tm = h('input', 'kin'); tm.type = 'time'; tm.value = c.time; tm.onchange = () => { c.time = tm.value; sync(); };
   const ai = h('input', 'kin'); ai.type = 'date'; ai.value = c.assigned; ai.onchange = () => { if (ai.value) { c.assigned = ai.value; sync(); } };
@@ -1244,7 +1267,7 @@ function openKan(id) {
     due.setAttribute('aria-label', it.time ? 'Change due time, currently ' + ktime(it.time) : 'Add a due time');
     const bf = h('div', 'kfill'), brem = h('span', 'kclr'), bw = h('div', 'kitb', null, h('div', 'kbar', null, bf), brem);   // the due time with its progress bar beside it
     const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time ? [bw] : []))); if (it.time) kanPop.push({ it, f: bf, rem: brem });
-    cb.onchange = () => { it.done = cb.checked; sync(); renderList(); };
+    cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; sync(); renderList(); };
     tx.oninput = () => grow(tx);
     tx.onchange = () => { it.text = tx.value.trim() || 'Item'; tx.value = it.text; sync(); };
     tx.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); tx.blur(); } });
@@ -1888,17 +1911,17 @@ function tick() {
   if (pendingSounds.length && AC && AC.state === 'running') flushPending();
   trashTick(n, sod);
   rows.forEach(r => {
-    const t = r.t, nowS = Math.floor(n / 1000);
-    let d = t.v * 60 - sod; if (d < 0) d += 86400;
+    const t = r.t, fz = t.kan && t.frz ? t.frz : 0, nx = fz || n, sx = fz ? sodOf(fz) : sod, nowS = Math.floor(nx / 1000);   // a complete Kanban card's row stands still at the moment it was completed
+    let d = t.v * 60 - sx; if (d < 0) d += 86400;
     const since = (86400 - d) % 86400, os = nowS - since;          // when this clock time last came round, in whole seconds
-    const wrapped = !isNaN(r.last) && d > r.last + 5;
+    const wrapped = !fz && !isNaN(r.last) && d > r.last + 5;
     if (wrapped) { beep(2); notify('Time reached', (t.title ? t.title + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60)); }
     if (!t.armed) { t.armed = n; saveSlot(t); }
     if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; saveSlot(t); }
     else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; saveSlot(t); }
     const fin = !!t.el && (os * 1000 >= t.armed - 1000 || since <= sod);   // elapsed switch on: count up from when it went off (looking back as far as earlier today)
-    r.last = d; r.os = fin ? os : 0; r.ok.style.display = fin && t.ack !== os ? '' : 'none';
-    if (!r.chipT || n - r.chipT >= 1000) { r.chipT = n; rowChips(r, n + d * 1000, n, t.v * 60 < sod); }   // chosen time vs daylight / golden / blue windows   // confirming hides the check; the elapsed time keeps counting until the Elapsed switch is turned off
+    r.last = fz ? NaN : d; r.os = fin ? os : 0; r.ok.style.display = fin && t.ack !== os ? '' : 'none';
+    if (!r.chipT || n - r.chipT >= 1000) { r.chipT = n; rowChips(r, nx + d * 1000, nx, t.v * 60 < sx); }   // chosen time vs daylight / golden / blue windows   // confirming hides the check; the elapsed time keeps counting until the Elapsed switch is turned off
     if (fin) {
       const lap = nowS - os, allot = os * 1000 >= t.armed - 1000 ? (t.dur0 || t.span) : 0, over = allot > 0 && lap > allot;   // red only if you gave it a length to pass
       r.cdMain.textContent = '-' + (lap < 60 ? lap + 's' : fmt(lap));
