@@ -33,14 +33,16 @@ let TZ = loc.tz, LAT = loc.lat, LON = loc.lon;
 const R = Math.PI / 180;
 const locName = () => (loc.id === 'gps' ? 'your location' : loc.city);   // shown in the Day and night titles (the city a lookup guesses is only approximate)
 const F = o => new Intl.DateTimeFormat('en-US', { timeZone: TZ, ...o });
+let H24 = false; try { H24 = GM_getValue('h24', false) === true; } catch (e) {}   // 24-hour (military) time, saved
+const HC = () => (H24 ? { hourCycle: 'h23' } : {});
 let tf, df, hf, ymd, clk, wkf, pmFmtDay, tzn;
 const mkFmts = () => {   // rebuilt whenever you change location
-  tf = F({ hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+  tf = H24 ? F({ hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }) : F({ hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
   df = F({ weekday: 'long', month: 'long', day: 'numeric' });
   hf = F({ hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' });
   ymd = F({ year: 'numeric', month: 'numeric', day: 'numeric' });
-  clk = F({ hour: 'numeric', minute: '2-digit' });
-  wkf = F({ weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  clk = F({ hour: 'numeric', minute: '2-digit', ...HC() });
+  wkf = F({ weekday: 'short', hour: 'numeric', minute: '2-digit', ...HC() });
   pmFmtDay = F({ weekday: 'short', month: 'short', day: 'numeric' });
   tzn = F({ timeZoneName: 'short' });
 };
@@ -55,7 +57,7 @@ const h = (tag, cls, text, ...kids) => {
   return e;
 };
 const p2 = n => String(n).padStart(2, '0');
-const hl = (H, M) => (H % 12 || 12) + ':' + p2(M) + ' ' + (H < 12 ? 'AM' : 'PM');
+const hl = (H, M) => H24 ? p2(H) + ':' + p2(M) : (H % 12 || 12) + ':' + p2(M) + ' ' + (H < 12 ? 'AM' : 'PM');
 const fmt = s => { const H = Math.floor(s / 3600), M = Math.floor(s % 3600 / 60); return (H ? H + 'h ' : '') + M + 'm ' + p2(s % 60) + 's'; };
 const clockFmt = x => { const H = Math.floor(x / 3600), M = Math.floor(x % 3600 / 60); return H ? H + ':' + p2(M) + ':' + p2(x % 60) : M + ':' + p2(x % 60); };
 
@@ -171,7 +173,7 @@ function cycleEndFor(now) {
 }
 // ---------- selected time zone: its own next sunrise / sunset, local time, typical start ----------
 const zf = {};
-const zfmt = (tz, k, o) => (zf[tz + k] = zf[tz + k] || new Intl.DateTimeFormat('en-US', { timeZone: tz, ...o }));
+const zfmt = (tz, k, o) => { const key = tz + k + (H24 ? 'H' : ''); return (zf[key] = zf[key] || new Intl.DateTimeFormat('en-US', { timeZone: tz, ...o, ...(o.hour && !o.hourCycle ? HC() : {}) })); };
 const zsod = (tz, ms) => { const p = zfmt(tz, 's', { hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' }).formatToParts(new Date(ms)), g = t => +p.find(x => x.type === t).value; return g('hour') * 3600 + g('minute') * 60 + g('second'); };
 const curZone = () => ZONES.find(z => z.id === zoneId) || null;
 function zoneEvents(z, now) {
@@ -200,6 +202,12 @@ const CSS = `
 .d{opacity:.85;margin:4px 0 8px}
 .badge{display:inline-block;padding:3px 12px;border-radius:99px;background:rgba(255,200,90,.22);color:#ffd27a;font-weight:600;font-size:12.8px;border:1px solid rgba(255,210,122,.3)}
 .ttl{font-weight:600;opacity:.9;margin-bottom:10px;font-size:12.8px}
+.cth{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cmpb{padding:2px 10px;border-radius:99px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);font-size:11px;font-weight:600}
+.g.cmp>*:not(.ttl):not(.keep){display:none!important}
+.g.cmp>.ttl{margin-bottom:0}
+.g.cmp>.keep{margin-top:10px}
+.h24sw{margin-top:8px}
 .phs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;text-align:center;margin-bottom:8px}
 .ph{opacity:.6}.ph.on{opacity:1}
 .ph i{display:block;font-style:normal;font-size:16px}.ph span{display:block;font-size:10.9px}
@@ -571,8 +579,18 @@ const setSw = (i, v) => { i.checked = !!v; i.setAttribute('aria-checked', String
 const alElSw = mkSw('Show elapsed time after it rings'); setSw(alElSw.i, alEl);
 alElSw.i.onchange = () => { alEl = alElSw.i.checked; alElSw.i.setAttribute('aria-checked', String(alEl)); try { GM_setValue('alEl', alEl); } catch (e) {} tick(); };
 const alBtns = h('div', 'ctl', null, alSilence, alCancel, alAgain, alDone); alBtns.style.marginTop = '10px';
+const h24Sw = mkSw('24-hour (military) time', true); h24Sw.lab.classList.add('h24sw');
+const cmpState = (() => { try { const v = GM_getValue('compact', {}); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } })();
+const cmpHeads = [];
+function cmpHdr(title, key) {   // a title row with a button that collapses the box down to just its title (a running timer stays visible)
+  const b = h('button', 'cmpb'); b.type = 'button';
+  const hd = h('div', 'ttl cth', null, h('span', null, title), b);
+  hd.apply = () => { const on = !!cmpState[key]; b.textContent = on ? '▸ Expand' : '▾ Compact'; b.title = on ? 'Show everything in this box' : 'Shrink this box to just its title'; b.setAttribute('aria-expanded', String(!on)); b.setAttribute('aria-label', (on ? 'Expand ' : 'Compact ') + title); if (hd.parentElement) hd.parentElement.classList.toggle('cmp', on); };
+  b.onclick = () => { cmpState[key] = !cmpState[key]; try { GM_setValue('compact', { ...cmpState }); } catch (e) {} hd.apply(); };
+  cmpHeads.push(hd); return hd;
+}
 const alBox = h('div', null, null, alTime, alEnd, alLap, h('div', 'bar sm', null, alFill), alCap, alBtns); alBox.style.display = 'none';
-const alarmCard = h('section', 'g', null, h('div', 'ttl', 'Alarm timer'), h('div', 'ctl', null, alH, h('span', 'unit', 'h'), alM, h('span', 'unit', 'min'), alGo), alChips, alElSw.lab, alBox, alTest);
+const alarmCard = h('section', 'g', null, cmpHdr('Alarm timer', 'alarm'), h('div', 'ctl', null, alH, h('span', 'unit', 'h'), alM, h('span', 'unit', 'min'), alGo), alChips, alElSw.lab, alBox, alTest);
 const phName = h('span'), phLeft = h('span'), fill = h('div', 'fill');
 const inp = h('input'); inp.type = 'time'; inp.setAttribute('aria-label', 'Custom time');
 const addBtn = h('button', 'add', 'Add'), chipBox = h('div', 'chips'), tl = h('div'), undoBar = h('div', 'undo');
@@ -605,7 +623,7 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
@@ -653,6 +671,7 @@ addEventListener('keydown', e => {
 addEventListener('pointerdown', e => { if (scRec && !e.composedPath().includes(scBtn[scRec])) scStop(); }, true);
 if (skc && skc.getShortcuts) skc.getShortcuts().then(s => { scState = s; scShow(); });
 if (skc && skc.onTheme) skc.onTheme(() => applyMode(mode === 'sky' ? 'grain' : 'sky', true));   // the Sky / Black keybind
+if (skc && skc.onMil) skc.onMil(() => { h24Sw.i.checked = !H24; h24Sw.i.onchange(); });   // the 12-hour / 24-hour keybind
 if (skc && skc.onInd) skc.onInd(() => applyInd(!ind));   // the dots & LIVE badges keybind
 if (skc && skc.onFlip) skc.onFlip(() => flipTo(kan.side === 'kanban' ? 'time' : 'kanban'));   // the Time until / Kanban keybind
 
@@ -682,7 +701,9 @@ const pmStats = h('div', null, null, pmDayT,
   h('div', 'ev', null, h('span', null, 'Full pomodoros'), pmFull), h('div', 'ev', null, h('span', null, 'Quit early'), pmPart),
   h('div', 'ev', null, h('span', null, 'Completion'), pmRate), h('div', 'ev', null, h('span', null, 'Worked today'), pmTot),
   pmWeek, pmIns, pmFoot, pmHist);
-const pomoCard = h('section', 'g', null, h('div', 'ttl', 'Pomodoro (focus timer)'), pmOpts, pmCtl, pmRunBox, pmSum, pmStats);
+const pomoCard = h('section', 'g', null, cmpHdr('Pomodoro (focus timer)', 'pomo'), pmOpts, pmCtl, pmRunBox, pmSum, pmStats);
+[alBox, pmRunBox, pmSum].forEach(e => e.classList.add('keep'));   // these stay visible while the box is compact
+cmpHeads.forEach(x => x.apply());
 const tIn = h('input', 'tin'); tIn.type = 'text'; tIn.maxLength = 60; tIn.placeholder = 'Title (optional), e.g. Laundry'; tIn.setAttribute('aria-label', 'Timer title');
 const tip = h('div', 'tip'); tip.setAttribute('role', 'tooltip');
 const phTitle = h('div', 'ttl', 'Day and night in ' + locName());
@@ -1035,6 +1056,7 @@ function kRoll(c, n) {   // a repeating interval that has run out starts over, t
   return moved;
 }
 const kdate = ds => { const [y, m, d] = ds.split('-').map(Number); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(Date.UTC(y, m - 1, d, 12)); };
+const kdatew = ds => { const [y, m, d] = ds.split('-').map(Number); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short' }).format(Date.UTC(y, m - 1, d, 12)) + ', ' + kdate(ds); };   // with the three-letter day, e.g. Tue, Dec 1
 const MONTH_ICON = ['❄️', '💝', '🍀', '🌷', '🌸', '☀️', '🎆', '🌻', '🍎', '🎃', '🍂', '🎄'];   // one emoji per month, Jan to Dec, shown beside the Kanban title
 const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayStr(Date.now()).slice(0, 4); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', ...(y !== cy ? { year: 'numeric' } : {}) }).format(Date.UTC(y, m - 1, 15)); };
 const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
@@ -1049,9 +1071,9 @@ function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight u
 const knext = (c, n) => { const td = kdayStr(n); let ms = zonedMs(td, c.time); if (ms <= n) ms = zonedMs(kaddDays(td, 1), c.time); return ms; };   // the next time this clock time comes round
 const kdtText = c => {   // the small line under a card's title
   const m = kmode(c), rp = c.rep ? ' · 🔁 repeats' : '', at = c.time ? ktime(c.time) : 'end of day';
-  if (m === 'interval') return (c.start && c.end ? kdate(c.start) + ' → ' + kdate(c.end) + ' · ' + at : 'Set the start and end dates') + (c.rep ? ' · 🔁 cycle ' + (c.cycle || 1) : '');
+  if (m === 'interval') return (c.start && c.end ? kdatew(c.start) + ' → ' + kdatew(c.end) + ' · ' + at : 'Set the start and end dates') + (c.rep ? ' · 🔁 cycle ' + (c.cycle || 1) : '');
   if (m === 'none') return 'No due date · running since ' + kdate(c.assigned) + (c.time ? ' · due daily at ' + ktime(c.time) : '') + rp;
-  return (c.due ? kdate(c.due) + ' · ' + at : c.time ? 'No due date · every day at ' + ktime(c.time) : 'No due date') + rp;
+  return (c.due ? kdatew(c.due) + ' · ' + at : c.time ? 'No due date · every day at ' + ktime(c.time) : 'No due date') + rp;
 };
 const kwarn = c => c.cat !== 'done' && c.assigned && c.assigned.slice(0, 7) < kdayStr(Date.now()).slice(0, 7);   // assigned in an earlier month than this one
 
@@ -1063,7 +1085,7 @@ function kanDerived() {   // only the cards picked with the ⏱ button (or every
   kan.cards.forEach(c => {
     if (c.cat === 'done' || !(kan.inc || c.tu)) return;
     const col = kcat(c.cat).color;
-    if (c.time) out.push(kanSlot(c.id, c.time, '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdate(kdd(c)) : ''), col));
+    if (c.time) out.push(kanSlot(c.id, c.time, '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdatew(kdd(c)) : ''), col));
     c.items.forEach(it => { if (!it.done && it.time) out.push(kanSlot(c.id + ':' + it.id, it.time, '☑ ' + it.text + ' · ' + c.title, col)); });
   });
   return out;
@@ -1296,7 +1318,7 @@ function flipTo(side, instant) {   // the box turns over like a card
 flipBtn.onclick = () => flipTo('kanban'); flipBack.onclick = () => flipTo('time');
 function kanInit() { kanRender(); if (kan.side === 'kanban') flipTo('kanban', true); }
 const wrap = h('div', 'wrap', null,
-  h('section', 'g c', null, seg, cTime, cDate, cBadge),
+  h('section', 'g c', null, seg, cTime, cDate, cBadge, h24Sw.lab),
   locCard,
   h('section', 'g', null, phTitle,
     h('div', 'phs', null, ...phEls.map(x => x.box)), editor, h('div', 'bar', null, fill), h('div', 'row', null, phName, phLeft), wakeNote, fxRow, fxBox),
@@ -1313,6 +1335,12 @@ const sk = window.skyclock || null;   // bridge to the desktop shell (preload.js
 const pinBtn = h('button', null, '📌'), minBtn = h('button', null, '–'), xBtn = h('button', null, '✕');
 pinBtn.title = 'Keep on top of other windows'; minBtn.title = 'Minimize'; xBtn.title = 'Close to the system tray (timers keep running)';
 pinBtn.setAttribute('aria-label', 'Always on top'); minBtn.setAttribute('aria-label', 'Minimize'); xBtn.setAttribute('aria-label', 'Close to tray');
+setSw(h24Sw.i, H24);
+h24Sw.i.onchange = () => {   // every clock time switches between 12-hour and 24-hour
+  H24 = h24Sw.i.checked; try { GM_setValue('h24', H24); } catch (e) {}
+  mkFmts(); Object.keys(zf).forEach(k => { delete zf[k]; }); chipKey = -1; skyKey = '';
+  build(); kanRender(); pmRender(); renderZone(); tick();
+};
 const hd = h('div', 'hd', null, h('span', null, '🕰️ Sky Clock'), pinBtn, minBtn, xBtn);
 const refreshPin = () => { if (sk) sk.getPin().then(on => pinBtn.classList.toggle('on', !!on)); };
 pinBtn.onclick = () => { if (sk) sk.togglePin().then(on => pinBtn.classList.toggle('on', !!on)); };

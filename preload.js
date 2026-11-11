@@ -20,4 +20,5 @@ contextBridge.exposeInMainWorld('skyclock', {
   onTheme: cb => ipcRenderer.on('theme:toggle', () => cb()),
   onFlip: cb => ipcRenderer.on('flip:toggle', () => cb()),
   onInd: cb => ipcRenderer.on('ind:toggle', () => cb()),
+  onMil: cb => ipcRenderer.on('mil:toggle', () => cb()),
 });
