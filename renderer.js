@@ -1079,7 +1079,10 @@ const kwarn = c => c.cat !== 'done' && c.assigned && c.assigned.slice(0, 7) < kd
 
 // card and checklist times become extra slots in the Time until list (only while that option is on)
 const kanSlots = new Map();
-const kanSlot = (id, time, title, col) => { const v = +time.slice(0, 2) * 60 + +time.slice(3); let s = kanSlots.get(id); if (!s || s.v !== v) { s = { v, kan: true, el: false }; kanSlots.set(id, s); } s.title = title; s.col = col; return s; };
+// the progress bar of a Kanban time on the Time until side keeps its place across refreshes and restarts: its span and start are saved
+let kanSpan = {}; try { const v = JSON.parse(GM_getValue('kanspan', '{}')); if (v && typeof v === 'object') kanSpan = v; } catch (e) {}
+const saveSlot = t => { if (!t.kan) { save(); return; } kanSpan[t.id] = { v: t.v, span: t.span, dur0: t.dur0, armed: t.armed }; try { GM_setValue('kanspan', JSON.stringify(kanSpan)); } catch (e) {} };
+const kanSlot = (id, time, title, col) => { const v = +time.slice(0, 2) * 60 + +time.slice(3); let s = kanSlots.get(id); if (!s || s.v !== v) { s = { v, kan: true, el: false, id }; const st = kanSpan[id]; if (st && st.v === v && st.span) { s.span = st.span; s.dur0 = st.dur0; s.armed = st.armed; } kanSlots.set(id, s); } s.title = title; s.col = col; return s; };
 function kanDerived() {   // only the cards picked with the ⏱ button (or every card, if that switch is on)
   const out = [];
   kan.cards.forEach(c => {
@@ -1890,9 +1893,9 @@ function tick() {
     const since = (86400 - d) % 86400, os = nowS - since;          // when this clock time last came round, in whole seconds
     const wrapped = !isNaN(r.last) && d > r.last + 5;
     if (wrapped) { beep(2); notify('Time reached', (t.title ? t.title + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60)); }
-    if (!t.armed) { t.armed = n; save(); }
-    if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; save(); }
-    else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; save(); }
+    if (!t.armed) { t.armed = n; saveSlot(t); }
+    if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; saveSlot(t); }
+    else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; saveSlot(t); }
     const fin = !!t.el && (os * 1000 >= t.armed - 1000 || since <= sod);   // elapsed switch on: count up from when it went off (looking back as far as earlier today)
     r.last = d; r.os = fin ? os : 0; r.ok.style.display = fin && t.ack !== os ? '' : 'none';
     if (!r.chipT || n - r.chipT >= 1000) { r.chipT = n; rowChips(r, n + d * 1000, n, t.v * 60 < sod); }   // chosen time vs daylight / golden / blue windows   // confirming hides the check; the elapsed time keeps counting until the Elapsed switch is turned off
