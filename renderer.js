@@ -262,7 +262,15 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .pedit{display:inline-flex;flex:none;align-items:center;gap:6px;white-space:nowrap}
 .pok{flex:none;width:26px;height:26px;padding:0;border-radius:8px;background:rgba(123,228,149,.22);border:1px solid rgba(123,228,149,.6);color:#7be495;font-weight:700;font-size:15px;text-shadow:none}
 .pok:disabled{opacity:.35;cursor:default}
+.kpan .pok{color:#0a7a3a;background:#dff7e6;border-color:#34c98a}
+.kpan .pno{color:#14173a;background:rgba(20,23,58,.08);border-color:rgba(20,23,58,.3)}
+.kpan .pedit{display:flex;width:100%}
+.kpan .pedit .kin{flex:1;min-width:0}
 .trt{row-gap:4px}
+.tr.pchg{outline:2px solid #4da3ff;outline-offset:3px;border-radius:10px;box-shadow:0 0 8px rgba(77,163,255,.45)}
+.tr.pnew{animation:pnew 1s ease-out 2}
+@keyframes pnew{0%,100%{box-shadow:0 0 8px rgba(77,163,255,.45)}50%{box-shadow:0 0 20px 6px rgba(77,163,255,.95)}}
+@media (prefers-reduced-motion:reduce){.tr.pnew{animation:none}}
 .tprev{font-size:10.5px;color:rgba(232,235,246,.72);text-shadow:none;white-space:nowrap}
 .tx{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;padding:8px 10px;border:2px dashed rgba(255,255,255,.4);border-radius:10px;font-size:11.5px;line-height:1.4;color:rgba(232,235,246,.72);text-shadow:none}
 .tx b{display:block;margin-top:2px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:rgba(236,239,250,.9)}
@@ -474,7 +482,18 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.flip>section,.kcard,.kpan,.kmod,.kfill{transition:none}.flip>.fin{animation:none}}
 .ktu{position:absolute;top:6px;right:6px;width:24px;height:24px;padding:0;border-radius:50%;background:rgba(20,23,58,.08);color:#14173a;border:1px solid rgba(20,23,58,.3);font-size:13px;line-height:1;opacity:.55;text-shadow:none}
 .ktu.on{opacity:1;background:var(--kc);border-color:var(--kc)}
-.kcard .kt{padding-right:30px}
+.kcard .kt{padding-right:64px}
+.kdone{position:absolute;top:6px;right:36px;width:24px;height:24px;padding:0;border-radius:50%;background:rgba(52,201,138,.14);color:#1e9e6a;border:2px solid #34c98a;font-size:13px;font-weight:800;line-height:1;text-shadow:none;transition:background .2s ease,color .2s ease,box-shadow .2s ease}
+.kdone:hover{box-shadow:0 0 0 3px rgba(52,201,138,.3)}
+.kdone.on{background:#34c98a;color:#fff}
+.kdone::after{content:'';position:absolute;inset:-2px;border-radius:50%;border:2px solid #34c98a;opacity:0;pointer-events:none}
+.kdone.kpop{animation:kpopk .34s cubic-bezier(.3,1.6,.4,1)}
+.kdone.kpop::after{animation:kring .4s ease-out}
+@keyframes kpopk{0%{transform:scale(1)}45%{transform:scale(1.45)}100%{transform:scale(1)}}
+@keyframes kring{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.2)}}
+.kfly{box-shadow:0 0 0 3px #34c98a,0 12px 28px rgba(0,0,0,.55)!important}
+.kautob{margin-top:6px;padding:2px 10px;border-radius:99px;background:#fff3dc;color:#3a2400;border:1px solid #c98a00;font-size:10.5px;font-weight:700;text-shadow:none}
+@media (prefers-reduced-motion:reduce){.kdone.kpop,.kdone.kpop::after{animation:none}}
 .tr.tkan{border:1px solid var(--kc);border-radius:10px;padding:8px 9px 4px;margin:7px 0}
 .pun{flex:none;width:26px;height:26px;padding:0;border-radius:8px;background:rgba(255,210,122,.2);border:1px solid rgba(255,210,122,.6);color:#ffd27a;font-weight:700;font-size:15px;text-shadow:none}
 .indrow{margin:0 0 10px}
@@ -519,6 +538,18 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kform .kfx{overflow-wrap:anywhere;line-height:1.4}
 .kaddwrap{margin-top:12px}
 .kcl{margin-top:10px;padding-top:8px;border-top:1px dashed rgba(20,23,58,.3)}
+.kclh{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.ksh{cursor:pointer;user-select:none}
+.kshl{display:inline-flex;align-items:center;gap:12px}
+.karr{display:inline-block;width:12px;font-size:12px;opacity:.75}
+.kcb{flex:none;min-width:28px;height:24px;padding:0 8px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:inherit;font-size:12px;line-height:1;text-shadow:none}
+.kcard .kcb{background:rgba(20,23,58,.08);border-color:rgba(20,23,58,.3);color:#14173a}
+.kshr{display:inline-flex;align-items:center;gap:8px}
+.ksec.kcol .klist{display:none}
+.kcl.kcol .kclrow{display:none}
+.khl{animation:khl 1.1s ease-in-out 3;outline:3px solid #ffd84d;outline-offset:2px;border-radius:10px}
+@keyframes khl{0%,100%{box-shadow:0 0 0 0 rgba(255,216,77,0)}50%{box-shadow:0 0 18px 6px rgba(255,216,77,.85)}}
+@media (prefers-reduced-motion:reduce){.khl{animation:none}}
 .kcll{margin-bottom:6px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;opacity:.7}
 .kclrow{margin:8px 0 10px}
 .kclt{margin-bottom:5px;font-size:12.5px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
@@ -1026,7 +1057,7 @@ const KTAGS = [["🏠 Home", ["🧹 Cleaning", "🧺 Laundry", "🍽️ Dishes",
 const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof s === 'string' && re.test(s);
 const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
 const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
-  mode: ['date', 'interval', 'none'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
+  mode: ['date', 'interval', 'none'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', auto: (Array.isArray(c.auto) ? c.auto : []).filter(s => typeof s === 'string').slice(0, 200), start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
   items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
 let kan = { cards: [], inc: false, rem: false, side: 'time', sp: {} };   // sp: the saved progress-bar spans of Kanban times on the Time until side, kept with the cards
 try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time', sp: v.sp && typeof v.sp === 'object' && !Array.isArray(v.sp) ? v.sp : {} }; } catch (e) {}
@@ -1061,9 +1092,18 @@ const MONTH_ICON = ['❄️', '💝', '🍀', '🌷', '🌸', '☀️', '🎆', 
 const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayStr(Date.now()).slice(0, 4); return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', ...(y !== cy ? { year: 'numeric' } : {}) }).format(Date.UTC(y, m - 1, 15)); };
 const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
 let kanDirty = false;
+// the hourly progress-bar gradient for a given moment, so a completed item keeps the colours of the minute it was completed
+const gradAt = ms => { const q = hf.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value, H = g('hour'), M = g('minute'), c = BAR[H], d = BAR[(H + 1) % 24]; return [mix(c[0], d[0], M / 60), mix(c[1], d[1], M / 60)]; };
+function kGrad(el, ms, both) {   // ms set: pin this element's gradient to that moment (static); ms 0: back to the live hourly gradient
+  if (!el) return; const key = ms ? ms + (both ? 'b' : '') : ''; if (el._gk === key) return; el._gk = key;
+  if (!ms) { ['--l1', '--l2', '--g1', '--g2'].forEach(p => el.style.removeProperty(p)); return; }
+  const [a, b] = gradAt(ms); el.style.setProperty('--l1', a); el.style.setProperty('--l2', b);
+  if (both) { el.style.setProperty('--g1', a); el.style.setProperty('--g2', b); }
+}
 function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight up to its due time; it restarts at midnight, so it tracks again the next day
   const it = x.it; let nn = n, dd = dk;
   if (it.done) { if (!it.dat) { it.dat = n; kanDirty = true; } nn = it.dat; dd = kdayStr(nn); }   // a checked item is frozen at the moment it was checked; unchecking it lets it jump back to where it would be now
+  kGrad(x.g, it.done ? nn : 0);   // a checked item keeps the gradient of the moment it was checked
   const due = zonedMs(dd, it.time), st = zonedMs(dd, '00:00'), pre = it.done ? '✓ done · ' : '';
   if (nn >= due) { x.f.style.width = '100%'; x.rem.textContent = pre + 'Time passed · overdue ' + fmt(Math.floor((nn - due) / 1000)) + (it.done ? '' : ' · tracks again tomorrow'); return; }
   x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (nn - st) / (due - st))) : 100) + '%';
@@ -1082,7 +1122,7 @@ function kReset(c, n) {   // unchecks the card and its checklist and starts the 
   const b = kBoundary(c); if (!b || b <= c.fz || n < b) return false;
   c.items.forEach(i => { i.done = false; i.dat = 0; });
   if (c.cat === 'done') c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog';
-  c.fz = 0; c.rst = kdayStr(n); return true;
+  c.auto = []; c.fz = 0; c.rst = kdayStr(n); return true;
 }
 const knext = (c, n) => { const td = kdayStr(n); let ms = zonedMs(td, c.time); if (ms <= n) ms = zonedMs(kaddDays(td, 1), c.time); return ms; };   // the next time this clock time comes round
 const kdtText = c => {   // the small line under a card's title
@@ -1124,18 +1164,33 @@ function kTpl(catId) {   // the dashed template for a new card
   add.onclick = go; t.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
   return h('div', 'ktpl', null, t, h('div', 'ktr', null, d, tm, add), ...(rp ? [h('div', 'ktr', null, rp.lab)] : []));
 }
-const kSecs = KCATS.map(cat => { const cnt = h('span', 'kcnt'), list = h('div', 'klist'), box = h('div', 'ksec', null, h('div', 'ksh', null, h('span', null, cat.name), cnt), list); box.style.setProperty('--kc', cat.color); box.setAttribute('role', 'group'); box.setAttribute('aria-label', cat.name); return { cat, cnt, list, box, tpl: kTpl(cat.id) }; });
+let kColl = {}; try { const v = JSON.parse(GM_getValue('kcoll', '{}')); if (v && typeof v === 'object') kColl = v; } catch (e) {}   // which Kanban sections and which cards' checklist-time lists are collapsed (remembered)
+const saveColl = () => { try { GM_setValue('kcoll', JSON.stringify(kColl)); } catch (e) {} };
+const kSecs = KCATS.map(cat => {
+  const cnt = h('span', 'kcnt'), list = h('div', 'klist'), arr = h('span', 'karr'), hd = h('div', 'ksh', null, h('span', 'kshl', null, arr, h('span', null, cat.name)), cnt);
+  const box = h('div', 'ksec', null, hd, list);
+  hd.tabIndex = 0; hd.setAttribute('role', 'button');   // tapping the section's name collapses or expands it
+  const apply = () => { const on = !!kColl['sec:' + cat.id]; box.classList.toggle('kcol', on); arr.textContent = on ? '▸' : '▾'; hd.title = on ? 'Show the cards in ' + cat.name : 'Collapse ' + cat.name; hd.setAttribute('aria-expanded', String(!on)); hd.setAttribute('aria-label', (on ? 'Expand ' : 'Collapse ') + cat.name); };
+  const flip = () => { kColl['sec:' + cat.id] = !kColl['sec:' + cat.id]; saveColl(); apply(); };
+  hd.onclick = flip; hd.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } }); apply();
+  box.style.setProperty('--kc', cat.color); box.setAttribute('role', 'group'); box.setAttribute('aria-label', cat.name); return { cat, cnt, list, box, apply, tpl: kTpl(cat.id) };
+});
 let kanRefs = [], kanDay = '', kanLast = 0;
 function kCard(c) {
-  const box = h('div', 'kcard'); box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
-  const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), elp = h('span', 'kov bad'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
+  const box = h('div', 'kcard'); box.dataset.kid = c.id; box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
+  let pctF = null; const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), elp = h('span', 'kov bad'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
   box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);
-  if (pct != null) { const f = h('div', 'kfill'); f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
+  if (pct != null) { const f = h('div', 'kfill'); pctF = f; f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
   const itRefs = [], timed = c.items.filter(i => i.time);
   if (timed.length) {   // a small labelled section: each checklist item's due time (gradient border) beside its own progress bar
-    const cl = h('div', 'kcl', null, h('div', 'kcll', '☑ Checklist due times'));
-    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'); cl.append(h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), h('div', 'kclb', null, h('span', 'kitp', '⏰ ' + ktime(it.time)), h('div', 'kbar', null, f)), rem)); itRefs.push({ it, f, rem }); });
+    const cl = h('div', 'kcl'), carr = h('span', 'karr'), chd = h('div', 'kcll kclh', null, carr, h('span', null, '☑ Checklist due times · ' + timed.length));
+    chd.tabIndex = 0; chd.setAttribute('role', 'button');   // tapping the heading collapses or expands the list (without opening the card)
+    const capply = () => { const on = !!kColl['cl:' + c.id]; cl.classList.toggle('kcol', on); carr.textContent = on ? '▸' : '▾'; chd.title = on ? 'Show the checklist due times' : 'Collapse the checklist due times'; chd.setAttribute('aria-expanded', String(!on)); chd.setAttribute('aria-label', (on ? 'Expand' : 'Collapse') + ' checklist due times'); };
+    const cflip = () => { kColl['cl:' + c.id] = !kColl['cl:' + c.id]; saveColl(); capply(); };
+    chd.onclick = e => { e.stopPropagation(); cflip(); }; chd.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cflip(); } });
+    cl.append(chd); capply();
+    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), h('div', 'kclb', null, h('span', 'kitp', '⏰ ' + ktime(it.time)), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
     box.append(cl);
   }
   if (c.tags.length) box.append(h('div', 'ktagrow', null, ...c.tags.map(t => h('span', 'ktag', t))));
@@ -1143,14 +1198,79 @@ function kCard(c) {
   const tu = h('button', 'ktu', '⏱'); tu.type = 'button'; tu.classList.toggle('on', !!(c.tu || kan.inc));
   tu.title = kan.inc ? 'In the Time until list (every card is added)' : c.tu ? 'In the Time until list: tap to remove it' : 'Add this card to the Time until list' + (c.time ? '' : ' (give it a due time first)'); tu.setAttribute('aria-label', tu.title); tu.setAttribute('aria-pressed', String(!!(c.tu || kan.inc)));
   tu.onclick = e => { e.stopPropagation(); if (kan.inc) return; c.tu = !c.tu; saveKan(); kanRender(); build(); }; tu.addEventListener('keydown', e => e.stopPropagation()); box.append(tu);
+  const isDone = c.cat === 'done', dn = h('button', 'kdone' + (isDone ? ' on' : ''), '✓'); dn.type = 'button';   // the green check: marks the card complete (and its checklist) or incomplete
+  dn.title = isDone ? 'Complete: tap to mark it incomplete' : 'Mark this card complete (its checklist is completed too)'; dn.setAttribute('aria-label', dn.title); dn.setAttribute('aria-pressed', String(isDone));
+  dn.onclick = e => { e.stopPropagation(); if (dn.classList.contains('kpop')) return; dn.classList.add('kpop'); setTimeout(() => kToggleDone(c.id), kReduce() ? 0 : 320); }; dn.addEventListener('keydown', e => e.stopPropagation()); box.append(dn);
+  if (c.auto && c.auto.length) { const ab = h('button', 'kautob', '↶ Reverse auto-completed checklist (' + c.auto.length + ')'); ab.type = 'button'; ab.onclick = e => { e.stopPropagation(); kFlight(c, () => { kReverseAuto(c); saveKan(); kanRender(); build(); }); }; ab.addEventListener('keydown', e => e.stopPropagation()); box.append(h('div', null, null, ab)); }
   box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
-  kanRefs.push({ c, dd, tmr, ov, elp, dt, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
+  kanRefs.push({ c, dd, tmr, ov, elp, dt, pf: pctF, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
+}
+function kanGoto(id) {   // the 🗂 icon on a Time until row: flip to the Kanban board, scroll to that card (or checklist item) and highlight it
+  const [cid, iid] = String(id || '').split(':'), c = kan.cards.find(z => z.id === cid);
+  flipTo('kanban');
+  if (!c) return;
+  let moved = false;
+  if (kColl['sec:' + c.cat]) { kColl['sec:' + c.cat] = false; moved = true; }   // a collapsed section or list is opened so the item can be seen
+  if (iid && kColl['cl:' + cid]) { kColl['cl:' + cid] = false; moved = true; }
+  if (moved) { saveColl(); kSecs.forEach(s => s.box.classList.toggle('kcol', !!kColl['sec:' + s.cat.id])); kanRender(); }
+  const go = () => {
+    const card = [...kanSec.querySelectorAll('.kcard')].find(e => e.dataset.kid === cid); if (!card) return;
+    const el = (iid && [...card.querySelectorAll('.kclrow')].find(e => e.dataset.iid === iid)) || card;
+    el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    el.classList.remove('khl'); void el.offsetWidth; el.classList.add('khl'); setTimeout(() => el.classList.remove('khl'), 3200);
+  };
+  setTimeout(go, matchMedia('(prefers-reduced-motion: reduce)').matches ? 30 : 520);   // after the board has finished flipping over
 }
 function kanRender() {
   kanRefs = [];
   kSecs.forEach(s => { const cards = kan.cards.filter(c => c.cat === s.cat.id).sort((a, b) => (kdue(a) == null ? 9e15 : kdue(a)) - (kdue(b) == null ? 9e15 : kdue(b))); s.cnt.textContent = cards.length; s.list.replaceChildren(...cards.map(kCard), s.tpl); });
   kanTick(Date.now(), true);
 }
+// ---- completing a card: its checklist is completed with it (and can be reversed), and the card flies to the Done section
+const kReduce = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+function kOpenSec(id) { if (!kColl['sec:' + id]) return; kColl['sec:' + id] = false; saveColl(); const s = kSecs.find(z => z.cat.id === id); if (s) s.apply(); }   // a collapsed section opens so you can see where the card went
+function kComplete(c, now) {   // marked done: every unchecked item is checked for you, and remembered in c.auto so it can be reversed
+  if (c.cat === 'done') return;
+  c.pcat = c.cat; c.auto = [];
+  c.items.forEach(i => { if (!i.done) { i.done = true; i.dat = now; c.auto.push(i.id); } });
+  c.cat = 'done';
+}
+function kReopen(c) {   // marked incomplete: back to the section it came from
+  const ids = c.auto || [];
+  if (c.items.length && c.items.every(i => i.done)) {   // a fully checked list would complete the card again, so the auto-completed items (or, failing that, the last one checked) are unchecked
+    const hit = c.items.filter(i => ids.includes(i.id));
+    (hit.length ? hit : [c.items.reduce((a, b) => ((b.dat || 0) >= (a.dat || 0) ? b : a))]).forEach(i => { i.done = false; i.dat = 0; });
+  }
+  c.auto = []; c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog';
+}
+function kSettle(c) {   // keeps the card and its checklist in step: every item checked sends it to Done, unchecking one brings it back
+  const all = c.items.length > 0 && c.items.every(i => i.done);
+  if (all && c.cat !== 'done') { c.pcat = c.cat; c.auto = []; c.cat = 'done'; return 'done'; }
+  c.auto = (c.auto || []).filter(id => c.items.some(i => i.id === id && i.done));
+  if (!all && c.cat === 'done' && c.items.length) { c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog'; return 'undone'; }
+  return null;
+}
+function kReverseAuto(c) {   // unchecks only the items that were checked for you when the card was marked done
+  const ids = c.auto || [];
+  c.items.forEach(i => { if (ids.includes(i.id)) { i.done = false; i.dat = 0; } });
+  c.auto = []; kSettle(c);
+}
+function kFlight(c, fn) {   // runs fn (it changes the card and redraws the board), then flies the card from where it was to where it landed
+  const cardEl = () => [...kanSec.querySelectorAll('.kcard')].find(e => e.dataset.kid === c.id);
+  const b0 = cardEl(), before = b0 && b0.offsetParent ? b0.getBoundingClientRect() : null;
+  fn(); kOpenSec(c.cat);
+  if (!before || kReduce()) return;
+  const el = cardEl(); if (!el) return;
+  const after = el.getBoundingClientRect(), dx = before.left - after.left, dy = before.top - after.top;
+  if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+  el.style.transition = 'none'; el.style.transform = 'translate(0,100px)';
+  const f = (el.getBoundingClientRect().top - after.top) / 100 || 1;   // measured, so it also works when the page is zoomed
+  el.style.transform = 'translate(' + dx / f + 'px,' + dy / f + 'px)'; el.style.zIndex = '8'; el.classList.add('kfly');
+  void el.offsetWidth;
+  el.style.transition = 'transform .7s cubic-bezier(.2,.85,.25,1)'; el.style.transform = 'translate(0,0)';
+  setTimeout(() => { el.style.transition = ''; el.style.transform = ''; el.style.zIndex = ''; el.classList.remove('kfly'); try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }, 730);
+}
+function kToggleDone(id) { const c = kan.cards.find(z => z.id === id); if (!c) return; kFlight(c, () => { if (c.cat === 'done') kReopen(c); else kComplete(c, Date.now()); saveKan(); kanRender(); build(); }); }
 function kOver(c, n, dd, tmr, ov) {   // no due date: it counts as overdue since the card was made, so the elapsed time counts up
   const a = Math.max(0, n - kam(c)), d0 = Math.floor(a / 864e5), s = Math.floor(a % 864e5 / 1000);
   dd.textContent = d0 + (d0 === 1 ? ' day' : ' days'); tmr.style.display = ''; tmr.textContent = p2(Math.floor(s / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60); ov.textContent = 'overdue'; ov.className = 'kov bad';
@@ -1167,9 +1287,10 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
   });
   if (regroup) { saveKan(); kanRender(); build(); return; }
   kanRefs.forEach(r => r.its.forEach(x => kitUpd(x, n, dk))); kanPop.forEach(x => kitUpd(x, n, dk));
-  kanRefs.forEach(({ c, dd, tmr, ov, elp, dt, ip }) => {
+  kanRefs.forEach(({ c, dd, tmr, ov, elp, dt, ip, pf }) => {
     if (kRoll(c, n)) rolled = true;
-    const nF = c.fz || n, dF = kdayStr(nF);   // a complete card shows its countdown as it was when it was completed
+    const nF = c.fz || n, dF = kdayStr(nF);
+    kGrad(tmr, c.fz); kGrad(ov, c.fz); kGrad(ip.f, c.fz); kGrad(pf, c.fz);   // a completed card keeps the gradient of the moment it was completed   // a complete card shows its countdown as it was when it was completed
     dt.textContent = kdtText(c) + (c.fz ? ' · ' + (c.cat === 'done' ? '✓ Done · frozen' : '☑ 100% · frozen') : ''); ip.box.style.display = 'none';
     const ms = kdue(c, nF);
     let el = '';   // due daily at a clock time with no due date: once today's time has passed, the elapsed time is added to the red text (the countdown to the next one keeps running)
@@ -1203,9 +1324,17 @@ function openKan(id) {
   const ti = h('input', 'kin kti'); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
   const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
   const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
-  sel.onchange = () => { if (sel.value === 'done' && c.cat !== 'done') c.pcat = c.cat; c.cat = sel.value; col(); sync(); renderList(); showMode(); };   // the thin borders follow the category right away
+  const kPopSync = (fn, closeOnDone) => { const was = c.cat; kFlight(c, () => { fn(); sync(); }); sel.value = c.cat; col(); if (closeOnDone && c.cat === 'done' && was !== 'done') { closeKan(); return; } renderList(); showMode(); showAuto(); };   // a card that lands in Done closes this pop-up so you can watch it fly there
+  sel.onchange = () => { const v = sel.value; kPopSync(() => { if (v === 'done' && c.cat !== 'done') kComplete(c, Date.now()); else if (v !== 'done' && c.cat === 'done') { kReopen(c); c.cat = v; } else c.cat = v; }, true); };
+  const doneBtn = h('button', 'add sm2', ''), autoBtn = h('button', 'add sm2', ''); doneBtn.type = autoBtn.type = 'button';
+  function showAuto() { const n = (c.auto || []).length; autoBtn.style.display = n ? '' : 'none'; autoBtn.textContent = '↶ Reverse auto-completed checklist (' + n + ')'; doneBtn.textContent = c.cat === 'done' ? '↺ Mark incomplete' : '✓ Mark complete'; }
+  doneBtn.onclick = () => kPopSync(() => { if (c.cat === 'done') kReopen(c); else kComplete(c, Date.now()); }, true);
+  autoBtn.onclick = () => kPopSync(() => kReverseAuto(c), false);
+  const kPopSettle = () => kPopSync(() => kSettle(c), true);   // the thin borders follow the category right away
   const di = h('input', 'kin'); di.type = 'date'; di.value = c.due; di.onchange = () => { c.due = di.value; sync(); showMode(); };
-  const tm = h('input', 'kin'); tm.type = 'time'; tm.value = c.time; tm.onchange = () => { c.time = tm.value; sync(); };
+  const tm = h('input', 'kin'); tm.type = 'time'; tm.value = c.time;
+  const tmOk = h('button', 'pok', '✓'); tmOk.type = 'button'; tmOk.title = 'Apply this time'; tmOk.setAttribute('aria-label', 'Apply the due time'); tmOk.style.display = 'none';   // applied only when you press the check mark, not while the picker is still moving
+  tm.oninput = tm.onchange = () => { tmOk.style.display = tm.value !== c.time ? '' : 'none'; }; tmOk.onclick = () => { c.time = tm.value; tmOk.style.display = 'none'; sync(); };
   const ai = h('input', 'kin'); ai.type = 'date'; ai.value = c.assigned; ai.onchange = () => { if (ai.value) { c.assigned = ai.value; sync(); } };
   const fld = (lab, el) => h('label', 'kfld', null, h('span', null, lab), el);
   // deadline type: a due date, an interval (from one date to the next), or none at all (a running timer counts up from when the card was made)
@@ -1214,7 +1343,7 @@ function openKan(id) {
   mSel.value = kmode(c);
   const si = h('input', 'kin'); si.type = 'date'; si.value = c.start; si.setAttribute('aria-label', 'Interval starts'); si.onchange = () => { c.start = si.value; sync(); };
   const ei = h('input', 'kin'); ei.type = 'date'; ei.value = c.end; ei.setAttribute('aria-label', 'Interval ends'); ei.onchange = () => { c.end = ei.value; sync(); };
-  const tnote = h('span', 'ksub', 'No due date: repeats every day'), tlab = h('span', null, 'Due time'), fDue = fld('Due date', di), fTime = h('label', 'kfld', null, tlab, tm, tnote), fStart = fld('Starts', si), fEnd = fld('Ends', ei);
+  const tnote = h('span', 'ksub', 'No due date: repeats every day'), tlab = h('span', null, 'Due time'), fDue = fld('Due date', di), fTime = h('label', 'kfld', null, tlab, h('span', 'pedit', null, tm, tmOk), tnote), fStart = fld('Starts', si), fEnd = fld('Ends', ei);
   const qk = h('div', 'kq', null, h('span', 'ksub', 'Quick length:'), ...[['1 week', 7], ['2 weeks', 14], ['1 month', 30]].map(([l, dn]) => { const b = h('button', 'cf', l); b.type = 'button'; b.onclick = () => { if (!c.start) { c.start = kdayStr(Date.now()); si.value = c.start; } c.end = kaddDays(c.start, dn - 1); ei.value = c.end; sync(); }; return b; }));
   const repSw = mkSw('🔁 Repeating card', true); setSw(repSw.i, c.rep); kTip(repSw.lab, REP_TIP);
   const repNote = h('p', 'knote', 'A repeating card never shows the ⚠ warning. When it was made in an earlier month, you get a friendly reminder of when instead, and an interval starts over (the same length) each time it ends.');
@@ -1266,17 +1395,19 @@ function openKan(id) {
     const due = h('button', 'kdueat' + (it.time ? '' : ' none'), it.time ? '⏰ due at ' + ktime(it.time) : '+ due time'); due.type = 'button';
     due.setAttribute('aria-label', it.time ? 'Change due time, currently ' + ktime(it.time) : 'Add a due time');
     const bf = h('div', 'kfill'), brem = h('span', 'kclr'), bw = h('div', 'kitb', null, h('div', 'kbar', null, bf), brem);   // the due time with its progress bar beside it
-    const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time ? [bw] : []))); if (it.time) kanPop.push({ it, f: bf, rem: brem });
-    cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; sync(); renderList(); };
+    const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time ? [bw] : []))); if (it.time) kanPop.push({ it, f: bf, rem: brem, g: bw });
+    cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kPopSettle(); };
     tx.oninput = () => grow(tx);
     tx.onchange = () => { it.text = tx.value.trim() || 'Item'; tx.value = it.text; sync(); };
     tx.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); tx.blur(); } });
     due.onclick = () => {   // swap the pill for a time picker
       const ft = h('input', 'kin kitime'); ft.type = 'time'; ft.value = it.time; ft.setAttribute('aria-label', 'Item due time');
-      ft.onchange = () => { it.time = ft.value; sync(); renderList(); };
-      ft.onblur = () => renderList();
-      ft.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); renderList(); } else if (e.key === 'Enter') ft.blur(); });
-      due.replaceWith(ft); ft.focus();
+      const ok = h('button', 'pok', '✓'), no = h('button', 'pok pno', '✕'); ok.type = no.type = 'button'; ok.title = 'Apply this time'; no.title = 'Cancel';
+      ok.setAttribute('aria-label', 'Apply this time'); no.setAttribute('aria-label', 'Cancel');
+      // the time is only applied when you press the check mark (or Enter), never while you are still scrolling the picker
+      ok.onclick = () => { it.time = ft.value; sync(); renderList(); }; no.onclick = () => renderList();
+      ft.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); renderList(); } else if (e.key === 'Enter') ok.click(); });
+      due.replaceWith(h('span', 'pedit', null, ft, ok, no)); ft.focus();
     };
     const doRemove = () => { const i = c.items.indexOf(it); if (i < 0) return; undoItems.push({ it, i }); c.items = c.items.filter(z => z !== it); sync(); renderList(); showKundo(); timeKundo(); };
     rm.onclick = () => {   // first tap only asks; nothing is removed until "Remove" (then the warning with Undo appears)
@@ -1303,11 +1434,15 @@ function openKan(id) {
   function showForm() {   // the styled "new item" card with a due-at time
     const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item'); ni.oninput = () => grow(ni); requestAnimationFrame(() => grow(ni));
     const nt = h('input', 'kin kitime'); nt.type = 'time'; nt.setAttribute('aria-label', 'Due time for the new item');
+    let nTime = '';   // the time only counts once you press the check mark, never while the picker is still moving
+    const nOk = h('button', 'pok', '✓'); nOk.type = 'button'; nOk.title = 'Set this time'; nOk.setAttribute('aria-label', 'Set this due time'); nOk.style.display = 'none';
+    const nShow = () => { nOk.style.display = nt.value !== nTime ? '' : 'none'; };
+    nt.oninput = nt.onchange = nShow; nOk.onclick = () => { nTime = nt.value; nShow(); };
     const add = h('button', 'kfadd', 'Add'), cancel = h('button', 'kfcancel', '×'); add.type = cancel.type = 'button'; cancel.setAttribute('aria-label', 'Cancel');
-    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nt.value || '', done: false }); sync(); renderList(); showForm(); };   // the form reopens so you can add several in a row
+    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nTime || '', done: false }); kPopSettle(); showForm(); };   // the form reopens so you can add several in a row
     add.onclick = go; cancel.onclick = showAddBtn;
     ni.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.stopPropagation(); showAddBtn(); } });
-    addWrap.replaceChildren(h('div', 'kform', null, ni, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt), h('div', 'kfact', null, add, cancel)));
+    addWrap.replaceChildren(h('div', 'kform', null, ni, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt, nOk), h('div', 'kfact', null, add, cancel)));
     ni.focus();
   }
   showAddBtn();
@@ -1315,9 +1450,9 @@ function openKan(id) {
   const conf = h('div', 'conf', null, h('span', null, 'Delete this card and its checklist?'), yes, no); conf.style.display = 'none'; del.style.marginTop = '12px';
   del.onclick = () => { del.style.display = 'none'; conf.style.display = 'flex'; }; no.onclick = () => { conf.style.display = 'none'; del.style.display = ''; };
   yes.onclick = () => { kan.cards = kan.cards.filter(z => z !== c); closeKan(); sync(); };
-  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fTime, fld('Assigned', ai)), qk, repSw.lab, repNote,
+  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fTime, fld('Assigned', ai)), h('div', 'kq', null, doneBtn, autoBtn), qk, repSw.lab, repNote,
     tuSw.lab, remSw.lab, h('div', 'kchead', null, h('span', null, '🏷 Tags'), tagCnt), tagSel, tagDD, h('div', 'kchead', null, h('span', null, '☑ Checklist'), psub), h('div', 'kpr', null, ptxt, pbar), list, kundo, addWrap, del, conf);
-  renderList(); renderTags(); showMode();
+  renderList(); renderTags(); showMode(); showAuto();
   m.addEventListener('keydown', e => { if (e.key === 'Escape') closeKan(); });
   m.addEventListener('pointerdown', e => { if (e.target === m) closeKan(); });
   shell.append(m); m.focus(); requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('open')));
@@ -1402,7 +1537,7 @@ function build() {
     x.setAttribute('aria-label', 'Remove ' + (t.title || l));
     const ok = h('button', 'x ok', '✓'); ok.title = 'Got it: hides this check, elapsed time keeps counting'; ok.setAttribute('aria-label', 'Done with ' + l); ok.style.display = 'none';
     // the time with its title under it; long titles are shortened with an ellipsis and hovering shows them in full
-    const tsp = planning && !t.kan ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60))] : [])), lblBox = h('div', 'tlb', null, tr1, tt);
+    const tsp = planning && !t.kan ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60) + (t.hist && t.hist.length > 1 ? ' · changed ' + t.hist.length + '×' : ''))] : [])), lblBox = h('div', 'tlb', null, tr1, tt);
     const showTitle = () => { tt.textContent = t.title || 'add a title'; tt.className = 'tt' + (t.title ? '' : ' empty'); };
     showTitle();
     lblBox.addEventListener('mouseenter', () => { if (t.title) showTip(lblBox, t.title); });
@@ -1423,6 +1558,7 @@ function build() {
     const chips = [mkChip('sun', '☀️ Daylight', 'Your chosen time falls between sunrise and sunset, so there is still daylight then.'), mkChip('gold', '🌇 Golden hour', 'Your chosen time falls inside a golden-hour window: low sun and soft, warm light.'), mkChip('blue', '🔵 Blue hour', 'Your chosen time falls inside a blue-hour window: deep twilight just before sunrise or after sunset.')];
     const chipRow = h('div', 'trkr', null, ...chips.map(c => c.box)); chipRow.style.display = 'none'; tr1.append(chipRow);
     const head = h('div', 'trh', null, lblBox, cd, ok, x), row = h('div', 'tr', null, head, h('div', 'bar sm', null, f), h('div', 'trf', null, sw.lab));
+    if (planning && !t.kan && (t.prev != null || (t.hist && t.hist.length))) { row.classList.add('pchg'); if (t === lastChg) row.classList.add('pnew'); }   // re-planning: a blue outline marks every countdown whose time was changed, and it pulses right after each new change
     x.onclick = () => {   // first tap only asks; nothing is removed until "Remove"
       const yes = h('button', 'cf yes', 'Remove'), no = h('button', 'cf', 'Keep');
       const conf = h('div', 'conf', null, h('span', null, 'Remove ' + (t.title || l) + '?'), yes, no);
@@ -1432,14 +1568,14 @@ function build() {
       no.onclick = cancel;
       head.style.display = 'none'; row.insertBefore(conf, head); timer = setTimeout(cancel, 5000);
     };
-    if (t.kan) { x.textContent = '🗂'; x.title = 'From your Kanban board: tap to open it'; x.setAttribute('aria-label', 'Open the Kanban board'); x.onclick = () => flipTo('kanban'); tt.onclick = null; tt.classList.add('nokan'); row.classList.add('tkan'); row.style.setProperty('--kc', t.col || '#8ea0d8'); }   // a slot that comes from the Kanban
+    if (t.kan) { x.textContent = '🗂'; x.title = 'From your Kanban board: tap to open it'; x.setAttribute('aria-label', 'Open the Kanban board'); x.onclick = () => kanGoto(t.id); tt.onclick = null; tt.classList.add('nokan'); row.classList.add('tkan'); row.style.setProperty('--kc', t.col || '#8ea0d8'); }   // a slot that comes from the Kanban
     ok.onclick = () => { const e = rows.find(z => z.t === t); if (e && e.os) { t.ack = e.os; save(); } };   // acknowledge: back to the normal countdown
     rows.push({ t, cd, cdMain, cdSup, f, row, ok, chips, chipRow, tr1, chipT: 0, os: 0, last: NaN, p: 0, first: true });
     return row;
   }));
 }
 // Remove keeps the whole timer object (including its original length), so Undo puts the progress bar back where it belongs.
-let undoList = [], undoTimer = 0;
+let undoList = [], undoTimer = 0, lastChg = null;   // lastChg: the countdown whose time was changed most recently (re-planning)
 function mkTimeEdit(t) {   // planning mode: pick a new time, then press the check mark beside it to apply it
   const i = h('input', 'ptime'); i.type = 'time'; const cur = p2(Math.floor(t.v / 60)) + ':' + p2(t.v % 60); i.value = cur; i.setAttribute('aria-label', 'New time for this countdown');
   const ok = h('button', 'pok', '✓'); ok.type = 'button'; ok.disabled = true; ok.title = 'Apply the new time'; ok.setAttribute('aria-label', 'Apply the new time');
@@ -1449,7 +1585,7 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
     const q = i.value.split(':').map(Number);
     if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
     const v = q[0] * 60 + q[1];
-    (t.hist = t.hist || []).push(t.v); t.fut = []; t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
+    lastChg = t; (t.hist = t.hist || []).push(t.v); t.fut = []; t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
     save(); build();
   };
   i.addEventListener('input', sync); i.addEventListener('change', sync);
@@ -1459,12 +1595,12 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
   const un = h('button', 'pun', '↶'); un.type = 'button';
   if (t.hist && t.hist.length) {   // each press steps back one edit; the "was" time then shows the one before that
     const back = t.hist[t.hist.length - 1]; un.title = 'Undo the last change and go back to ' + hl(Math.floor(back / 60), back % 60); un.setAttribute('aria-label', un.title);
-    un.onclick = () => { (t.fut = t.fut || []).push(t.v); t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+    un.onclick = () => { lastChg = t; (t.fut = t.fut || []).push(t.v); t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
   } else un.style.display = 'none';
   const rd = h('button', 'pun', '↷'); rd.type = 'button';   // redo: steps forward again after an undo
   if (t.fut && t.fut.length) {
     const fwd = t.fut[t.fut.length - 1]; rd.title = 'Redo: go forward to ' + hl(Math.floor(fwd / 60), fwd % 60); rd.setAttribute('aria-label', rd.title);
-    rd.onclick = () => { (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = t.fut.pop(); delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+    rd.onclick = () => { lastChg = t; (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = t.fut.pop(); delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
   } else rd.style.display = 'none';
   return h('span', 'pedit', null, i, ok, un, rd);
 }
@@ -1912,6 +2048,7 @@ function tick() {
   trashTick(n, sod);
   rows.forEach(r => {
     const t = r.t, fz = t.kan && t.frz ? t.frz : 0, nx = fz || n, sx = fz ? sodOf(fz) : sod, nowS = Math.floor(nx / 1000);   // a complete Kanban card's row stands still at the moment it was completed
+    kGrad(r.row, fz, true);   // a completed Kanban row keeps the gradient of its completion moment
     let d = t.v * 60 - sx; if (d < 0) d += 86400;
     const since = (86400 - d) % 86400, os = nowS - since;          // when this clock time last came round, in whole seconds
     const wrapped = !fz && !isNaN(r.last) && d > r.last + 5;
