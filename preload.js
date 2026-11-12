@@ -21,4 +21,8 @@ contextBridge.exposeInMainWorld('skyclock', {
   onFlip: cb => ipcRenderer.on('flip:toggle', () => cb()),
   onInd: cb => ipcRenderer.on('ind:toggle', () => cb()),
   onMil: cb => ipcRenderer.on('mil:toggle', () => cb()),
+  miniMode: (on, w, h) => ipcRenderer.send('mini:set', !!on, Number(w) || 0, Number(h) || 0),
+  miniSize: (w, h) => ipcRenderer.send('mini:size', Number(w) || 0, Number(h) || 0),
+  onMini: cb => ipcRenderer.on('mini:toggle', () => cb()),
+  onMview: cb => ipcRenderer.on('mview:toggle', () => cb()),
 });

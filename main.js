@@ -8,7 +8,7 @@ const gotLock = app.requestSingleInstanceLock();      // only one Sky Clock at a
 if (!gotLock) app.quit();
 app.setAppUserModelId('com.skyclock.desktop');        // needed for Windows notifications
 
-let win = null, tray = null, quitting = false, cfg = {}, saveTimer = null;
+let win = null, tray = null, quitting = false, cfg = {}, saveTimer = null, miniWin = false, normalBounds = null;
 const cfgPath = () => path.join(app.getPath('userData'), 'window.json');
 const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgPath(), 'utf8')); } catch (e) { return {}; } };
 const saveCfg = () => { try { fs.writeFileSync(cfgPath(), JSON.stringify(cfg)); } catch (e) {} };
@@ -19,15 +19,17 @@ const onScreen = b => b && [b.x, b.y, b.width, b.height].every(Number.isFinite) 
 });
 
 // ---------- keyboard shortcuts (work from anywhere, even while the window is hidden) ----------
-const DEFAULT_KEYS = { toggle: 'Alt+Shift+K', theme: 'Alt+Shift+B', flip: 'Alt+Shift+F', ind: 'Alt+Shift+I', mil: 'Alt+Shift+M', quit: 'Alt+Shift+Q' };
+const DEFAULT_KEYS = { toggle: 'Alt+Shift+K', theme: 'Alt+Shift+B', flip: 'Alt+Shift+F', ind: 'Alt+Shift+I', mil: 'Alt+Shift+M', mini: 'Alt+Shift+T', mview: 'Alt+Shift+V', quit: 'Alt+Shift+Q' };
 let shortcuts = { ...DEFAULT_KEYS };
-const scOk = { toggle: false, theme: false, flip: false, ind: false, mil: false, quit: false };          // did Windows let us have that key combination?
+const scOk = { toggle: false, theme: false, flip: false, ind: false, mil: false, mini: false, mview: false, quit: false };          // did Windows let us have that key combination?
 const quitApp = () => { quitting = true; app.quit(); };
 const toggleTheme = () => { if (win) win.webContents.send('theme:toggle'); };   // the page switches Sky <-> Black
 const flipBoard = () => { if (win) win.webContents.send('flip:toggle'); };   // the page flips Time until <-> Kanban
 const toggleInd = () => { if (win) win.webContents.send('ind:toggle'); };   // the page shows or hides the dots and LIVE badges
 const toggleMil = () => { if (win) win.webContents.send('mil:toggle'); };   // the page switches 12-hour <-> 24-hour time
-const actions = { toggle: () => toggle(), theme: toggleTheme, flip: flipBoard, ind: toggleInd, mil: toggleMil, quit: quitApp };
+const toggleMini = () => { if (!win) return; if (!win.isVisible()) { if (win.isMinimized()) win.restore(); win.show(); } win.webContents.send('mini:toggle'); };   // the page shrinks to one timer, or goes back
+const switchMini = () => { if (win) win.webContents.send('mview:toggle'); };   // the mini window switches Time until <-> Kanban card
+const actions = { toggle: () => toggle(), theme: toggleTheme, flip: flipBoard, ind: toggleInd, mil: toggleMil, mini: toggleMini, mview: switchMini, quit: quitApp };
 const MODS = ['Ctrl', 'Control', 'CommandOrControl', 'CmdOrCtrl', 'Alt', 'Option', 'AltGr', 'Shift', 'Super', 'Meta', 'Command', 'Cmd'];
 const BLOCKED = ['ctrl+c', 'ctrl+v', 'ctrl+x', 'ctrl+z', 'ctrl+y', 'ctrl+a', 'ctrl+s', 'alt+f4', 'alt+tab'];
 function validAccel(a) {                               // '' means "off"
@@ -52,6 +54,8 @@ const scSnapshot = () => ({
   flip: { accel: shortcuts.flip, ok: scOk.flip },
   ind: { accel: shortcuts.ind, ok: scOk.ind },
   mil: { accel: shortcuts.mil, ok: scOk.mil },
+  mini: { accel: shortcuts.mini, ok: scOk.mini },
+  mview: { accel: shortcuts.mview, ok: scOk.mview },
   quit: { accel: shortcuts.quit, ok: scOk.quit },
 });
 
@@ -77,6 +81,8 @@ function rebuildMenu() {
     { label: 'Flip Time until / Kanban' + hint('flip'), click: flipBoard },
     { label: 'Show / hide dots & LIVE badges' + hint('ind'), click: toggleInd },
     { label: '12-hour / 24-hour time' + hint('mil'), click: toggleMil },
+    { label: 'Mini window (selected timer)' + hint('mini'), click: toggleMini },
+    { label: 'Mini window: switch Time until / card' + hint('mview'), click: switchMini },
     { label: 'Always on top', type: 'checkbox', checked: win.isAlwaysOnTop(), click: i => setPin(i.checked) },
     { label: 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings(loginOpts()).openAtLogin, click: i => setAutostart(i.checked) },
     { type: 'separator' },
@@ -116,7 +122,7 @@ function createWindow() {
 
   const remember = () => {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { if (win && !win.isMinimized() && !win.isMaximized()) { cfg.bounds = win.getBounds(); saveCfg(); } }, 400);
+    saveTimer = setTimeout(() => { if (win && !win.isMinimized() && !win.isMaximized()) { const b = win.getBounds(); if (miniWin) cfg.miniPos = { x: b.x, y: b.y }; else cfg.bounds = b; saveCfg(); } }, 400);   // the mini window remembers its own spot; the full window keeps its size
   };
   win.on('resize', remember); win.on('move', remember);
   win.on('show', rebuildMenu); win.on('hide', rebuildMenu);
@@ -161,6 +167,27 @@ if (gotLock) {
       } catch (e) {}
     }
     return { ok: false };
+  });
+  const clampN = (v, lo, hi, d) => (Number.isFinite(+v) && +v > 0 ? Math.max(lo, Math.min(hi, Math.round(+v))) : d);
+  ipcMain.on('mini:set', (e, on, w, h) => {              // mini window: the app shrinks to show one timer, then goes back to its full size and place
+    if (!win) return; on = !!on;
+    if (on && !miniWin) {
+      if (win.isMaximized()) win.unmaximize();
+      normalBounds = win.getBounds(); miniWin = true;
+      win.setMinimumSize(120, 60); win.setResizable(false);
+      const mw = clampN(w, 200, 900, 320), mh = clampN(h, 60, 1600, 220), p = cfg.miniPos;
+      const at = p && Number.isFinite(p.x) && Number.isFinite(p.y) && onScreen({ x: p.x, y: p.y, width: mw, height: mh }) ? p : normalBounds;
+      win.setBounds({ x: Math.round(at.x), y: Math.round(at.y), width: mw, height: mh });
+    } else if (!on && miniWin) {
+      miniWin = false; win.setMinimumSize(280, 360); win.setResizable(true);
+      if (normalBounds) win.setBounds(normalBounds);
+      normalBounds = null;
+    }
+  });
+  ipcMain.on('mini:size', (e, w, h) => {                 // the page tells us how big the timer on show is
+    if (!win || !miniWin) return;
+    const mw = clampN(w, 200, 900, 320), mh = clampN(h, 60, 1600, 220), b = win.getBounds();
+    if (b.width !== mw || b.height !== mh) win.setBounds({ x: b.x, y: b.y, width: mw, height: mh });
   });
   ipcMain.handle('pin:get', () => (win ? win.isAlwaysOnTop() : false));
   ipcMain.handle('pin:toggle', () => setPin(!win.isAlwaysOnTop()));

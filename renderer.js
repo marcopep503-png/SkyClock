@@ -566,6 +566,37 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kitb .kbar{flex:none;width:100%}
 .kclb .kfill,.kitb .kfill{background:linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5))}   /* the same hourly gradient the progress bars have in Black mode, shown in Sky mode too */
 .kit .kbody{gap:6px}
+.mpv{display:none;flex:none;width:100%;padding:5px 12px;border-radius:10px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.18);font-size:11.5px;opacity:.78;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;font-variant-numeric:tabular-nums}
+.mpv:hover{opacity:1}
+.hd span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hd .vb{display:none}
+.shell.mini .hd .vb.kon{display:inline-block}
+.shell.mini .mpv{display:block}
+.shell.mini .wrap{gap:8px;padding:8px}
+.shell.mini .wrap>*:not(.mpv):not(.flip){display:none!important}
+.shell.mini .flip{flex:none}
+.shell.mini .flip>section.kan{display:none!important}
+.shell.mini .flip>section:not(.kan){display:block!important}
+.shell.mini.mcard .flip>section:not(.kan){display:none!important}
+.shell.mini.mcard .flip>section.kan{display:block!important}
+.shell.mini .flip>section:not(.kan)>*:not(.mtl){display:none!important}
+.shell.mini .mtl .tr:not(.msel),.shell.mini .mtl .tx{display:none!important}
+.shell.mini .mtl .tr{border-top:0;padding-top:2px}
+.shell.mini .tr .pk{display:none}
+.shell.mini .kan>*:not(.ksec):not(.mchips){display:none!important}
+.shell.mini .kan>.ksec:not(.mhas){display:none!important}
+.shell.mini .ksec .ksh,.shell.mini .ksec .ktpl,.shell.mini .ksec .kcard:not(.msel){display:none!important}
+.shell.mini .ksec .klist{display:block!important}
+.shell.mini .kcard.mitems>*:not(.kt):not(.kcl){display:none!important}
+.shell.mini .kcard.mitems .kcll{display:none}
+.shell.mini .kcard.mitems .kclrow:not(.mpick){display:none!important}
+.shell.mini .kcard.mitems .kcl.kcol .kclrow.mpick{display:block!important}
+.shell.mini .kcard.mitems .kcl{margin-top:6px;padding-top:0;border-top:0}
+.shell.mini .kcard.mitems .kt{padding-right:0}
+.mchips{display:none;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.shell.mini.mcard .mchips{display:flex}
+.mchips .chip{margin:0;cursor:pointer;text-shadow:none}
+.mchips .chip.on{background:rgba(255,255,255,.42);font-weight:700;border-color:rgba(255,255,255,.7)}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -631,7 +662,7 @@ const addBtn = h('button', 'add', 'Add'), chipBox = h('div', 'chips'), tl = h('d
 const planSw = mkSw('Re-planning'); planSw.lab.classList.add('plan'); setSw(planSw.i, planning);
 planSw.lab.title = 'Re-planning mode: change the time of a countdown, and keep an Undo box for every deleted countdown until you switch this off';
 function setPlanning(on, revert) {
-  planning = on; setSw(planSw.i, on);
+  planning = on; lastChg = null; setSw(planSw.i, on);
   if (on) planSnap = JSON.stringify(tracked);
   else {
     if (revert && planSnap) { try { tracked = JSON.parse(planSnap); } catch (e) {} }   // every edit, deletion and addition made while planning is undone
@@ -657,14 +688,14 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini window: only the selected timer'], ['mview', 'Mini window: Time until / Kanban card'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
 const scRows = SC.map(([k, label]) => { const b = h('button', 'add sm2', '…'); scBtn[k] = b; return h('div', 'ev', null, h('span', null, label), b); });
 const scReset = h('button', 'add sm2', 'Reset to defaults');
 const shortcutCard = h('section', 'g', null, h('div', 'ttl', 'Keyboard shortcuts'), ...scRows, scMsg, scReset,
-  h('p', 'note', 'Tap a shortcut, then press the new keys. Also, while this window is selected: Ctrl+W hides it, Ctrl+B switches Sky / Black, Ctrl+F flips Time until / Kanban and Ctrl+Q quits.'));
+  h('p', 'note', 'Tap a shortcut, then press the new keys. Also, while this window is selected: Ctrl+W hides it, Ctrl+B switches Sky / Black, Ctrl+F flips Time until / Kanban and Ctrl+Q quits. In the mini window: Up / Down or the mouse wheel cycle the timers, Left / Right or a sideways scroll switch between Time until and the Kanban card.'));
 shortcutCard.style.display = skc && skc.getShortcuts ? '' : 'none';
 let scState = null, scRec = null;
 function scShow() {
@@ -705,9 +736,11 @@ addEventListener('keydown', e => {
 addEventListener('pointerdown', e => { if (scRec && !e.composedPath().includes(scBtn[scRec])) scStop(); }, true);
 if (skc && skc.getShortcuts) skc.getShortcuts().then(s => { scState = s; scShow(); });
 if (skc && skc.onTheme) skc.onTheme(() => applyMode(mode === 'sky' ? 'grain' : 'sky', true));   // the Sky / Black keybind
-if (skc && skc.onMil) skc.onMil(() => { h24Sw.i.checked = !H24; h24Sw.i.onchange(); });   // the 12-hour / 24-hour keybind
+if (skc && skc.onMil) skc.onMil(() => { h24Sw.i.checked = !H24; h24Sw.i.onchange(); });
+if (skc && skc.onMini) skc.onMini(() => miniToggle());
+if (skc && skc.onMview) skc.onMview(() => miniSwitch());   // the 12-hour / 24-hour keybind
 if (skc && skc.onInd) skc.onInd(() => applyInd(!ind));   // the dots & LIVE badges keybind
-if (skc && skc.onFlip) skc.onFlip(() => flipTo(kan.side === 'kanban' ? 'time' : 'kanban'));   // the Time until / Kanban keybind
+if (skc && skc.onFlip) skc.onFlip(() => { if (mini.on) miniSwitch(); else flipTo(kan.side === 'kanban' ? 'time' : 'kanban'); });   // the Time until / Kanban keybind
 
 // ---------- pomodoro card (focus sessions of up to 7 pomodoros, with per-day averages) ----------
 const PM_MAX = 7, PM_PRESETS = [[5, '5 min'], [10, '10 min'], [15, '15 min'], [25, '25 min'], [45, '45 min'], [60, '1 hr']];   // same buttons as the alarm timer
@@ -1212,6 +1245,7 @@ function kCard(c) {
 }
 function kanGoto(id) {   // the 🗂 icon on a Time until row: flip to the Kanban board, scroll to that card (or checklist item) and highlight it
   const [cid, iid] = String(id || '').split(':'), c = kan.cards.find(z => z.id === cid);
+  if (mini.on) { miniSwitch(); return; }   // in the mini window the 🗂 icon switches to the card
   flipTo('kanban');
   if (!c) return;
   let moved = false;
@@ -1230,6 +1264,7 @@ function kanRender() {
   kanRefs = [];
   kSecs.forEach(s => { const cards = kan.cards.filter(c => c.cat === s.cat.id).sort((a, b) => (kdue(a) == null ? 9e15 : kdue(a)) - (kdue(b) == null ? 9e15 : kdue(b))); s.cnt.textContent = cards.length; s.list.replaceChildren(...cards.map(kCard), s.tpl); });
   kanTick(Date.now(), true);
+  miniApply();
 }
 // ---- completing a card: its checklist is completed with it (and can be reversed), and the card flies to the Done section
 const kReduce = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
@@ -1554,6 +1589,119 @@ const launch = h('button', 'launch', '🕰️');
 launch.onclick = () => { if (moved) { moved = false; return; } if (isYT && ytSlot()) { ytDocked = true; keepYT(); place(); return; } setOpen(true, true); };
 shell.append(tip); root.append(shell, launch);
 
+// ---------- mini window: show one Time until timer, with the window shrunk to its size (desktop app) ----------
+// Up / Down or the mouse wheel cycle through the timers (the one above and the one below are previewed);
+// Left / Right or a sideways scroll switch a Kanban timer between its Time until row and its Kanban card.
+const MINI_W = 320;
+let mini = { on: false, key: '', view: 'time', idx: 0 }, miniPick = {}, miniLast = { w: 0, h: 0 }, miniHintT = 0;
+try { const v = JSON.parse(GM_getValue('mini', 'null')); if (v) mini = { on: !!v.on, key: String(v.key || ''), view: v.view === 'card' ? 'card' : 'time', idx: 0 }; } catch (e) {}
+try { const v = JSON.parse(GM_getValue('miniPick', '{}')); if (v && typeof v === 'object' && !Array.isArray(v)) miniPick = v; } catch (e) {}
+const miniSave = () => { try { GM_setValue('mini', JSON.stringify({ on: mini.on, key: mini.key, view: mini.view })); } catch (e) {} };
+const miniSavePick = () => { try { GM_setValue('miniPick', JSON.stringify(miniPick)); } catch (e) {} };
+const mkey = (t, assign) => t.kan ? String(t.id) : (t.uid || (assign ? (t.uid = Math.random().toString(36).slice(2, 10), save(), t.uid) : null));   // a stable name for every timer
+const miniPrev = h('button', 'mpv'), miniNext = h('button', 'mpv'), mchips = h('div', 'mchips');
+miniPrev.type = miniNext.type = 'button'; miniPrev.title = 'Show the timer above (Up arrow)'; miniNext.title = 'Show the timer below (Down arrow)';
+flipBox.before(miniPrev); flipBox.after(miniNext); kanSec.prepend(mchips); tl.classList.add('mtl');
+const hdTitle = hd.firstElementChild;
+const miniBtn = h('button', null, '⏱'), viewBtn = h('button', 'vb', '⇄');
+miniBtn.type = viewBtn.type = 'button'; viewBtn.title = 'Switch between the Time until row and the Kanban card (Left / Right arrow)'; viewBtn.setAttribute('aria-label', 'Switch between Time until and Kanban card');
+pinBtn.before(viewBtn, miniBtn);
+const miniIdx = () => { let i = mini.key ? rows.findIndex(r => mkey(r.t) === mini.key) : -1; if (i < 0 && rows.length) i = Math.min(Math.max(mini.idx || 0, 0), rows.length - 1); return i; };
+function miniPicks(c) {   // which checklist timers of this card are shown (none picked = the whole card)
+  const ok = c.items.filter(i => i.time).map(i => i.id), iid = String(mini.key).split(':')[1];
+  const raw = miniPick[c.id] !== undefined ? miniPick[c.id] : (iid ? [iid] : []);
+  return raw.filter(id => ok.includes(id));
+}
+function miniApply() {   // lays the page out for mini mode: only the chosen timer (or its card) is visible
+  try { shell.classList.toggle('mini', mini.on); } catch (e) { return; }
+  miniBtn.textContent = mini.on ? '⤢' : '⏱'; miniBtn.title = mini.on ? 'Back to the full window' : 'Mini window: show only one timer';
+  miniBtn.setAttribute('aria-label', miniBtn.title);
+  if (!mini.on) { rows.forEach(r => r.row.classList.remove('msel')); shell.classList.remove('mcard'); hdTitle.textContent = '🕰️ Sky Clock'; return; }
+  const i = miniIdx(), cur = i >= 0 ? rows[i] : null;
+  if (cur) { mini.idx = i; const k = mkey(cur.t, true); if (k !== mini.key) { mini.key = k; miniSave(); } }
+  rows.forEach((r, k) => r.row.classList.toggle('msel', k === i));
+  const t = cur ? cur.t : null, cid = t && t.kan ? String(t.id).split(':')[0] : '', c = cid ? kan.cards.find(z => z.id === cid) : null;
+  if (!c && mini.view === 'card') { mini.view = 'time'; miniSave(); }
+  shell.classList.toggle('mcard', mini.view === 'card'); viewBtn.classList.toggle('kon', !!c);
+  const picks = c ? miniPicks(c) : [];
+  kanSec.querySelectorAll('.ksec').forEach(s => s.classList.remove('mhas'));
+  kanSec.querySelectorAll('.kcard').forEach(el => {   // the card itself, or only the checklist timers you picked
+    const on = !!c && el.dataset.kid === cid;
+    el.classList.toggle('msel', on); el.classList.toggle('mitems', on && picks.length > 0);
+    el.querySelectorAll('.kclrow').forEach(rw => rw.classList.toggle('mpick', on && picks.includes(rw.dataset.iid)));
+    if (on) { const s = el.closest('.ksec'); if (s) s.classList.add('mhas'); }
+  });
+  const timed = c ? c.items.filter(x => x.time) : [], sh = s => (s.length > 26 ? s.slice(0, 25) + '…' : s);
+  const chip = (label, on, fn) => { const b = h('button', 'chip' + (on ? ' on' : ''), label); b.type = 'button'; b.setAttribute('aria-pressed', String(on)); b.onclick = fn; return b; };
+  mchips.replaceChildren(...(timed.length ? [
+    chip('🗂 Whole card', !picks.length, () => { miniPick[c.id] = []; miniSavePick(); miniApply(); }),
+    ...timed.map(it => chip('⏰ ' + ktime(it.time) + ' ' + sh(it.text), picks.includes(it.id), () => { const s = new Set(picks); if (s.has(it.id)) s.delete(it.id); else s.add(it.id); miniPick[c.id] = [...s]; miniSavePick(); miniApply(); }))
+  ] : []));
+  miniTick(); miniFitSoon();
+}
+function miniTick() {   // every tick: the previews, the header and the window size follow the timers
+  if (!mini.on) return;
+  const n = rows.length, i = Math.min(Math.max(mini.idx || 0, 0), Math.max(0, n - 1));
+  const fm = r => hl(Math.floor(r.t.v / 60), r.t.v % 60) + (r.t.title ? ' · ' + r.t.title : '') + ' · ' + r.cdMain.textContent;
+  miniPrev.style.display = n > 2 ? '' : 'none'; miniNext.style.display = n > 1 ? '' : 'none';
+  if (n > 2) miniPrev.textContent = '↑ ' + fm(rows[(i - 1 + n) % n]);
+  if (n > 1) miniNext.textContent = '↓ ' + fm(rows[(i + 1) % n]);
+  if (!miniHintT) hdTitle.textContent = n ? '⏱ ' + (i + 1) + ' of ' + n + (mini.view === 'card' ? ' · card' : '') : '⏱ no timers';
+  miniFit();
+}
+function miniHint(msg) { hdTitle.textContent = msg; clearTimeout(miniHintT); miniHintT = setTimeout(() => { miniHintT = 0; miniTick(); }, 1600); }
+function miniFit(force) {   // the window is as tall as what is showing; the width stays fixed
+  if (!mini.on || !skc || !skc.miniSize) return;
+  const kids = [...wrap.children].filter(e => e.offsetParent !== null), cs = getComputedStyle(wrap), gap = parseFloat(cs.rowGap) || 0;
+  const nat = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) + kids.reduce((a, e) => a + e.offsetHeight, 0) + gap * Math.max(0, kids.length - 1);
+  let hh = Math.ceil(hd.offsetHeight + nat); if (kmod) hh = Math.max(hh, 560);   // the card pop-up needs room
+  hh = Math.max(90, Math.min(hh, (screen.availHeight || 800) - 30));
+  if (force === true || hh !== miniLast.h) { miniLast = { w: MINI_W, h: hh }; skc.miniSize(MINI_W, hh); }
+}
+const miniFitSoon = () => { if (mini.on) { setTimeout(miniFit, 30); setTimeout(miniFit, 300); } };
+function miniStep(d) {   // the next (1) or previous (-1) timer, wrapping around
+  const n = rows.length; if (n < 2) return;
+  const t = rows[(miniIdx() + d + n) % n].t;
+  mini.key = mkey(t, true); if (!(t.kan && mini.view === 'card')) mini.view = 'time';
+  miniSave(); hideTip(); miniApply();
+}
+function miniSwitch() {   // Time until row <-> Kanban card (Kanban timers only)
+  if (!mini.on) return;
+  const r = rows[miniIdx()];
+  if (!r || !r.t.kan) { miniHint('Only Kanban timers have a card'); return; }
+  mini.view = mini.view === 'card' ? 'time' : 'card'; miniSave(); miniApply();
+  const sec = mini.view === 'card' ? kanSec : timeSec; sec.classList.add('fin'); setTimeout(() => sec.classList.remove('fin'), 320);
+}
+function miniOn(t) {   // t: the timer picked on its row; with none, the last one shown (or the first)
+  if (!skc || !skc.miniMode) return;
+  if (t) { mini.key = mkey(t, true); mini.view = 'time'; }
+  else if (!(mini.key && rows.some(r => mkey(r.t) === mini.key)) && rows.length) mini.key = mkey(rows[0].t, true);
+  mini.on = true; miniSave(); miniLast = { w: 0, h: 0 };
+  skc.miniMode(true, MINI_W, 220); miniApply(); setTimeout(() => miniFit(true), 80);
+}
+function miniOff() { mini.on = false; miniSave(); miniLast = { w: 0, h: 0 }; hideTip(); if (skc && skc.miniMode) skc.miniMode(false, 0, 0); miniApply(); }
+const miniToggle = () => { if (mini.on) miniOff(); else miniOn(); };
+function miniInit() { if (!skc || !skc.miniMode) { mini.on = false; return; } if (mini.on) { miniLast = { w: 0, h: 0 }; skc.miniMode(true, MINI_W, 220); miniApply(); setTimeout(() => miniFit(true), 120); } else skc.miniMode(false, 0, 0); }
+miniBtn.onclick = miniToggle; viewBtn.onclick = miniSwitch;
+miniPrev.onclick = () => miniStep(-1); miniNext.onclick = () => miniStep(1);
+addEventListener('keydown', e => {   // Up / Down: the timer above or below; Left / Right: Time until <-> Kanban card
+  if (!mini.on || scRec || kmod || e.ctrlKey || e.altKey || e.metaKey) return;
+  const tg = e.composedPath()[0], tn = tg && tg.tagName;
+  if ((tn === 'INPUT' && !/^(checkbox|radio|button)$/.test(tg.type)) || tn === 'TEXTAREA' || tn === 'SELECT' || (tg && tg.isContentEditable)) return;
+  if (e.key === 'ArrowUp') miniStep(-1); else if (e.key === 'ArrowDown') miniStep(1); else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') miniSwitch(); else return;
+  e.preventDefault();
+}, true);
+let mwX = 0, mwY = 0, mwLock = 0, mwT = 0;
+wrap.addEventListener('wheel', e => {   // scrolling on the timer cycles through the timers; scrolling sideways switches the view
+  if (!mini.on || kmod) return;
+  let dx = e.deltaX, dy = e.deltaY; if (e.shiftKey && !dx) { dx = dy; dy = 0; }
+  const now = performance.now(); clearTimeout(mwT); mwT = setTimeout(() => { mwX = mwY = 0; }, 180);
+  if (Math.abs(dx) > Math.abs(dy)) { e.preventDefault(); mwX += dx; if (now > mwLock && Math.abs(mwX) > 30) { mwX = mwY = 0; mwLock = now + 450; miniSwitch(); } return; }
+  if (mini.view === 'card' && wrap.scrollHeight > wrap.clientHeight + 1) return;   // a tall card scrolls instead
+  e.preventDefault(); mwY += dy;
+  if (now > mwLock && Math.abs(mwY) > 40) { const d = mwY > 0 ? 1 : -1; mwX = mwY = 0; mwLock = now + 300; miniStep(d); }
+}, { passive: false });
+
 // ---------- tracked times ----------
 let rows = [];
 // smooth pop-up with the full title
@@ -1569,7 +1717,7 @@ function hideTip() { tip.classList.toggle('on', false); }
 function build() {
   tracked.sort((a, b) => a.v - b.v); rows = []; trashRows = [];
   const list = [...tracked.map(t => ({ t })), ...kanDerived().map(t => ({ t })), ...(planning ? trash.map(t => ({ t, del: true })) : [])].sort((a, b) => a.t.v - b.t.v);
-  if (!list.length) { tl.replaceChildren(h('p', 'note', 'Nothing tracked yet.')); return; }
+  if (!list.length) { tl.replaceChildren(h('p', 'note', 'Nothing tracked yet.')); miniApply(); return; }
   tl.replaceChildren(...list.map(({ t, del }) => {
     if (del) return trashRow(t);
     const l = hl(Math.floor(t.v / 60), t.v % 60), x = h('button', 'x', '×'), f = h('div', 'fill');
@@ -1597,8 +1745,9 @@ function build() {
     const mkChip = (cls, label, tip) => { const live = h('span', 'trl', '● LIVE'); live.style.display = 'none'; const box = h('span', 'trk dot ' + cls, null, h('span', 'trn', label), live); box.setAttribute('aria-label', label); box.style.display = 'none'; tipOn(box, () => tip + ' ● LIVE means that window is happening right now.' + (box.classList.contains('past') ? '\n\nDashed ring: this time already passed today, so this shows tomorrow’s window.' : '')); return { box, live }; };
     const chips = [mkChip('sun', '☀️ Daylight', 'Your chosen time falls between sunrise and sunset, so there is still daylight then.'), mkChip('gold', '🌇 Golden hour', 'Your chosen time falls inside a golden-hour window: low sun and soft, warm light.'), mkChip('blue', '🔵 Blue hour', 'Your chosen time falls inside a blue-hour window: deep twilight just before sunrise or after sunset.')];
     const chipRow = h('div', 'trkr', null, ...chips.map(c => c.box)); chipRow.style.display = 'none'; tr1.append(chipRow);
-    const head = h('div', 'trh', null, lblBox, cd, ok, x), row = h('div', 'tr', null, head, h('div', 'bar sm', null, f), h('div', 'trf', null, sw.lab));
-    if (planning && !t.kan && (t.prev != null || (t.hist && t.hist.length))) { row.classList.add('pchg'); if (t === lastChg) row.classList.add('pnew'); }   // re-planning: a blue outline marks every countdown whose time was changed, and it pulses right after each new change
+    const pk = h('button', 'x pk', '⏱'); pk.title = 'Show only this timer in a small window'; pk.setAttribute('aria-label', 'Show only ' + (t.title || l) + ' in the mini window'); pk.onclick = () => miniOn(t); if (!skc || !skc.miniMode) pk.style.display = 'none';
+    const head = h('div', 'trh', null, lblBox, cd, ok, pk, x), row = h('div', 'tr', null, head, h('div', 'bar sm', null, f), h('div', 'trf', null, sw.lab));
+    if (planning && !t.kan && t === lastChg) row.classList.add('pchg', 'pnew');   // re-planning: the blue outline follows one change at a time: it sits on the countdown you edited last and moves to the next one you edit
     x.onclick = () => {   // first tap only asks; nothing is removed until "Remove"
       const yes = h('button', 'cf yes', 'Remove'), no = h('button', 'cf', 'Keep');
       const conf = h('div', 'conf', null, h('span', null, 'Remove ' + (t.title || l) + '?'), yes, no);
@@ -1613,6 +1762,7 @@ function build() {
     rows.push({ t, cd, cdMain, cdSup, f, row, ok, chips, chipRow, tr1, chipT: 0, os: 0, last: NaN, p: 0, first: true });
     return row;
   }));
+  miniApply();
 }
 // Remove keeps the whole timer object (including its original length), so Undo puts the progress bar back where it belongs.
 let undoList = [], undoTimer = 0, lastChg = null;   // lastChg: the countdown whose time was changed most recently (re-planning)
@@ -2111,6 +2261,7 @@ function tick() {
     const p = Math.max(0, Math.min(1, 1 - d / t.span));
     r.f.style.transition = (r.first || p < r.p) ? 'none' : ''; r.first = false; r.p = p; r.f.style.width = (p * 100) + '%';
   });
+  miniTick();
 }
 
 // ---------- floating widget ----------
@@ -2259,7 +2410,7 @@ locGeo.onclick = () => {
   }).catch(() => { locMsg.textContent = 'Could not find your location. Pick your time zone above instead.'; });
 };
 renderLoc();
-pmRender(); renderZone(); build(); applyMode(mode, false); place(); kanInit(); applyInd(ind);
+pmRender(); renderZone(); build(); applyMode(mode, false); place(); kanInit(); applyInd(ind); miniInit();
 (document.body || document.documentElement).appendChild(panel);
 unlockAudio(true); setInterval(tick, 250);
 setInterval(() => { if (!panel.isConnected) (document.body || document.documentElement).appendChild(panel); }, 2000);
