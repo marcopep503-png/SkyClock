@@ -1111,7 +1111,7 @@ const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof 
 const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
 const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
   mode: ['date', 'interval', 'none', 'weekly'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', auto: (Array.isArray(c.auto) ? c.auto : []).filter(s => typeof s === 'string').slice(0, 200), days: [...new Set((Array.isArray(c.days) ? c.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b), wd: kok(c.wd, KD) ? c.wd : '', free: kok(c.free, KD) ? c.free : '', park: !!c.park, start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
-  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
+  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', date: kok(i.date, KD) ? i.date : '', done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
 let kan = { cards: [], inc: false, rem: false, side: 'time', sp: {} };   // sp: the saved progress-bar spans of Kanban times on the Time until side, kept with the cards
 try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time', sp: v.sp && typeof v.sp === 'object' && !Array.isArray(v.sp) ? v.sp : {} }; } catch (e) {}
 const saveKan = () => { try { GM_setValue('kanban', JSON.stringify(kan, (k, v) => (k[0] === '_' ? undefined : v))); } catch (e) {} };
@@ -1153,14 +1153,23 @@ function kGrad(el, ms, both) {   // ms set: pin this element's gradient to that 
   const [a, b] = gradAt(ms); el.style.setProperty('--l1', a); el.style.setProperty('--l2', b);
   if (both) { el.style.setProperty('--g1', a); el.style.setProperty('--g2', b); }
 }
-function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight up to its due time; it restarts at midnight, so it tracks again the next day
+const kitT = it => it.time || (it.date ? '23:59' : '');   // a due date on its own counts down to the end of that day
+const kdayWord = d => d + (d === 1 ? ' day' : ' days');
+const kPills = it => [h('span', 'kitp', it.time ? '⏰ ' + ktime(it.time) : '⏰ end of day'), ...(it.date ? [h('span', 'kitp', '📅 ' + kdatew(it.date))] : [])];   // the due time and due date pills of a checklist item
+function kitUpd(x, n, dk) {   // one checklist item: the day countdown (when it has a due date) beside the running countdown to its due time
   const it = x.it; let nn = n, dd = dk;
   if (it.done) { if (!it.dat) { it.dat = n; kanDirty = true; } nn = it.dat; dd = kdayStr(nn); }   // a checked item is frozen at the moment it was checked; unchecking it lets it jump back to where it would be now
   kGrad(x.g, it.done ? nn : 0);   // a checked item keeps the gradient of the moment it was checked
-  const due = zonedMs(dd, it.time), st = zonedMs(dd, '00:00'), pre = it.done ? '✓ done · ' : '';
-  if (nn >= due) { x.f.style.width = '100%'; x.rem.replaceChildren(pre + 'Time passed · ', h('span', it.done ? 'kodue kodone' : 'kodue', 'overdue -' + fmt(Math.floor((nn - due) / 1000))), it.done ? '' : ' · tracks again tomorrow'); return; }   // the overdue part is red, with a minus sign in front of the running time
-  x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (nn - st) / (due - st))) : 100) + '%';
-  if (it.done) x.rem.replaceChildren(pre, h('span', 'kogood', fmt(Math.round((due - nn) / 1000)) + ' left when checked')); else x.rem.textContent = fmt(Math.round((due - nn) / 1000)) + ' left today';   // done before it was due: green
+  const t = kitT(it), due = zonedMs(dd, t), st = zonedMs(dd, '00:00'), day = [], tm = [];
+  if (it.date) {   // the day countdown stays plain until the due date has passed. Checked off in time it is green, checked off late it is orange, still open and late it is red
+    const dueMs = zonedMs(it.date, t), over = nn >= dueMs, late = Math.floor((nn - dueMs) / 864e5), left = kdiff(dd, it.date);
+    const txt = over ? 'overdue' + (late > 0 ? ' −' + kdayWord(late) : '') : left <= 0 ? 'due today' : kdayWord(left) + ' left';
+    const cls = it.done ? (over ? 'kodue kodone' : 'kogood') : over ? 'kodue' : '';
+    day.push(cls ? h('span', cls, txt) : txt);
+  }
+  if (nn >= due) { x.f.style.width = '100%'; tm.push('Time passed · ', h('span', it.done ? 'kodue kodone' : 'kodue', 'overdue -' + fmt(Math.floor((nn - due) / 1000))), it.done ? '' : ' · tracks again tomorrow'); }
+  else { x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (nn - st) / (due - st))) : 100) + '%'; tm.push(it.done ? h('span', 'kogood', fmt(Math.round((due - nn) / 1000)) + ' left when checked') : fmt(Math.round((due - nn) / 1000)) + ' left today'); }
+  x.rem.replaceChildren(...(it.done ? ['✓ done · '] : []), ...day, ...(day.length ? [' · '] : []), ...tm);
 }
 const kFrozen = c => !c.park && (c.cat === 'done' || (c.items.length > 0 && c.items.every(i => i.done)));   // a weekly card parked in Done because today is not its day keeps counting down to its next day   // checked off as complete, or its checklist is 100%: the main countdown stands still
 function kBoundary(c) {   // when a frozen card starts over by itself: only a card with no due date (each day) or a repeating interval card. Every other card stays frozen until you uncheck it.
@@ -1237,7 +1246,7 @@ function kCard(c) {
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
   box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);
   if (pct != null) { const f = h('div', 'kfill'); pctF = f; f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
-  const itRefs = [], timed = c.items.filter(i => i.time);
+  const itRefs = [], timed = c.items.filter(i => i.time || i.date);
   if (timed.length) {   // a small labelled section: each checklist item's due time (gradient border) beside its own progress bar
     const cl = h('div', 'kcl'), carr = h('span', 'karr'), chd = h('div', 'kcll kclh', null, carr, h('span', null, '☑ Checklist due times · ' + timed.length));
     chd.tabIndex = 0; chd.setAttribute('role', 'button');   // tapping the heading collapses or expands the list (without opening the card)
@@ -1245,7 +1254,7 @@ function kCard(c) {
     const cflip = () => { kColl['cl:' + c.id] = !kColl['cl:' + c.id]; saveColl(); capply(); };
     chd.onclick = e => { e.stopPropagation(); cflip(); }; chd.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cflip(); } });
     cl.append(chd); capply();
-    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), h('div', 'kclb', null, h('span', 'kitp', '⏰ ' + ktime(it.time)), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
+    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), h('div', 'kclb', null, ...kPills(it), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
     box.append(cl);
   }
   if (c.tags.length) box.append(h('div', 'ktagrow', null, ...c.tags.map(t => h('span', 'ktag', t))));
@@ -1483,22 +1492,23 @@ function openKan(id) {
     const cb = h('input'); cb.type = 'checkbox'; cb.checked = it.done; cb.setAttribute('aria-label', 'Done: ' + it.text);
     const tx = h('textarea', 'kin kx'); tx.rows = 1; tx.maxLength = 200; tx.value = it.text; tx.setAttribute('aria-label', 'Item text');
     const rm = h('button', 'kdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove item: ' + it.text);
-    const due = h('button', 'kdueat' + (it.time ? '' : ' none'), it.time ? '⏰ due at ' + ktime(it.time) : '+ due time'); due.type = 'button';
-    due.setAttribute('aria-label', it.time ? 'Change due time, currently ' + ktime(it.time) : 'Add a due time');
+    const due = h('button', 'kdueat' + (it.time || it.date ? '' : ' none'), it.time || it.date ? (it.time ? '⏰ due at ' + ktime(it.time) : '⏰ end of day') + (it.date ? ' · 📅 ' + kdatew(it.date) : '') : '+ due time / date'); due.type = 'button';
+    due.setAttribute('aria-label', it.time || it.date ? 'Change the due date and time' : 'Add a due date or time');
     const bf = h('div', 'kfill'), brem = h('span', 'kclr'), bw = h('div', 'kitb', null, h('div', 'kbar', null, bf), brem);   // the due time with its progress bar beside it
-    const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time ? [bw] : []))); if (it.time) kanPop.push({ it, f: bf, rem: brem, g: bw });
+    const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time || it.date ? [bw] : []))); if (it.time || it.date) kanPop.push({ it, f: bf, rem: brem, g: bw });
     cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kPopSettle(); };
     tx.oninput = () => grow(tx);
     tx.onchange = () => { it.text = tx.value.trim() || 'Item'; tx.value = it.text; sync(); };
     tx.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); tx.blur(); } });
-    due.onclick = () => {   // swap the pill for a time picker
-      const ft = h('input', 'kin kitime'); ft.type = 'time'; ft.value = it.time; ft.setAttribute('aria-label', 'Item due time');
-      const ok = h('button', 'pok', '✓'), no = h('button', 'pok pno', '✕'); ok.type = no.type = 'button'; ok.title = 'Apply this time'; no.title = 'Cancel';
-      ok.setAttribute('aria-label', 'Apply this time'); no.setAttribute('aria-label', 'Cancel');
-      // the time is only applied when you press the check mark (or Enter), never while you are still scrolling the picker
-      ok.onclick = () => { it.time = ft.value; sync(); renderList(); }; no.onclick = () => renderList();
-      ft.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); renderList(); } else if (e.key === 'Enter') ok.click(); });
-      due.replaceWith(h('span', 'pedit', null, ft, ok, no)); ft.focus();
+    due.onclick = () => {   // swap the pill for a date and time picker
+      const fd = h('input', 'kin kitime'), ft = h('input', 'kin kitime'); fd.type = 'date'; ft.type = 'time'; fd.value = it.date || ''; ft.value = it.time || '';
+      fd.setAttribute('aria-label', 'Item due date'); ft.setAttribute('aria-label', 'Item due time'); fd.style.maxWidth = '150px'; fd.style.minWidth = '130px';
+      const ok = h('button', 'pok', '✓'), no = h('button', 'pok pno', '✕'); ok.type = no.type = 'button'; ok.title = 'Apply this date and time'; no.title = 'Cancel';
+      ok.setAttribute('aria-label', 'Apply this date and time'); no.setAttribute('aria-label', 'Cancel');
+      // nothing is applied until you press the check mark (or Enter), never while you are still scrolling the picker; an empty field clears that part
+      ok.onclick = () => { it.date = fd.value; it.time = ft.value; sync(); renderList(); }; no.onclick = () => renderList();
+      [fd, ft].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); renderList(); } else if (e.key === 'Enter') ok.click(); }));
+      const ed = h('span', 'pedit', null, fd, ft, ok, no); ed.style.flexWrap = 'wrap'; ed.style.whiteSpace = 'normal'; due.replaceWith(ed); fd.focus();
     };
     const doRemove = () => { const i = c.items.indexOf(it); if (i < 0) return; undoItems.push({ it, i }); c.items = c.items.filter(z => z !== it); sync(); renderList(); showKundo(); timeKundo(); };
     rm.onclick = () => {   // first tap only asks; nothing is removed until "Remove" (then the warning with Undo appears)
@@ -1525,15 +1535,16 @@ function openKan(id) {
   function showForm() {   // the styled "new item" card with a due-at time
     const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item'); ni.oninput = () => grow(ni); requestAnimationFrame(() => grow(ni));
     const nt = h('input', 'kin kitime'); nt.type = 'time'; nt.setAttribute('aria-label', 'Due time for the new item');
+    const nd = h('input', 'kin kitime'); nd.type = 'date'; nd.setAttribute('aria-label', 'Due date for the new item'); nd.style.maxWidth = '150px';
     let nTime = '';   // the time only counts once you press the check mark, never while the picker is still moving
     const nOk = h('button', 'pok', '✓'); nOk.type = 'button'; nOk.title = 'Set this time'; nOk.setAttribute('aria-label', 'Set this due time'); nOk.style.display = 'none';
     const nShow = () => { nOk.style.display = nt.value !== nTime ? '' : 'none'; };
     nt.oninput = nt.onchange = nShow; nOk.onclick = () => { nTime = nt.value; nShow(); };
     const add = h('button', 'kfadd', 'Add'), cancel = h('button', 'kfcancel', '×'); add.type = cancel.type = 'button'; cancel.setAttribute('aria-label', 'Cancel');
-    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nTime || '', done: false }); kPopSettle(); showForm(); };   // the form reopens so you can add several in a row
+    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nTime || '', date: nd.value || '', done: false }); kPopSettle(); showForm(); };   // the form reopens so you can add several in a row
     add.onclick = go; cancel.onclick = showAddBtn;
     ni.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.stopPropagation(); showAddBtn(); } });
-    addWrap.replaceChildren(h('div', 'kform', null, ni, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt, nOk), h('div', 'kfact', null, add, cancel)));
+    addWrap.replaceChildren(h('div', 'kform', null, ni, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt, nOk), h('div', 'kfdue', null, h('span', null, '📅 Due on'), nd), h('div', 'kfact', null, add, cancel)));
     ni.focus();
   }
   showAddBtn();
