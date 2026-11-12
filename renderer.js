@@ -606,6 +606,13 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnpin.on{opacity:1}
 .mnnote{font-size:11px;opacity:.75;margin:0}
 .mnhint{font-size:11px;color:#ffd27a;margin-top:5px}
+.mnlab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mncd.ring{color:#ffd27a}
+.mnlen{font-size:11px;opacity:.75;white-space:nowrap}
+.mnsess{margin:-10px -12px 8px;padding:3px 12px;background:rgba(8,10,30,.9);font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;cursor:default}
+.mnprog{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px;font-variant-numeric:tabular-nums}
+.mnprog .bar{flex:1;min-width:30px}
+.mnpt{flex:none;white-space:nowrap;opacity:.92}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -652,7 +659,9 @@ const mkSw = (text, small) => { const i = h('input'); i.type = 'checkbox'; i.set
 const setSw = (i, v) => { i.checked = !!v; i.setAttribute('aria-checked', String(!!v)); };
 const alElSw = mkSw('Show elapsed time after it rings'); setSw(alElSw.i, alEl);
 alElSw.i.onchange = () => { alEl = alElSw.i.checked; alElSw.i.setAttribute('aria-checked', String(alEl)); try { GM_setValue('alEl', alEl); } catch (e) {} tick(); };
-const alBtns = h('div', 'ctl', null, alSilence, alCancel, alAgain, alDone); alBtns.style.marginTop = '10px';
+const hasMini = !!(window.skyclock && window.skyclock.miniSize);   // the mini timer window only exists in the desktop app
+const alMini = h('button', 'add sm2', '⌚ Mini'); alMini.title = 'Show only this alarm in a small window'; alMini.setAttribute('aria-label', 'Show only this alarm in a small window'); alMini.onclick = () => miniEnter('alarm'); if (!hasMini) alMini.style.display = 'none';
+const alBtns = h('div', 'ctl', null, alSilence, alCancel, alAgain, alDone, alMini); alBtns.style.marginTop = '10px'; alBtns.style.flexWrap = 'wrap';
 const h24Sw = mkSw('24-hour (military) time', true); h24Sw.lab.classList.add('h24sw');
 const cmpState = (() => { try { const v = GM_getValue('compact', {}); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } })();
 const cmpHeads = [];
@@ -765,7 +774,8 @@ const pmKeepSw = mkSw('Keep counting time after a pomodoro ends'); setSw(pmKeepS
 const pmKeepTxt = h('div', 'pmkd'), pmKeepBox = h('div', 'pmkeep', null, pmKeepSw.lab, pmKeepTxt);
 const pmCMsg = h('span'), pmC1 = h('button', 'cf yes', 'Yes'), pmC2 = h('button', 'cf', 'No'), pmC3 = h('button', 'cf', 'Keep going');
 const pmConf = h('div', 'conf big', null, pmCMsg, pmC1, pmC2, pmC3); pmConf.style.display = 'none';
-const pmBtns = h('div', 'ctl', null, pmPause, pmDone, pmQuit, pmExit, pmStop); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
+const pmMini = h('button', 'add sm2', '⌚ Mini'); pmMini.title = 'Show only this pomodoro in a small window'; pmMini.setAttribute('aria-label', 'Show only this pomodoro in a small window'); pmMini.onclick = () => miniEnter('pomo'); if (!hasMini) pmMini.style.display = 'none';
+const pmBtns = h('div', 'ctl', null, pmPause, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
 const pmRunBox = h('div', null, null, pmHead, pmTime, pmEnd, pmBar, pmWork, pmKeepBox, pmBtns, pmConf);
 const pmSumTxt = h('div', 'pmt'), pmSumOk = h('button', 'add sm2', 'OK'), pmSum = h('div', 'pmsum', null, pmSumTxt, pmSumOk); pmSum.style.display = 'none';
 const pmDayT = h('div', 'pms'), pmFull = h('b', 'pmv'), pmPart = h('b', 'pmv'), pmRate = h('b', 'pmv'), pmTot = h('b', 'pmv'), pmWeek = h('div', 'note'), pmIns = h('div', 'note');
@@ -1609,9 +1619,15 @@ const mini = h('div', 'mini', null, mnBody, mnPk, mnPkB);
 mnPk.title = 'Go to the previous timer'; mnPkB.title = 'Go to the next timer';
 mnPk.onclick = e => { e.stopPropagation(); miniGo(-1); }; mnPkB.onclick = e => { e.stopPropagation(); miniGo(1); };   // clicking a banner moves to that timer
 shell.append(mini);
-const miniIdx = () => (miniSel ? rows.findIndex(r => r.t === miniSel.t || (miniSel.id && r.t.kan && r.t.id === miniSel.id)) : -1);
-const miniSet = t => { miniSel = { t, id: t.kan ? t.id : null }; };
-const miniLine = (r, a) => a + ' ' + hl(Math.floor(r.t.v / 60), r.t.v % 60) + (r.t.title ? ' · ' + r.t.title : '') + ' · ' + r.cdMain.textContent;
+const miniList = () => [...rows.map(r => ({ kind: 'row', r })), ...(alarm ? [{ kind: 'alarm' }] : []), ...(pm.session ? [{ kind: 'pomo' }] : [])];   // everything the small window can show: the Time until rows, then the alarm, then the pomodoro
+const miniIdx = () => { if (!miniSel) return -1; const L = miniList(); if (miniSel.kind && miniSel.kind !== 'row') return L.findIndex(e => e.kind === miniSel.kind); return L.findIndex(e => e.kind === 'row' && (e.r.t === miniSel.t || (miniSel.id && e.r.t.kan && e.r.t.id === miniSel.id))); };
+const miniSet = t => { miniSel = { kind: 'row', t, id: t.kan ? t.id : null }; };
+const miniSetEntry = en => { if (en.kind === 'row') miniSet(en.r.t); else miniSel = { kind: en.kind }; };
+const miniLine = (en, a) => {
+  if (en.kind === 'alarm') return a + ' ⏰ Alarm · ' + (alLap.style.display !== 'none' ? alLapMain.textContent : alTime.textContent);
+  if (en.kind === 'pomo') return a + ' 🍅 Pomodoro ' + (pm.session ? pm.session.n : '') + ' · ' + pmTMain.textContent;
+  const r = en.r; return a + ' ' + hl(Math.floor(r.t.v / 60), r.t.v % 60) + (r.t.title ? ' · ' + r.t.title : '') + ' · ' + r.cdMain.textContent;
+};
 function miniHint(msg) {
   clearTimeout(miniHintT); const old = mnBody.querySelector('.mnhint'); if (old) old.remove();
   if (!msg) return; mnBody.append(h('div', 'mnhint', msg)); miniHintT = setTimeout(() => { const o = mnBody.querySelector('.mnhint'); if (o) o.remove(); }, 3500);
@@ -1630,13 +1646,14 @@ mini.addEventListener('mousemove', e => { if (!miniOn || miniPeekT) return; cons
 mini.addEventListener('mouseleave', () => { if (!miniPeekT) miniPeek(false, false, false); });
 function miniRender() {
   if (!miniOn) return;
+  const L = miniList(), n = L.length;
   let i = miniIdx();
-  if (i < 0 && rows.length) { i = Math.min(miniIdxLast, rows.length - 1); miniSet(rows[i].t); }   // the chosen timer was removed: land on its neighbour
+  if (i < 0 && n) { i = Math.min(miniIdxLast, n - 1); miniSetEntry(L[i]); }   // the chosen timer was removed or finished: land on its neighbour
   if (i >= 0) miniIdxLast = i;
-  const r = rows[i], n = rows.length;
-  miniRefs = { r, prev: null, next: null, t: null, c: null, items: [] };
-  if (!r) { mnBody.replaceChildren(h('p', 'mnnote', 'No timers yet. Click here to go back, then add a time under Time until.')); return; }
-  miniRefs.prev = n > 1 ? rows[(i - 1 + n) % n] : null; miniRefs.next = n > 1 ? rows[(i + 1) % n] : null;
+  const en = L[i], r = en && en.kind === 'row' ? en.r : null;
+  miniRefs = { en, r, prev: n > 1 ? L[(i - 1 + n) % n] : null, next: n > 1 ? L[(i + 1) % n] : null, t: null, c: null, a: null, ip: null, items: [] };
+  if (!en) { mnBody.replaceChildren(h('p', 'mnnote', 'No timers yet. Click here to go back, then add a time under Time until.')); return; }
+  if (en.kind !== 'row') { miniTimerRender(en.kind); return; }
   const view = miniView === 'card' && r.t.kan ? 'card' : 'time';
   if (view === 'time') {
     const t = r.t, cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill');
@@ -1652,7 +1669,10 @@ function miniRender() {
   const coll = !!miniColl[cid], pins = new Set(miniPinned[cid] || []);   // collapsed: the checklist items are hidden and only the main card shows (items you pinned with 📌 stay)
   const arr = h('button', 'mnb', coll ? '▸' : '▾'); arr.type = 'button'; arr.title = coll ? 'Expand the card and its checklist' : 'Collapse the card'; arr.setAttribute('aria-label', arr.title); arr.setAttribute('aria-expanded', String(!coll));
   arr.onclick = () => { miniColl[cid] = !coll; miniRender(); miniTick(); };
-  const done = c.items.filter(x => x.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : 0, pf = h('div', 'fill'); pf.style.width = pct + '%';
+  const done = c.items.filter(x => x.done).length, total = c.items.length, pct = total ? Math.round(100 * done / total) : 0, pf = h('div', 'fill'); pf.style.width = pct + '%';
+  const pt = h('span', 'mnpt', '☑ ' + (total ? pct + '% · ' + done + '/' + total + ' done' : 'no checklist items yet'));   // checklist: percentage and how many of the total
+  const ipf = h('div', 'fill'), ipt = h('span', 'mnpt'), ipb = h('div', 'mnprog', null, h('div', 'bar', null, ipf), ipt); ipb.style.display = 'none';   // interval: shown only for a card with an interval due date
+  miniRefs.ip = { box: ipb, f: ipf, t: ipt };
   const cl = h('div', 'mncl'), head = h('div', 'mnch', null, h('div', 'mnct', c.title || 'Untitled'), arr); head.style.setProperty('--mc', kcat(c.cat).color);
   miniRefs.c = c; miniRefs.cl = cl;
   const list = h('div', 'mnlist'), shown = coll ? c.items.filter(x => x.time && pins.has(x.id)) : c.items;
@@ -1676,7 +1696,19 @@ function miniRender() {
     list.append(row);
   });
   if (!shown.length && !coll) list.append(h('p', 'mnnote', 'No checklist items yet.'));
-  mnBody.replaceChildren(head, cl, h('div', 'bar', null, pf), ...(coll && !shown.length ? [] : [list]));
+  mnBody.replaceChildren(head, cl, ipb, h('div', 'mnprog', null, h('div', 'bar', null, pf), pt), ...(coll && !shown.length ? [] : [list]));
+}
+function miniTimerRender(kind) {   // the alarm and the pomodoro share one small layout: end time top left, countdown top right, bar, length bottom left, Elapsed switch bottom right
+  const al = kind === 'alarm';
+  const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true);
+  const head = al ? null : h('div', 'mnsess');   // pomodoro: the session number in a black header (not clickable)
+  cdS.style.display = 'none';
+  setSw(es.i, al ? alEl : pmKeep);
+  es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
+  es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
+  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head };
+  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, lens, es.lab));
+  miniTick();
 }
 function miniTick() {
   const m = miniRefs; if (!m) return;
@@ -1685,31 +1717,61 @@ function miniTick() {
     const r = m.r, x = m.t;
     x.cdM.textContent = r.cdMain.textContent; x.cdS.textContent = r.cdSup.textContent; x.cdS.style.display = r.cdSup.style.display;
     x.cd.className = 'mncd' + r.cd.className.slice(2); x.fill.style.width = r.f.style.width;
+  } else if (m.a) {
+    const x = m.a;
+    if (x.al) {
+      if (!alarm) return;
+      const lap = alLap.style.display !== 'none';
+      x.endEl.textContent = alEnd.textContent;
+      x.cdM.textContent = lap ? alLapMain.textContent : alTime.textContent; x.cdS.textContent = alLapSup.textContent; x.cdS.style.display = lap ? alLapSup.style.display : 'none';
+      x.cd.className = 'mncd' + (lap ? ' lap' + (alLap.classList.contains('over') ? ' over' : '') : alarm.done ? ' ring' : '');
+      x.fill.style.width = alFill.style.width; x.lens.textContent = alCap.textContent;
+    } else {
+      const s = pm.session; if (!s) return;
+      const cls = pmTime.className;
+      x.head.textContent = pmHeadTxt.textContent; x.endEl.textContent = pmEnd.textContent;
+      x.cdM.textContent = pmTMain.textContent; x.cdS.textContent = pmTSup.textContent; x.cdS.style.display = pmTSup.style.display;
+      x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
+      x.fill.style.width = s.cur ? pmFill.style.width : '100%';
+      x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
+    }
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
     if (ref) {
       m.cl.textContent = [ref.dd.textContent, ref.tmr.style.display === 'none' ? '' : ref.tmr.textContent, ref.ov.textContent, ref.elp.textContent].filter(Boolean).join(' · ');
+      if (m.ip) { const on = ref.ip.box.style.display !== 'none'; m.ip.box.style.display = on ? '' : 'none'; if (on) { m.ip.f.style.width = ref.ip.f.style.width; m.ip.t.textContent = '📅 ' + ref.ip.t.textContent; } }   // the interval bar and its percentage
       m.items.forEach(x => { const y = ref.its.find(z => z.it === x.it); if (y) { x.rem.textContent = y.rem.textContent; x.f.style.width = y.f.style.width; } });
     }
   }
 }
-function miniGo(d) { const n = rows.length; if (n < 2) return; const i = miniIdx(); miniSet(rows[(((i < 0 ? 0 : i) + d) % n + n) % n].t); miniRender(); miniTick(); miniPeek(true, true, true); }
+function miniGo(d) { const L = miniList(), n = L.length; if (n < 2) return; const i = miniIdx(); miniSetEntry(L[(((i < 0 ? 0 : i) + d) % n + n) % n]); miniRender(); miniTick(); miniPeek(true, true, true); }
 function miniSwitch() {
   if (!miniOn) return;
-  const r = rows[miniIdx()];
-  if (!r || !r.t.kan) { miniHint('Only a Kanban (🗂) timer has a card view. Cycle to one with Up / Down.'); return; }
+  const en = miniList()[miniIdx()];
+  if (!en || en.kind !== 'row' || !en.r.t.kan) { miniHint('Only a Kanban (🗂) timer has a card view. Cycle to one with Up / Down.'); return; }
   miniView = miniView === 'card' ? 'time' : 'card'; miniRender(); miniTick();
 }
-function miniEnter(t) {
+function miniEnter(t) {   // t: a Time until timer, or 'alarm' / 'pomo'
   if (!sk || !sk.miniSize) return;
-  if (t) miniSet(t);
-  else if (miniIdx() < 0 && rows.length) {   // no timer chosen yet: start on the one that goes off next
-    let b = -1; rows.forEach((r, k) => { if (isFinite(r.last) && (b < 0 || r.last < rows[b].last)) b = k; });
-    miniSet(rows[b < 0 ? 0 : b].t);
+  if (typeof t === 'string') miniSel = { kind: t };
+  else if (t) miniSet(t);
+  else if (miniIdx() < 0) {   // no timer chosen yet: start on the one that goes off next
+    if (rows.length) { let b = -1; rows.forEach((r, k) => { if (isFinite(r.last) && (b < 0 || r.last < rows[b].last)) b = k; }); miniSet(rows[b < 0 ? 0 : b].t); }
+    else { const L = miniList(); if (L.length) miniSetEntry(L[0]); }
   }
   miniOn = true; miniLastH = 0; shell.classList.add('mini'); closeKan(); hideTip();
   miniRender(); miniTick();
   requestAnimationFrame(() => { miniFit(true); setTimeout(() => miniFit(true), 200); });   // sized once now, and once more after fonts and layout have settled
+}
+function miniAlert(target) {   // an alarm or pomodoro just finished: leave the small window if it is open, then scroll the full window to it if it is not already in view
+  if (miniOn) miniExit();
+  const go = () => {
+    try {
+      const wr = wrap.getBoundingClientRect(), tr = target.getBoundingClientRect();
+      if (tr.height && (tr.top < wr.top || tr.bottom > wr.bottom)) target.scrollIntoView({ block: 'center', behavior: 'auto' });
+    } catch (e) {}
+  };
+  go(); setTimeout(go, 150); setTimeout(go, 500);   // again once the window has grown back to full size
 }
 function miniExit() { if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b'); miniRefs = null; sk.miniSize(false, 0, 0); }
 mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, sideways scroll switches the view
@@ -1725,7 +1787,7 @@ mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, si
 }, { passive: false });
 // press and release on the card = back to the normal window; press, move and release = drag the small window
 mini.addEventListener('pointerdown', e => {
-  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk')) return;
+  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk,.mnsess')) return;
   const st = { x: e.screenX, y: e.screenY, p: null, moved: false }; miniDrag = st; mini.setPointerCapture(e.pointerId);
   sk.getPos().then(p => { st.p = p; });
 });
@@ -1880,9 +1942,9 @@ function startAlarm(ms, cap) {
   if (!(ms >= 1000)) return;
   ringOff();
   unlockAudio(true);
-  ms = Math.min(ms, 48 * 36e5); alarm = { end: Date.now() + ms, dur: ms, done: false, cap: cap || '' }; saveAlarm(); alarmTick(Date.now());
+  ms = Math.min(ms, 48 * 36e5); alarm = { end: Date.now() + ms, dur: ms, done: false, cap: cap || '' }; saveAlarm(); alarmTick(Date.now()); if (miniOn) miniRender();
 }
-function endAlarm() { ringOff(); alarm = null; saveAlarm(); alarmTick(Date.now()); }
+function endAlarm() { ringOff(); alarm = null; saveAlarm(); alarmTick(Date.now()); if (miniOn) miniRender(); }
 const lenWords = ms => {   // 25 minutes, 1 hour 30 minutes, 45 seconds
   const t = Math.round(ms / 1000), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60, p = [];
   if (H) p.push(H + (H === 1 ? ' hour' : ' hours')); if (M) p.push(M + (M === 1 ? ' minute' : ' minutes')); if (S && !H) p.push(S + (S === 1 ? ' second' : ' seconds'));
@@ -1892,7 +1954,7 @@ function alarmTick(n) {
   if (!alarm) { alBox.style.display = 'none'; return; }
   alBox.style.display = 'block';
   const left = alarm.end - n;
-  if (!alarm.done && left <= 0) { alarm.done = true; saveAlarm(); if (-left < 72e5) { ringOn(); notify('Alarm finished', 'Ended at ' + clk.format(alarm.end)); } }   // it rings even if the computer slept through the end (up to 2 hours late); older than that stays silent
+  if (!alarm.done && left <= 0) { alarm.done = true; saveAlarm(); if (-left < 72e5) { ringOn(); notify('Alarm finished', 'Ended at ' + clk.format(alarm.end)); miniAlert(alBox); } }   // it rings even if the computer slept through the end (up to 2 hours late); older than that stays silent
   const fin = alarm.done, when = ymd.format(alarm.end) === ymd.format(n) ? clk.format(alarm.end) : wkf.format(alarm.end);
   alTime.textContent = fin ? "Time's up" : clockFmt(Math.ceil(left / 1000));
   alEnd.textContent = (fin ? 'Ended at ' : 'Ends at ') + when;
@@ -1914,7 +1976,9 @@ alCancel.onclick = endAlarm; alDone.onclick = endAlarm; alAgain.onclick = () => 
 function addT(v) {
   const title = tIn.value.trim();
   if (!planning && tracked.some(t => t.v === v && (t.title || '') === title)) return;   // duplicates are allowed while re-planning
-  tracked.push({ v, title, el: false }); tIn.value = ''; save(); build();
+  const nt = { v, title, el: false }; tracked.push(nt); tIn.value = ''; save(); build();
+  const nr = rows.find(z => z.t === nt);   // scroll the list to the new countdown and flash it so it is easy to spot
+  if (nr) { nr.row.scrollIntoView({ block: 'center', behavior: kReduce() ? 'auto' : 'smooth' }); nr.row.classList.remove('khl'); void nr.row.offsetWidth; nr.row.classList.add('khl'); setTimeout(() => nr.row.classList.remove('khl'), 3200); }
 }
 addBtn.onclick = () => { if (!inp.value) return; const q = inp.value.split(':').map(Number); addT(q[0] * 60 + q[1]); };
 let chipKey = -1;
@@ -2180,6 +2244,7 @@ function pmRender() {                                  // layout: which parts ar
         'You worked ' + fmt(Math.round(l.worked)) + '\nStarted ' + clk.format(l.startAt) + ' · session length ' + fmt(l.span != null ? l.span : Math.round((l.endAt - l.startAt) / 1000));
   }
   pmStatsRender();
+  if (miniOn) miniRender();
 }
 function pmTick(n) {                                   // every tick: finish a pomodoro that ran out, refresh the live numbers
   let s = pm.session;
@@ -2192,7 +2257,7 @@ function pmTick(n) {                                   // every tick: finish a p
       notify(done ? 'Pomodoro session complete' : 'Pomodoro ' + s.n + ' complete', 'Worked ' + fmt(Math.round(s.worked)) + ' so far.');
       pmChime();
       if (done) pmEndSession(endAt);
-      savePm(); pmRender(); s = pm.session;
+      savePm(); pmRender(); s = pm.session; miniAlert(done ? pmSum : pmRunBox);
     }
   } else if (s && !s.cur && pmDay(n) !== s.day) {      // a session left open overnight is closed (counting stops at midnight)
     pmEndSession(Math.min(n, eodOf(s.endedAt || s.startAt))); savePm(); pmRender(); s = null;
