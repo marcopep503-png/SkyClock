@@ -1870,6 +1870,11 @@ function build() {
 }
 // Remove keeps the whole timer object (including its original length), so Undo puts the progress bar back where it belongs.
 let undoList = [], undoTimer = 0, lastChg = null;   // lastChg: the countdown whose time was changed most recently (re-planning)
+function focusRow(t) {   // scroll the list to a countdown (used after its time is changed in re-planning mode)
+  const r = rows.find(z => z.t === t); if (!r) return;
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  r.row.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+}
 function mkTimeEdit(t) {   // planning mode: pick a new time, then press the check mark beside it to apply it
   const i = h('input', 'ptime'); i.type = 'time'; const cur = p2(Math.floor(t.v / 60)) + ':' + p2(t.v % 60); i.value = cur; i.setAttribute('aria-label', 'New time for this countdown');
   const ok = h('button', 'pok', '✓'); ok.type = 'button'; ok.disabled = true; ok.title = 'Apply the new time'; ok.setAttribute('aria-label', 'Apply the new time');
@@ -1880,7 +1885,7 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
     if (q.length < 2 || !isFinite(q[0]) || !isFinite(q[1])) { build(); return; }
     const v = q[0] * 60 + q[1];
     lastChg = t; (t.hist = t.hist || []).push(t.v); t.fut = []; t.prev = t.v; t.v = v; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now();   // a fresh countdown to the new time
-    save(); build();
+    save(); build(); focusRow(t);
   };
   i.addEventListener('input', sync); i.addEventListener('change', sync);
   i.addEventListener('keydown', e => { if (e.key === 'Enter') { sync(); apply(); } else if (e.key === 'Escape') { i.value = cur; sync(); } });
@@ -1889,12 +1894,12 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
   const un = h('button', 'pun', '↶'); un.type = 'button';
   if (t.hist && t.hist.length) {   // each press steps back one edit; the "was" time then shows the one before that
     const back = t.hist[t.hist.length - 1]; un.title = 'Undo the last change and go back to ' + hl(Math.floor(back / 60), back % 60); un.setAttribute('aria-label', un.title);
-    un.onclick = () => { lastChg = t; (t.fut = t.fut || []).push(t.v); t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+    un.onclick = () => { lastChg = t; (t.fut = t.fut || []).push(t.v); t.v = t.hist.pop(); if (t.hist.length) t.prev = t.hist[t.hist.length - 1]; else delete t.prev; delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); focusRow(t); };
   } else un.style.display = 'none';
   const rd = h('button', 'pun', '↷'); rd.type = 'button';   // redo: steps forward again after an undo
   if (t.fut && t.fut.length) {
     const fwd = t.fut[t.fut.length - 1]; rd.title = 'Redo: go forward to ' + hl(Math.floor(fwd / 60), fwd % 60); rd.setAttribute('aria-label', rd.title);
-    rd.onclick = () => { lastChg = t; (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = t.fut.pop(); delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); };
+    rd.onclick = () => { lastChg = t; (t.hist = t.hist || []).push(t.v); t.prev = t.v; t.v = t.fut.pop(); delete t.span; delete t.dur0; delete t.ack; t.armed = Date.now(); save(); build(); focusRow(t); };
   } else rd.style.display = 'none';
   return h('span', 'pedit', null, i, ok, un, rd);
 }
