@@ -9,7 +9,7 @@ if (!gotLock) app.quit();
 app.setAppUserModelId('com.skyclock.desktop');        // needed for Windows notifications
 
 let win = null, tray = null, quitting = false, cfg = {}, saveTimer = null;
-let miniOn = false, miniOpen = false, fullBounds = null, miniRestore = null, miniAnim = null, miniLay = { w: 300, h: 0, T: 54, B: 24 };   // mini timer mode (see the mini:* handlers)
+let miniOn = false, fullBounds = null;               // mini timer mode: the window is one card, and the full-size bounds are kept to restore
 const cfgPath = () => path.join(app.getPath('userData'), 'window.json');
 const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgPath(), 'utf8')); } catch (e) { return {}; } };
 const saveCfg = () => { try { fs.writeFileSync(cfgPath(), JSON.stringify(cfg)); } catch (e) {} };
@@ -91,36 +91,9 @@ function rebuildMenu() {
   ]));
 }
 
-// ---------- mini timer mode ----------
-// The window is [room for the menu][the card][one preview line]. Only the card is ever drawn when the menu is hidden, and the empty rest of the
-// window ignores the mouse, so only the card is "there". The card's screen position is what matters: the menu can push the window back on screen
-// when it opens at an edge, and when it closes the window slides back so the card is exactly where you left it, even flush against the screen edge.
-const miniCardH = () => miniLay.h - miniLay.T - miniLay.B;
-const miniCard = () => { const [x, y] = win.getPosition(); return { x, y: y + miniLay.T }; };
-const saveMiniPos = () => { if (!win || !miniOn || miniRestore) return; cfg.miniPos = miniCard(); saveCfg(); };
-function slideTo(x, y) {
-  clearInterval(miniAnim);
-  const [sx, sy] = win.getPosition(), t0 = Date.now();
-  miniAnim = setInterval(() => {
-    if (!win || !miniOn) { clearInterval(miniAnim); miniAnim = null; return; }
-    const k = Math.min(1, (Date.now() - t0) / 160), e = 1 - Math.pow(1 - k, 3);
-    win.setBounds({ x: Math.round(sx + (x - sx) * e), y: Math.round(sy + (y - sy) * e), width: miniLay.w, height: miniLay.h });
-    if (k >= 1) { clearInterval(miniAnim); miniAnim = null; saveMiniPos(); }
-  }, 16);
-}
-function pushIn() {                                    // keep the whole open window (menu included) on screen; remember where to go back to
-  const [x, y] = win.getPosition();
-  const a = screen.getDisplayNearestPoint({ x: x + Math.round(miniLay.w / 2), y: y + miniLay.T + Math.round(miniCardH() / 2) }).workArea;
-  const nx = Math.max(a.x, Math.min(x, a.x + a.width - miniLay.w)), ny = Math.max(a.y, Math.min(y, a.y + a.height - miniLay.h));
-  if (nx === x && ny === y) return;
-  if (!miniRestore) miniRestore = { x, y };
-  slideTo(nx, ny);
-}
 function leaveMini() {                                 // back to the full-size window where it was
   if (!miniOn || !win) return;
-  clearInterval(miniAnim); miniAnim = null; saveMiniPos();
-  miniOn = false; miniOpen = false; miniRestore = null;
-  win.setIgnoreMouseEvents(false); win.setResizable(true); win.setMinimumSize(280, 360);
+  miniOn = false; win.setResizable(true); win.setMinimumSize(280, 360);
   if (fullBounds) win.setBounds(fullBounds);
   fullBounds = null;
 }
@@ -132,7 +105,7 @@ function createWindow() {
   const wa = screen.getPrimaryDisplay().workArea;
   const b = onScreen(cfg.bounds) ? cfg.bounds : { width: 360, height: 760, x: wa.x + wa.width - 380, y: wa.y + 20 };
   win = new BrowserWindow({
-    ...b, minWidth: 280, minHeight: 360, frame: false, transparent: true, backgroundColor: '#00000000', show: false,
+    ...b, minWidth: 280, minHeight: 360, frame: false, backgroundColor: '#12163a', show: false,
     alwaysOnTop: !!cfg.alwaysOnTop, icon: ICON, title: 'Sky Clock',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -158,7 +131,11 @@ function createWindow() {
 
   const remember = () => {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { if (win && !miniOn && !win.isMinimized() && !win.isMaximized()) { cfg.bounds = win.getBounds(); saveCfg(); } }, 400);   // the small window never overwrites the full-size bounds
+    saveTimer = setTimeout(() => {
+      if (!win || win.isMinimized() || win.isMaximized()) return;
+      if (miniOn) { const b = win.getBounds(); cfg.miniPos = { x: b.x, y: b.y }; saveCfg(); }   // the small window remembers its own spot, never overwriting the full-size bounds
+      else { cfg.bounds = win.getBounds(); saveCfg(); }
+    }, 400);
   };
   win.on('resize', remember); win.on('move', remember);
   win.on('show', rebuildMenu); win.on('hide', rebuildMenu);
@@ -204,52 +181,35 @@ if (gotLock) {
     }
     return { ok: false };
   });
-  ipcMain.handle('win:getBounds', () => (win ? win.getBounds() : null));
-  ipcMain.on('win:setBounds', (e, x, y, w, h) => {      // the window is transparent (so the mini menu can fade), which on Windows has no native resize edges: the page draws its own
-    if (!win || miniOn || ![x, y, w, h].every(Number.isFinite)) return;
-    win.setBounds({ x: Math.round(x), y: Math.round(y), width: Math.max(280, Math.round(w)), height: Math.max(360, Math.round(h)) });
-  });
-  ipcMain.handle('mini:layout', (e, on, w, cardH, T, B) => {   // the page tells us how big its card is; the window follows
-    if (!win) return false;
-    if (!on) { leaveMini(); return true; }
-    if (![w, cardH, T, B].every(Number.isFinite)) return false;
-    w = Math.round(Math.max(200, Math.min(w, 900))); cardH = Math.round(Math.max(20, Math.min(cardH, 900))); T = Math.round(Math.max(0, Math.min(T, 200))); B = Math.round(Math.max(0, Math.min(B, 200)));
-    const cur = win.getBounds(), oldT = miniLay.T;
-    miniLay = { w, h: T + cardH + B, T, B };
+  ipcMain.on('mini:size', (e, on, w, h) => {            // the page tells us how big its card is; the window follows
+    if (!win) return;
+    if (!on) { leaveMini(); return; }
+    if (!Number.isFinite(w) || !Number.isFinite(h)) return;
+    w = Math.round(Math.max(200, Math.min(w, 900))); h = Math.round(Math.max(40, Math.min(h, 900)));
     if (!miniOn) {
-      miniOn = true; miniOpen = false; miniRestore = null; fullBounds = cur;
-      const p = cfg.miniPos && onScreen({ x: cfg.miniPos.x, y: cfg.miniPos.y, width: w, height: cardH }) ? cfg.miniPos : { x: cur.x, y: cur.y };
-      win.setMinimumSize(1, 1); win.setResizable(false);
-      win.setBounds({ x: Math.round(p.x), y: Math.round(p.y - T), width: w, height: miniLay.h });
+      miniOn = true; fullBounds = win.getBounds();
+      const cur = fullBounds, p = cfg.miniPos && onScreen({ x: cfg.miniPos.x, y: cfg.miniPos.y, width: w, height: h }) ? cfg.miniPos : { x: cur.x, y: cur.y };
+      win.setMinimumSize(1, 1); win.setResizable(false);   // resizable first: on Windows, switching it afterwards changes the frame and would clip the card
+      win.setBounds({ x: Math.round(p.x), y: Math.round(p.y), width: w, height: h });
     } else {
-      win.setBounds({ x: cur.x, y: cur.y + oldT - T, width: w, height: miniLay.h });   // the card stays where it is
-      if (miniOpen) pushIn();
+      const b = win.getBounds(); if (b.width !== w || b.height !== h) win.setBounds({ x: b.x, y: b.y, width: w, height: h });
     }
-    return true;
+    win.setContentSize(w, h);                           // the page area is exactly the card
   });
-  ipcMain.on('mini:open', (e, on) => {                  // the menu fades in (true) or has finished fading out (false)
-    if (!win || !miniOn) return;
-    miniOpen = !!on;
-    if (on) pushIn();
-    else if (miniRestore) { const r = miniRestore; miniRestore = null; slideTo(r.x, r.y); }
-    else saveMiniPos();
-  });
-  ipcMain.on('mini:ignore', (e, on) => { if (win) win.setIgnoreMouseEvents(!!on && miniOn, { forward: true }); });   // empty window: clicks go through, mouse moves still reach the page so it can notice the pointer arriving
-  ipcMain.handle('mini:dragStart', () => { clearInterval(miniAnim); miniAnim = null; miniRestore = null; return win && miniOn ? miniCard() : null; });
-  ipcMain.on('mini:move', (e, cx, cy) => {              // cx, cy: where the card's top-left should be; it may touch the screen edge but not leave it
-    if (!win || !miniOn || !Number.isFinite(cx) || !Number.isFinite(cy)) return;
-    const ch = miniCardH(), d = screen.getDisplayNearestPoint({ x: Math.round(cx + miniLay.w / 2), y: Math.round(cy + ch / 2) }).bounds;
-    const x = Math.max(d.x, Math.min(cx, d.x + d.width - miniLay.w)), y = Math.max(d.y, Math.min(cy, d.y + d.height - ch));
-    win.setBounds({ x: Math.round(x), y: Math.round(y - miniLay.T), width: miniLay.w, height: miniLay.h });
-  });
-  ipcMain.on('mini:dragEnd', () => saveMiniPos());
   ipcMain.handle('pin:get', () => (win ? win.isAlwaysOnTop() : false));
   ipcMain.handle('pin:toggle', () => setPin(!win.isAlwaysOnTop()));
   ipcMain.on('win:reload', () => win && win.webContents.reload());   // used after a sync code is applied
   ipcMain.on('win:minimize', () => win && win.minimize());
   ipcMain.on('win:hide', () => win && win.hide());
   ipcMain.handle('win:getPos', () => (win ? win.getPosition() : [0, 0]));
-  ipcMain.on('win:setPos', (e, x, y) => { if (win && Number.isFinite(x) && Number.isFinite(y)) win.setPosition(Math.round(x), Math.round(y)); });
+  ipcMain.on('win:setPos', (e, x, y) => {
+    if (!win || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (miniOn) {                                       // the small card may touch the very edge of the screen, but never leave it
+      const [w, h] = win.getSize(), d = screen.getDisplayNearestPoint({ x: Math.round(x + w / 2), y: Math.round(y + h / 2) }).bounds;
+      x = Math.max(d.x, Math.min(x, d.x + d.width - w)); y = Math.max(d.y, Math.min(y, d.y + d.height - h));
+    }
+    win.setPosition(Math.round(x), Math.round(y));
+  });
   const liveNotes = new Set();
   ipcMain.on('notify', (e, title, text) => {
     if (!Notification.isSupported()) return;

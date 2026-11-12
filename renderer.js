@@ -567,35 +567,11 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kclb .kfill,.kitb .kfill{background:linear-gradient(90deg,var(--l1,#f5a623),var(--l2,#8b8ff5))}   /* the same hourly gradient the progress bars have in Black mode, shown in Sky mode too */
 .kit .kbody{gap:6px}
 
-.mini{display:none;position:relative;padding:54px 0 24px}
+.mini{display:none;position:relative;flex:none}
 .shell.mini>.hd,.shell.mini>.wrap{display:none}
 .shell.mini>.mini{display:block}
-.shell.mini.mnwait>.mini{visibility:hidden}
-.shell.mini{background:none!important;box-shadow:none!important;border:0}
-.rz{position:absolute;z-index:50;-webkit-app-region:no-drag}
-.rz.e{top:0;right:0;width:5px;bottom:12px;cursor:ew-resize}
-.rz.w{top:0;left:0;width:5px;bottom:12px;cursor:ew-resize}
-.rz.s{left:12px;right:12px;bottom:0;height:5px;cursor:ns-resize}
-.rz.se{right:0;bottom:0;width:12px;height:12px;cursor:nwse-resize}
-.rz.sw{left:0;bottom:0;width:12px;height:12px;cursor:nesw-resize}
-.shell.mini .rz{display:none}
-.mncard{position:relative;border-radius:14px;border:1px solid rgba(255,255,255,.25);overflow:hidden;background:radial-gradient(circle at 15% 8%,rgba(255,255,255,.22),transparent 45%),linear-gradient(180deg,var(--top,#12163a),var(--bot,#2b2f6e))}
-.shell.grain .mncard{background:var(--noise),#08080a}
-.mnx{position:absolute;left:0;right:0;z-index:5;background:rgba(8,10,30,.92);border:1px solid rgba(255,255,255,.2);opacity:0;pointer-events:none;transition:opacity .28s ease}
-.mntx{top:0;height:54px;border-radius:12px 12px 0 0;border-bottom:0}
-.mnbx{bottom:0;height:24px;border-radius:0 0 12px 12px;border-top:0}
-.shell.mnopen .mnx{opacity:1;pointer-events:auto}
-.shell.slow .mnx{transition-duration:.5s}
-@media (prefers-reduced-motion:reduce){.mnx{transition:none!important}}
-.mnbar{display:flex;align-items:center;gap:2px;height:30px;padding:0 6px 0 10px;font-weight:600;font-size:12px;user-select:none}
-.mnbar span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mnpk{height:24px;line-height:24px;padding:0 12px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;opacity:.85;cursor:pointer}
-.mnpk:hover{opacity:1;background:rgba(255,255,255,.08)}
-.mnpk:empty{cursor:default;pointer-events:none}
-.mnb{background:transparent;font-size:14px;line-height:1;padding:2px 8px;border-radius:7px;opacity:.85;text-shadow:none;cursor:pointer}
-.mnb:hover{background:rgba(255,255,255,.16);opacity:1}.mnb.on{background:rgba(255,255,255,.28);opacity:1}
-.mnbody{padding:10px 12px 8px;cursor:grab}
-.mnbody:active{cursor:grabbing}
+.shell.mini{box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.mnbody{padding:10px 12px 10px;cursor:pointer}
 .mntop{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mnl{min-width:0;flex:1}
 .mnlab{font:700 14px system-ui,'Segoe UI',sans-serif}
@@ -609,6 +585,12 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnfoot{display:flex;align-items:center;gap:8px;margin-top:6px;min-height:22px}
 .mnfoot .sw{margin-left:auto}
 .mnok{padding:2px 10px}
+.mnb{background:transparent;font-size:14px;line-height:1;padding:2px 8px;border-radius:7px;opacity:.85;text-shadow:none;cursor:pointer}
+.mnb:hover{background:rgba(255,255,255,.16);opacity:1}
+.mnpk{position:absolute;left:0;right:0;z-index:5;padding:3px 12px;background:rgba(8,10,30,.9);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;display:none;pointer-events:none}
+.mnpk.t{top:0}.mnpk.b{bottom:0}
+.shell.pk-t .mnpk.t,.shell.pk-b .mnpk.b{display:block}
+.mnpk:empty{display:none!important}
 .mnch{display:flex;align-items:center;gap:6px;padding-left:8px;border-left:3px solid var(--mc,#8ea0d8)}
 .mnct{flex:1;min-width:0;font-weight:700;font-size:13px;overflow-wrap:anywhere}
 .mncl{margin:4px 0 0 11px;font-size:11.5px;font-variant-numeric:tabular-nums;opacity:.92}
@@ -621,12 +603,11 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnpill{flex:none;padding:0 8px;border-radius:99px;border:1px solid rgba(255,255,255,.4);font-weight:700;font-size:10.5px;white-space:nowrap}
 .mnpin{flex:none;opacity:.4;background:transparent;font-size:13px;padding:0 3px}
 .mnpin.on{opacity:1}
-.mnnote{font-size:11px;opacity:.75;margin:6px 0 0}
+.mnnote{font-size:11px;opacity:.75;margin:0}
 .mnhint{font-size:11px;color:#ffd27a;margin-top:5px}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
-document.documentElement.style.background = 'transparent'; if (document.body) document.body.style.background = 'transparent';   // the window is transparent now (the shell paints its own sky), so the mini menu can fade to nothing
 const panel = document.createElement('div');
 panel.id = 'skyclock-panel';
 const root = panel.attachShadow({ mode: 'open' });
@@ -1615,36 +1596,15 @@ shell.append(tip); root.append(shell, launch);
 
 // ---------- tracked times ----------
 let rows = [];
-// ---------- window resize handles (the window is transparent so the mini menu can fade; Windows then has no native resize edges) ----------
-let rzS = null;
-[['e', 'e'], ['w', 'w'], ['s', 's'], ['se', 'se'], ['sw', 'sw']].forEach(([cls, dir]) => {
-  const z = h('div', 'rz ' + cls); shell.append(z);
-  z.addEventListener('pointerdown', e => { if (!sk || !sk.getBounds || e.button > 0) return; e.preventDefault(); const st = { x: e.screenX, y: e.screenY, b: null }; rzS = st; z.setPointerCapture(e.pointerId); sk.getBounds().then(b => { st.b = b; }); });
-  z.addEventListener('pointermove', e => {
-    if (rzS && rzS.b) {
-      const dx = e.screenX - rzS.x, dy = e.screenY - rzS.y; let { x, y, width, height } = rzS.b;
-      if (dir.includes('e')) width += dx; if (dir.includes('s')) height += dy;
-      if (dir.includes('w')) { width -= dx; x += dx; }
-      if (width < 280) { if (dir.includes('w')) x -= 280 - width; width = 280; } if (height < 360) height = 360;
-      sk.setBounds(x, y, width, height);
-    }
-  });
-  ['pointerup', 'pointercancel'].forEach(ev => z.addEventListener(ev, () => { rzS = null; }));
-});
-// ---------- mini timer window (desktop) ----------
-// The window is one card. Hover it and the menu (title, ⇄ 📌 ⤢) plus the timers above and below fade in around it; move the pointer away and they fade out.
-// Press and drag the card and the extras fade away slowly, so only the small card moves. Up / Down or the wheel cycle the timers; Left / Right or a sideways scroll
-// switch a Kanban timer between its Time until card and its Kanban card (collapsible, with the checklist and pinnable checklist timers).
-const MINI_W = 300, MN_T = 54, MN_B = 24;
-let miniOn = false, miniSel = null, miniView = 'time', miniIdxLast = 0, miniRefs = null, miniColl = {}, miniAcc = 0, miniWheelAt = 0, miniHintT = 0, miniFitRaf = 0, miniPinned = {};
-let mnState = 'closed', mnHold = false, mnIn = false, mnCloseT = 0, mnFadeT = 0, mnDrag = null;
+// ---------- mini timer window (desktop): the window is exactly one timer card, no title bar and no menu ----------
+// Click the card to go back to the normal window. Up / Down or the scroll wheel cycle the timers (the one above and the one below show as a line over the card's
+// top and bottom edge for a moment). Left / Right, a sideways scroll or the switch-view keybind swap a Kanban timer between its Time until card and its Kanban card.
+const MINI_W = 300;
+let miniOn = false, miniSel = null, miniView = 'time', miniIdxLast = 0, miniRefs = null, miniColl = {}, miniAcc = 0, miniWheelAt = 0, miniHintT = 0, miniFitRaf = 0, miniPinned = {}, miniPeekT = 0, miniLastH = 0, miniDrag = null;
 try { const v = GM_getValue('miniPins', {}); if (v && typeof v === 'object' && !Array.isArray(v)) miniPinned = v; } catch (e) {}
 const savePins = () => { try { GM_setValue('miniPins', { ...miniPinned }); } catch (e) {} };
-const mnTitle = h('span', null, '🕰️ Mini timer'), mnView = h('button', 'mnb', '⇄'), mnPin = h('button', 'mnb', '📌'), mnExit = h('button', 'mnb', '⤢');
-mnView.title = 'Switch Kanban card / Time until view'; mnPin.title = 'Keep on top of other windows'; mnExit.title = 'Back to the full window';
-[mnView, mnPin, mnExit].forEach(b => { b.type = 'button'; b.setAttribute('aria-label', b.title); });
-const mnPk = h('div', 'mnpk'), mnPkB = h('div', 'mnpk'), mnBody = h('div', 'mnbody'), mnCard = h('div', 'mncard', null, mnBody);
-const mini = h('div', 'mini', null, h('div', 'mnx mntx', null, h('div', 'mnbar', null, mnTitle, mnView, mnPin, mnExit), mnPk), mnCard, h('div', 'mnx mnbx', null, mnPkB));
+const mnPk = h('div', 'mnpk t'), mnPkB = h('div', 'mnpk b'), mnBody = h('div', 'mnbody');
+const mini = h('div', 'mini', null, mnBody, mnPk, mnPkB);
 shell.append(mini);
 const miniIdx = () => (miniSel ? rows.findIndex(r => r.t === miniSel.t || (miniSel.id && r.t.kan && r.t.id === miniSel.id)) : -1);
 const miniSet = t => { miniSel = { t, id: t.kan ? t.id : null }; };
@@ -1653,49 +1613,18 @@ function miniHint(msg) {
   clearTimeout(miniHintT); const old = mnBody.querySelector('.mnhint'); if (old) old.remove();
   if (!msg) return; mnBody.append(h('div', 'mnhint', msg)); miniHintT = setTimeout(() => { const o = mnBody.querySelector('.mnhint'); if (o) o.remove(); }, 3500);
 }
-// the window is always the card plus room for the menu above and one line below; everything outside the card is see-through and click-through while the menu is hidden
-function miniFit() { if (!miniOn || !sk || !sk.miniLayout) return Promise.resolve(); return sk.miniLayout(true, MINI_W, Math.ceil(mnCard.getBoundingClientRect().height), MN_T, MN_B); }
-try { new ResizeObserver(() => { if (!miniOn) return; cancelAnimationFrame(miniFitRaf); miniFitRaf = requestAnimationFrame(miniFit); }).observe(mnCard); } catch (e) {}
-// ---- hover: the rest of the window fades in; leaving fades it out; dragging the card fades it out slowly
-function mnOpen() {
-  clearTimeout(mnFadeT); clearTimeout(mnCloseT);
-  if (mnState === 'open') return;
-  mnState = 'open'; sk.miniIgnore(false); sk.miniOpen(true);   // the main process nudges the window back on screen if the menu would run off an edge
-  shell.classList.remove('slow'); shell.classList.add('mnopen');
+function miniFit(force) {   // the window is exactly as tall as the card
+  if (!miniOn || !sk || !sk.miniSize) return;
+  const hgt = Math.ceil(Math.max(mini.getBoundingClientRect().height, mini.scrollHeight));
+  if (!force && hgt === miniLastH) return; miniLastH = hgt; sk.miniSize(true, MINI_W, hgt);
 }
-function mnClose(slow) {
-  clearTimeout(mnCloseT); if (mnState !== 'open') return;
-  mnState = 'closed'; shell.classList.toggle('slow', !!slow); shell.classList.remove('mnopen');
-  clearTimeout(mnFadeT);
-  mnFadeT = setTimeout(() => { if (mnState !== 'closed' || !miniOn) return; sk.miniOpen(false); if (!mnDrag) sk.miniIgnore(true); }, slow ? 540 : 320);   // after the fade: the card slides back to where it was (flush against the screen edge, if that is where you left it) and the empty window lets clicks through
+try { new ResizeObserver(() => { if (!miniOn) return; cancelAnimationFrame(miniFitRaf); miniFitRaf = requestAnimationFrame(() => miniFit(false)); }).observe(mini); } catch (e) {}
+function miniPeek(t, b, hold) {   // no animation: the lines simply appear and disappear
+  shell.classList.toggle('pk-t', !!t); shell.classList.toggle('pk-b', !!b);
+  if (hold) { clearTimeout(miniPeekT); miniPeekT = setTimeout(() => { miniPeekT = 0; shell.classList.remove('pk-t', 'pk-b'); }, 1500); }
 }
-const mnPeek = ms => { mnOpen(); clearTimeout(mnCloseT); mnCloseT = setTimeout(() => { if (!mnIn) mnClose(false); }, ms); };
-addEventListener('mousemove', e => {
-  if (!miniOn) return;
-  const r = mnCard.getBoundingClientRect(), inCard = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  mnIn = mnState === 'open' || inCard;
-  if (mnState === 'open') { clearTimeout(mnCloseT); return; }
-  if (!inCard) mnHold = false; else if (!mnHold && !mnDrag) mnOpen();   // right after a drag the card stays small until the pointer leaves it and comes back
-}, true);
-document.addEventListener('mouseout', e => {
-  if (!miniOn || e.relatedTarget) return;   // the pointer left the window
-  mnIn = false;
-  if (mnState === 'open' && !mnDrag) { clearTimeout(mnCloseT); mnCloseT = setTimeout(() => { if (!mnIn && !mnDrag) mnClose(false); }, 180); }
-}, true);
-// ---- drag the card (the window follows; the main process keeps the card on screen but lets it touch the very edge)
-const mnDragApply = d => { if (mnDrag === d && d.go && d.pos) sk.miniMove(d.pos.x + d.dx, d.pos.y + d.dy); };
-mnCard.addEventListener('pointerdown', e => {
-  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist')) return;
-  mnDrag = { sx: e.screenX, sy: e.screenY, go: false, pos: null, dx: 0, dy: 0 }; mnCard.setPointerCapture(e.pointerId);
-});
-mnCard.addEventListener('pointermove', e => {
-  const d = mnDrag; if (!d) return;
-  d.dx = e.screenX - d.sx; d.dy = e.screenY - d.sy;
-  if (!d.go) { if (Math.hypot(d.dx, d.dy) < 4) return; d.go = true; mnHold = true; mnClose(true); sk.miniDragStart().then(p => { d.pos = p; mnDragApply(d); }); return; }
-  mnDragApply(d);
-});
-const mnDragEnd = () => { const d = mnDrag; mnDrag = null; if (!d || !d.go) return; sk.miniDragEnd(); if (mnState === 'closed') sk.miniIgnore(true); };
-['pointerup', 'pointercancel'].forEach(ev => mnCard.addEventListener(ev, mnDragEnd));
+mini.addEventListener('mousemove', e => { if (!miniOn || miniPeekT) return; const r = mini.getBoundingClientRect(); miniPeek(e.clientY - r.top < 20, r.bottom - e.clientY < 20, false); });
+mini.addEventListener('mouseleave', () => { if (!miniPeekT) miniPeek(false, false, false); });
 function miniRender() {
   if (!miniOn) return;
   let i = miniIdx();
@@ -1703,10 +1632,9 @@ function miniRender() {
   if (i >= 0) miniIdxLast = i;
   const r = rows[i], n = rows.length;
   miniRefs = { r, prev: null, next: null, t: null, c: null, items: [] };
-  if (!r) { mnTitle.textContent = '🕰️ Mini timer'; mnBody.replaceChildren(h('p', 'mnnote', 'No timers yet. Go back with ⤢, add a time under Time until, then press the ⧉ button on it.')); return; }
+  if (!r) { mnBody.replaceChildren(h('p', 'mnnote', 'No timers yet. Click here to go back, then add a time under Time until.')); return; }
   miniRefs.prev = n > 1 ? rows[(i - 1 + n) % n] : null; miniRefs.next = n > 1 ? rows[(i + 1) % n] : null;
   const view = miniView === 'card' && r.t.kan ? 'card' : 'time';
-  mnTitle.textContent = '🕰️ ' + (i + 1) + ' of ' + n + (r.t.kan ? (view === 'card' ? ' · Kanban card' : ' · Time until') : '');
   if (view === 'time') {
     const t = r.t, cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), ok = h('button', 'add sm2 mnok', '✓ Got it');
     cdS.style.display = 'none'; ok.style.display = 'none'; ok.onclick = () => r.ok.click();
@@ -1762,34 +1690,25 @@ function miniTick() {
     }
   }
 }
-function miniGo(d) { const n = rows.length; if (n < 2) return; const i = miniIdx(); miniSet(rows[(((i < 0 ? 0 : i) + d) % n + n) % n].t); miniRender(); miniTick(); mnPeek(1800); }
+function miniGo(d) { const n = rows.length; if (n < 2) return; const i = miniIdx(); miniSet(rows[(((i < 0 ? 0 : i) + d) % n + n) % n].t); miniRender(); miniTick(); miniPeek(true, true, true); }
 function miniSwitch() {
   if (!miniOn) return;
   const r = rows[miniIdx()];
-  if (!r || !r.t.kan) { miniHint('Only a Kanban (🗂) timer has a card view. Cycle to one with Up / Down.'); mnPeek(1800); return; }
-  miniView = miniView === 'card' ? 'time' : 'card'; miniRender(); miniTick(); mnPeek(1800);
+  if (!r || !r.t.kan) { miniHint('Only a Kanban (🗂) timer has a card view. Cycle to one with Up / Down.'); return; }
+  miniView = miniView === 'card' ? 'time' : 'card'; miniRender(); miniTick();
 }
 function miniEnter(t) {
-  if (!sk || !sk.miniLayout) return;
+  if (!sk || !sk.miniSize) return;
   if (t) miniSet(t);
   else if (miniIdx() < 0 && rows.length) {   // no timer chosen yet: start on the one that goes off next
     let b = -1; rows.forEach((r, k) => { if (isFinite(r.last) && (b < 0 || r.last < rows[b].last)) b = k; });
     miniSet(rows[b < 0 ? 0 : b].t);
   }
-  miniOn = true; mnState = 'closed'; mnHold = false; mnIn = false; mnDrag = null; clearTimeout(mnCloseT); clearTimeout(mnFadeT);
-  shell.classList.remove('mnopen', 'slow'); shell.classList.add('mini', 'mnwait'); closeKan(); hideTip();
+  miniOn = true; miniLastH = 0; shell.classList.add('mini'); closeKan(); hideTip();
   miniRender(); miniTick();
-  requestAnimationFrame(() => { miniFit().then(() => { shell.classList.remove('mnwait'); mnPeek(2200); }); });   // the menu shows for a moment so you can see it is there
-  sk.getPin().then(on => mnPin.classList.toggle('on', !!on));
+  requestAnimationFrame(() => { miniFit(true); setTimeout(() => miniFit(true), 200); });   // sized once now, and once more after fonts and layout have settled
 }
-function miniExit() {
-  if (!miniOn) return;
-  miniOn = false; clearTimeout(mnCloseT); clearTimeout(mnFadeT); mnState = 'closed'; mnDrag = null;
-  shell.classList.remove('mini', 'mnopen', 'slow', 'mnwait'); miniRefs = null; sk.miniLayout(false, 0, 0, 0, 0);
-}
-mnExit.onclick = miniExit; mnView.onclick = miniSwitch;
-mnPin.onclick = () => { if (sk) sk.togglePin().then(on => mnPin.classList.toggle('on', !!on)); };
-mnPk.onclick = () => miniGo(-1); mnPkB.onclick = () => miniGo(1);
+function miniExit() { if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b'); miniRefs = null; sk.miniSize(false, 0, 0); }
 mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, sideways scroll switches the view
   if (!miniOn) return;
   const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY), horiz = ax > ay || (e.shiftKey && ay > 0), amt = horiz ? (e.deltaX || e.deltaY) : e.deltaY;
@@ -1801,6 +1720,19 @@ mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, si
   const dir = miniAcc > 0 ? 1 : -1; miniAcc = 0; miniWheelAt = now;
   if (horiz) miniSwitch(); else miniGo(dir);
 }, { passive: false });
+// press and release on the card = back to the normal window; press, move and release = drag the small window
+mini.addEventListener('pointerdown', e => {
+  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist')) return;
+  const st = { x: e.screenX, y: e.screenY, p: null, moved: false }; miniDrag = st; mini.setPointerCapture(e.pointerId);
+  sk.getPos().then(p => { st.p = p; });
+});
+mini.addEventListener('pointermove', e => {
+  const d = miniDrag; if (!d) return;
+  if (!d.moved && Math.hypot(e.screenX - d.x, e.screenY - d.y) < 4) return;
+  d.moved = true; if (d.p) sk.setPos(d.p[0] + e.screenX - d.x, d.p[1] + e.screenY - d.y);
+});
+mini.addEventListener('pointerup', () => { const d = miniDrag; miniDrag = null; if (d && !d.moved) miniExit(); });
+mini.addEventListener('pointercancel', () => { miniDrag = null; });
 addEventListener('keydown', e => {   // capture, so it also works while a button inside the panel has focus
   if (!miniOn || kmod || (typeof scRec !== 'undefined' && scRec) || e.ctrlKey || e.altKey || e.metaKey) return;
   const el = e.composedPath()[0] || {};
@@ -1853,7 +1785,7 @@ function build() {
     const chips = [mkChip('sun', '☀️ Daylight', 'Your chosen time falls between sunrise and sunset, so there is still daylight then.'), mkChip('gold', '🌇 Golden hour', 'Your chosen time falls inside a golden-hour window: low sun and soft, warm light.'), mkChip('blue', '🔵 Blue hour', 'Your chosen time falls inside a blue-hour window: deep twilight just before sunrise or after sunset.')];
     const chipRow = h('div', 'trkr', null, ...chips.map(c => c.box)); chipRow.style.display = 'none'; tr1.append(chipRow);
     const mb = h('button', 'x', '⧉'); mb.title = 'Show only this timer in a small window'; mb.setAttribute('aria-label', 'Show only this timer in a small window'); mb.onclick = () => miniEnter(t);
-    const head = h('div', 'trh', null, lblBox, cd, ok, ...(sk && sk.miniLayout ? [mb] : []), x), row = h('div', 'tr', null, head, h('div', 'bar sm', null, f), h('div', 'trf', null, sw.lab));
+    const head = h('div', 'trh', null, lblBox, cd, ok, ...(sk && sk.miniSize ? [mb] : []), x), row = h('div', 'tr', null, head, h('div', 'bar sm', null, f), h('div', 'trf', null, sw.lab));
     if (planning && !t.kan && (t.prev != null || (t.hist && t.hist.length))) { row.classList.add('pchg'); if (t === lastChg) row.classList.add('pnew'); }   // re-planning: a blue outline marks every countdown whose time was changed, and it pulses right after each new change
     x.onclick = () => {   // first tap only asks; nothing is removed until "Remove"
       const yes = h('button', 'cf yes', 'Remove'), no = h('button', 'cf', 'Keep');
