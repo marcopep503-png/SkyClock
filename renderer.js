@@ -492,6 +492,9 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @keyframes kpopk{0%{transform:scale(1)}45%{transform:scale(1.45)}100%{transform:scale(1)}}
 @keyframes kring{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.2)}}
 .kfly{box-shadow:0 0 0 3px #34c98a,0 12px 28px rgba(0,0,0,.55)!important}
+.kodue{color:#b3122a;font-weight:700}
+.kodue.kodone{color:#d9640a}
+.kogood{color:#0a7a3a;font-weight:700}
 .kautob{margin-top:6px;padding:2px 10px;border-radius:99px;background:#fff3dc;color:#3a2400;border:1px solid #c98a00;font-size:10.5px;font-weight:700;text-shadow:none}
 @media (prefers-reduced-motion:reduce){.kdone.kpop,.kdone.kpop::after{animation:none}}
 .tr.tkan{border:1px solid var(--kc);border-radius:10px;padding:8px 9px 4px;margin:7px 0}
@@ -1105,9 +1108,9 @@ function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight u
   if (it.done) { if (!it.dat) { it.dat = n; kanDirty = true; } nn = it.dat; dd = kdayStr(nn); }   // a checked item is frozen at the moment it was checked; unchecking it lets it jump back to where it would be now
   kGrad(x.g, it.done ? nn : 0);   // a checked item keeps the gradient of the moment it was checked
   const due = zonedMs(dd, it.time), st = zonedMs(dd, '00:00'), pre = it.done ? '✓ done · ' : '';
-  if (nn >= due) { x.f.style.width = '100%'; x.rem.textContent = pre + 'Time passed · overdue ' + fmt(Math.floor((nn - due) / 1000)) + (it.done ? '' : ' · tracks again tomorrow'); return; }
+  if (nn >= due) { x.f.style.width = '100%'; x.rem.replaceChildren(pre + 'Time passed · ', h('span', it.done ? 'kodue kodone' : 'kodue', 'overdue -' + fmt(Math.floor((nn - due) / 1000))), it.done ? '' : ' · tracks again tomorrow'); return; }   // the overdue part is red, with a minus sign in front of the running time
   x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (nn - st) / (due - st))) : 100) + '%';
-  x.rem.textContent = pre + fmt(Math.round((due - nn) / 1000)) + (it.done ? ' left when checked' : ' left today');
+  if (it.done) x.rem.replaceChildren(pre, h('span', 'kogood', fmt(Math.round((due - nn) / 1000)) + ' left when checked')); else x.rem.textContent = fmt(Math.round((due - nn) / 1000)) + ' left today';   // done before it was due: green
 }
 const kFrozen = c => c.cat === 'done' || (c.items.length > 0 && c.items.every(i => i.done));   // checked off as complete, or its checklist is 100%: the main countdown stands still
 function kBoundary(c) {   // when a frozen card starts over by itself: only a card with no due date (each day) or a repeating interval card. Every other card stays frozen until you uncheck it.
