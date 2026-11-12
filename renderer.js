@@ -1060,7 +1060,7 @@ const KTAGS = [["🏠 Home", ["🧹 Cleaning", "🧺 Laundry", "🍽️ Dishes",
 const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof s === 'string' && re.test(s);
 const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
 const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
-  mode: ['date', 'interval', 'none'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', auto: (Array.isArray(c.auto) ? c.auto : []).filter(s => typeof s === 'string').slice(0, 200), start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
+  mode: ['date', 'interval', 'none', 'weekly'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', auto: (Array.isArray(c.auto) ? c.auto : []).filter(s => typeof s === 'string').slice(0, 200), days: [...new Set((Array.isArray(c.days) ? c.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b), wd: kok(c.wd, KD) ? c.wd : '', free: kok(c.free, KD) ? c.free : '', park: !!c.park, start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
   items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
 let kan = { cards: [], inc: false, rem: false, side: 'time', sp: {} };   // sp: the saved progress-bar spans of Kanban times on the Time until side, kept with the cards
 try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time', sp: v.sp && typeof v.sp === 'object' && !Array.isArray(v.sp) ? v.sp : {} }; } catch (e) {}
@@ -1075,8 +1075,8 @@ function zonedMs(ds, ts) {
 }
 // how a card is timed: a due date, an interval (from one date to the next), or none (a running timer counts up from when it was made). A Proactive card with no due date counts up by itself.
 const kmode = c => c.mode || (c.due ? 'date' : c.cat === 'proactive' ? 'none' : 'date');
-const kdd = c => { const m = kmode(c); return m === 'interval' ? c.end : m === 'date' ? c.due : ''; };   // the date it is due: the end of its interval, or its due date
-const kdue = (c, n) => { const d = kdd(c); if (!d) { if (c.time && kmode(c) === 'date') { const now = n == null ? Date.now() : n, td = kdayStr(now); let ms = zonedMs(td, c.time); if (ms <= now) ms = zonedMs(kaddDays(td, 1), c.time); return ms; } return null; }   // a due time with no due date repeats every day: it counts down to the next time that clock time comes round
+const kdd = (c, n) => { const m = kmode(c); return m === 'interval' ? c.end : m === 'date' ? c.due : m === 'weekly' ? kwNext(c, n) : ''; };   // the date it is due: the end of its interval, or its due date
+const kdue = (c, n) => { const d = kdd(c, n); if (!d) { if (c.time && kmode(c) === 'date') { const now = n == null ? Date.now() : n, td = kdayStr(now); let ms = zonedMs(td, c.time); if (ms <= now) ms = zonedMs(kaddDays(td, 1), c.time); return ms; } return null; }   // a due time with no due date repeats every day: it counts down to the next time that clock time comes round
   const key = d + ' ' + (c.time || '23:59') + TZ; if (c._k !== key) { c._k = key; c._ms = zonedMs(d, c.time || '23:59'); } return c._ms; };
 const kam = c => { const key = (c.rst || c.assigned) + TZ; if (c._ak !== key) { c._ak = key; c._am = zonedMs(c.rst || c.assigned, '00:00'); } return c._am; };   // when the card was made
 const kst = c => { const key = c.start + TZ; if (c._sk !== key) { c._sk = key; c._sm = zonedMs(c.start, '00:00'); } return c._sm; };   // when its interval starts
@@ -1112,8 +1112,9 @@ function kitUpd(x, n, dk) {   // one checklist item's bar: today from midnight u
   x.f.style.width = (due > st ? Math.max(0, Math.min(100, 100 * (nn - st) / (due - st))) : 100) + '%';
   if (it.done) x.rem.replaceChildren(pre, h('span', 'kogood', fmt(Math.round((due - nn) / 1000)) + ' left when checked')); else x.rem.textContent = fmt(Math.round((due - nn) / 1000)) + ' left today';   // done before it was due: green
 }
-const kFrozen = c => c.cat === 'done' || (c.items.length > 0 && c.items.every(i => i.done));   // checked off as complete, or its checklist is 100%: the main countdown stands still
+const kFrozen = c => !c.park && (c.cat === 'done' || (c.items.length > 0 && c.items.every(i => i.done)));   // a weekly card parked in Done because today is not its day keeps counting down to its next day   // checked off as complete, or its checklist is 100%: the main countdown stands still
 function kBoundary(c) {   // when a frozen card starts over by itself: only a card with no due date (each day) or a repeating interval card. Every other card stays frozen until you uncheck it.
+  if (kmode(c) === 'weekly') return 0;   // a weekly card is handled by the auto-organizer
   if (kmode(c) === 'interval') return c.rep && c.start && c.end ? kdue(c) : 0;
   if (kdd(c)) return 0;
   const d = kdayStr(c.fz);
@@ -1130,6 +1131,7 @@ function kReset(c, n) {   // unchecks the card and its checklist and starts the 
 const knext = (c, n) => { const td = kdayStr(n); let ms = zonedMs(td, c.time); if (ms <= n) ms = zonedMs(kaddDays(td, 1), c.time); return ms; };   // the next time this clock time comes round
 const kdtText = c => {   // the small line under a card's title
   const m = kmode(c), rp = c.rep ? ' · 🔁 repeats' : '', at = c.time ? ktime(c.time) : 'end of day';
+  if (m === 'weekly') return (c.days && c.days.length ? 'Every ' + c.days.map(d => KDOW[d]).join(', ') + ' · ' + at + ' · ' + (c.days.includes(kdow(kdayStr(Date.now()))) ? 'today is a due day' : 'next ' + kdatew(kwNext(c))) : 'Pick the days of the week') + (c.free === kdayStr(Date.now()) ? ' · ✋ placed by you today' : ' · 🧭 auto-organized');
   if (m === 'interval') return (c.start && c.end ? kdatew(c.start) + ' → ' + kdatew(c.end) + ' · ' + at : 'Set the start and end dates') + (c.rep ? ' · 🔁 cycle ' + (c.cycle || 1) : '');
   if (m === 'none') return 'No due date · running since ' + kdate(c.assigned) + (c.time ? ' · due daily at ' + ktime(c.time) : '') + rp;
   return (c.due ? kdatew(c.due) + ' · ' + at : c.time ? 'No due date · every day at ' + ktime(c.time) : 'No due date') + rp;
@@ -1236,7 +1238,7 @@ function kComplete(c, now) {   // marked done: every unchecked item is checked f
   if (c.cat === 'done') return;
   c.pcat = c.cat; c.auto = [];
   c.items.forEach(i => { if (!i.done) { i.done = true; i.dat = now; c.auto.push(i.id); } });
-  c.cat = 'done';
+  c.cat = 'done'; kMoved(c);
 }
 function kReopen(c) {   // marked incomplete: back to the section it came from
   const ids = c.auto || [];
@@ -1244,13 +1246,13 @@ function kReopen(c) {   // marked incomplete: back to the section it came from
     const hit = c.items.filter(i => ids.includes(i.id));
     (hit.length ? hit : [c.items.reduce((a, b) => ((b.dat || 0) >= (a.dat || 0) ? b : a))]).forEach(i => { i.done = false; i.dat = 0; });
   }
-  c.auto = []; c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog';
+  c.auto = []; c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog'; kMoved(c);
 }
 function kSettle(c) {   // keeps the card and its checklist in step: every item checked sends it to Done, unchecking one brings it back
   const all = c.items.length > 0 && c.items.every(i => i.done);
-  if (all && c.cat !== 'done') { c.pcat = c.cat; c.auto = []; c.cat = 'done'; return 'done'; }
+  if (all && c.cat !== 'done') { c.pcat = c.cat; c.auto = []; c.cat = 'done'; kMoved(c); return 'done'; }
   c.auto = (c.auto || []).filter(id => c.items.some(i => i.id === id && i.done));
-  if (!all && c.cat === 'done' && c.items.length) { c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog'; return 'undone'; }
+  if (!all && c.cat === 'done' && c.items.length && !c.park) { c.cat = c.pcat && c.pcat !== 'done' ? c.pcat : 'backlog'; kMoved(c); return 'undone'; }
   return null;
 }
 function kReverseAuto(c) {   // unchecks only the items that were checked for you when the card was marked done
@@ -1274,6 +1276,30 @@ function kFlight(c, fn) {   // runs fn (it changes the card and redraws the boar
   setTimeout(() => { el.style.transition = ''; el.style.transform = ''; el.style.zIndex = ''; el.classList.remove('kfly'); try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }, 730);
 }
 function kToggleDone(id) { const c = kan.cards.find(z => z.id === id); if (!c) return; kFlight(c, () => { if (c.cat === 'done') kReopen(c); else kComplete(c, Date.now()); saveKan(); kanRender(); build(); }); }
+// ---- weekly cards: no due date, but due on certain days of the week. Proactive on those days, Done on every other day.
+const KDOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const kdow = ds => new Date(kdn(ds)).getUTCDay();
+function kwNext(c, n) {   // the next due day (today counts until its due time has passed)
+  const ds = c.days || []; if (!ds.length) return '';
+  const now = n == null ? Date.now() : n, td = kdayStr(now), endT = c.time || '23:59';
+  for (let i = 0; i < 8; i++) { const d = kaddDays(td, i); if (ds.includes(kdow(d)) && (i > 0 || zonedMs(d, endT) > now)) return d; }
+  return '';
+}
+function kMoved(c) { c.park = false; if (kmode(c) === 'weekly') c.free = kdayStr(Date.now()); }   // you moved it yourself: the card stays put until the day ends (or until you switch auto-organize back on)
+function kOrganize(c, n, force) {   // returns true when something changed
+  if (kmode(c) !== 'weekly' || !(c.days && c.days.length)) return false;
+  const td = kdayStr(n); if (c.free === td) return false;   // placed by you today: left alone until the day ends
+  const due = c.days.includes(kdow(td)), target = due ? 'proactive' : 'done', newDay = c.wd !== td && !force;
+  let ch = c.wd !== td; c.wd = td;
+  if (newDay && due && c.items.some(i => i.done)) { c.items.forEach(i => { i.done = false; i.dat = 0; }); c.auto = []; c.fz = 0; c.rst = td; ch = true; }   // every due day starts with a fresh checklist
+  if (newDay && !due && c.cat === 'done' && !c.park) { c.park = true; c.fz = 0; ch = true; }   // a card finished on its due day stops being frozen once the day is over
+  if (c.cat !== target) {
+    if (target === 'done') { c.pcat = c.cat; c.park = true; }
+    else { c.park = false; if (c.items.length && c.items.every(i => i.done)) { c.items.forEach(i => { i.done = false; i.dat = 0; }); c.auto = []; } }
+    c.cat = target; c.fz = 0; ch = true;
+  }
+  return ch;
+}
 function kOver(c, n, dd, tmr, ov) {   // no due date: it counts as overdue since the card was made, so the elapsed time counts up
   const a = Math.max(0, n - kam(c)), d0 = Math.floor(a / 864e5), s = Math.floor(a % 864e5 / 1000);
   dd.textContent = d0 + (d0 === 1 ? ' day' : ' days'); tmr.style.display = ''; tmr.textContent = p2(Math.floor(s / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60); ov.textContent = 'overdue'; ov.className = 'kov bad';
@@ -1284,6 +1310,7 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
   if (dk !== kanDay) { kanDay = dk; kMonth.textContent = MONTH_ICON[+dk.slice(5, 7) - 1] + ' ' + new Intl.DateTimeFormat('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }).format(new Date(n)); if (!force) { kanRender(); return; } }
   let rolled = false, fzChanged = false, regroup = false; kanDirty = false;
   kanRefs.forEach(({ c }) => {   // first: a card with no due date (or a repeating one) starts over by itself; then freeze or unfreeze each card's main countdown
+    if (kOrganize(c, n)) { regroup = true; rolled = true; }
     if (kReset(c, n)) { regroup = true; rolled = true; }
     const fr = kFrozen(c);
     if (fr && !c.fz) { c.fz = n; rolled = true; fzChanged = true; } else if (!fr && c.fz) { c.fz = 0; rolled = true; fzChanged = true; }
@@ -1297,7 +1324,7 @@ function kanTick(n, force) {   // the days-left counters and their small 24-hour
     dt.textContent = kdtText(c) + (c.fz ? ' · ' + (c.cat === 'done' ? '✓ Done · frozen' : '☑ 100% · frozen') : ''); ip.box.style.display = 'none';
     const ms = kdue(c, nF);
     let el = '';   // due daily at a clock time with no due date: once today's time has passed, the elapsed time is added to the red text (the countdown to the next one keeps running)
-    if (!kdd(c) && c.time && kmode(c) !== 'interval') { const tm = zonedMs(dF, c.time); if (nF >= tm) el = 'overdue ' + fmt(Math.floor((nF - tm) / 1000)) + ' since ' + ktime(c.time); }
+    if (!kdd(c) && c.time && kmode(c) !== 'interval' && kmode(c) !== 'weekly') { const tm = zonedMs(dF, c.time); if (nF >= tm) el = 'overdue ' + fmt(Math.floor((nF - tm) / 1000)) + ' since ' + ktime(c.time); }
     elp.textContent = el;   // the red elapsed text sits beside the countdown, outside its border
     if (kmode(c) === 'none') {   // no due date: it counts up from when the card was made
       if (c.time) { dd.textContent = ''; tmr.style.display = 'none'; ov.textContent = 'Due in ' + fmt(Math.round((knext(c, nF) - nF) / 1000)) + ''; ov.className = 'kov kdi'; return; }   // a due time: the "due in" text replaces the timer
@@ -1328,12 +1355,22 @@ function openKan(id) {
   const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
   const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
   const kPopSync = (fn, closeOnDone) => { const was = c.cat; kFlight(c, () => { fn(); sync(); }); sel.value = c.cat; col(); if (closeOnDone && c.cat === 'done' && was !== 'done') { closeKan(); return; } renderList(); showMode(); showAuto(); };   // a card that lands in Done closes this pop-up so you can watch it fly there
-  sel.onchange = () => { const v = sel.value; kPopSync(() => { if (v === 'done' && c.cat !== 'done') kComplete(c, Date.now()); else if (v !== 'done' && c.cat === 'done') { kReopen(c); c.cat = v; } else c.cat = v; }, true); };
+  sel.onchange = () => { const v = sel.value; kPopSync(() => { if (v === 'done' && c.cat !== 'done') kComplete(c, Date.now()); else if (v !== 'done' && c.cat === 'done') { kReopen(c); c.cat = v; } else { c.cat = v; kMoved(c); } }, true); };
   const doneBtn = h('button', 'add sm2', ''), autoBtn = h('button', 'add sm2', ''); doneBtn.type = autoBtn.type = 'button';
-  function showAuto() { const n = (c.auto || []).length; autoBtn.style.display = n ? '' : 'none'; autoBtn.textContent = '↶ Reverse auto-completed checklist (' + n + ')'; doneBtn.textContent = c.cat === 'done' ? '↺ Mark incomplete' : '✓ Mark complete'; }
+  function showAuto() { const n = (c.auto || []).length; autoBtn.style.display = n ? '' : 'none'; autoBtn.textContent = '↶ Reverse auto-completed checklist (' + n + ')'; doneBtn.textContent = c.cat === 'done' ? '↺ Mark incomplete' : '✓ Mark complete'; setSw(aoSw.i, c.free !== kdayStr(Date.now())); }
   doneBtn.onclick = () => kPopSync(() => { if (c.cat === 'done') kReopen(c); else kComplete(c, Date.now()); }, true);
   autoBtn.onclick = () => kPopSync(() => kReverseAuto(c), false);
-  const kPopSettle = () => kPopSync(() => kSettle(c), true);   // the thin borders follow the category right away
+  const kPopSettle = () => kPopSync(() => kSettle(c), true);
+  const aoSw = mkSw('Auto-organize by day (Proactive on its days, Done on the others)', true), aoRow = h('div', 'kq', null, aoSw.lab);   // weekly cards only
+  const daysRow = h('div', 'ktgb'), fDays = h('div', 'kfld', null, h('span', null, 'Due on these days'), daysRow); fDays.style.gridColumn = '1 / -1';
+  function renderDays() {
+    daysRow.replaceChildren(...KDOW.map((nm, d) => {
+      const on = (c.days || []).includes(d), b = h('button', 'kpick' + (on ? ' on' : ''), nm); b.type = 'button'; b.setAttribute('aria-pressed', String(on));
+      b.onclick = () => { const s = new Set(c.days || []); if (on) s.delete(d); else s.add(d); c.days = [...s].sort((x, y) => x - y); kPopSync(() => { if (c.free !== kdayStr(Date.now())) kOrganize(c, Date.now(), true); }, false); };
+      return b;
+    }));
+  }
+  aoSw.i.onchange = () => { const on = aoSw.i.checked; aoSw.i.setAttribute('aria-checked', String(on)); kPopSync(() => { if (on) { c.free = ''; kOrganize(c, Date.now(), true); } else c.free = kdayStr(Date.now()); }, false); };   // on: organize this card now; off: it stays where you put it until the day ends   // the thin borders follow the category right away
   const di = h('input', 'kin'); di.type = 'date'; di.value = c.due; di.onchange = () => { c.due = di.value; sync(); showMode(); };
   const tm = h('input', 'kin'); tm.type = 'time'; tm.value = c.time;
   const tmOk = h('button', 'pok', '✓'); tmOk.type = 'button'; tmOk.title = 'Apply this time'; tmOk.setAttribute('aria-label', 'Apply the due time'); tmOk.style.display = 'none';   // applied only when you press the check mark, not while the picker is still moving
@@ -1342,7 +1379,7 @@ function openKan(id) {
   const fld = (lab, el) => h('label', 'kfld', null, h('span', null, lab), el);
   // deadline type: a due date, an interval (from one date to the next), or none at all (a running timer counts up from when the card was made)
   const mSel = h('select', 'kin'); mSel.setAttribute('aria-label', 'Deadline type');
-  [['date', 'Due date'], ['interval', 'Interval (one date to the next)'], ['none', 'No due date (running timer)']].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; mSel.append(o); });
+  [['date', 'Due date'], ['interval', 'Interval (one date to the next)'], ['none', 'No due date (running timer)'], ['weekly', 'No due date: by day of the week']].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; mSel.append(o); });
   mSel.value = kmode(c);
   const si = h('input', 'kin'); si.type = 'date'; si.value = c.start; si.setAttribute('aria-label', 'Interval starts'); si.onchange = () => { c.start = si.value; sync(); };
   const ei = h('input', 'kin'); ei.type = 'date'; ei.value = c.end; ei.setAttribute('aria-label', 'Interval ends'); ei.onchange = () => { c.end = ei.value; sync(); };
@@ -1351,8 +1388,8 @@ function openKan(id) {
   const repSw = mkSw('🔁 Repeating card', true); setSw(repSw.i, c.rep); kTip(repSw.lab, REP_TIP);
   const repNote = h('p', 'knote', 'A repeating card never shows the ⚠ warning. When it was made in an earlier month, you get a friendly reminder of when instead, and an interval starts over (the same length) each time it ends.');
   repSw.i.onchange = () => { c.rep = repSw.i.checked; repSw.i.setAttribute('aria-checked', String(c.rep)); sync(); };
-  function showMode() { const m = kmode(c); tnote.style.display = (m === 'date' && !c.due) || m === 'none' ? '' : 'none'; tnote.textContent = m === 'none' ? 'Optional: due every day at this time, beside the running timer' : 'No due date: repeats every day'; fDue.style.display = m === 'date' ? '' : 'none'; fStart.style.display = fEnd.style.display = qk.style.display = m === 'interval' ? '' : 'none'; fTime.style.display = ''; tlab.textContent = m === 'interval' ? 'Ends at (time)' : 'Due time'; mSel.value = m; }
-  mSel.onchange = () => { c.mode = mSel.value; if (c.mode === 'interval') { if (!c.start) c.start = kdayStr(Date.now()); if (!c.end) c.end = kaddDays(c.start, 6); si.value = c.start; ei.value = c.end; } showMode(); sync(); };
+  function showMode() { const m = kmode(c); tnote.style.display = (m === 'date' && !c.due) || m === 'none' || m === 'weekly' ? '' : 'none'; tnote.textContent = m === 'none' ? 'Optional: due every day at this time, beside the running timer' : m === 'weekly' ? 'Optional: due at this time on those days' : 'No due date: repeats every day'; fDue.style.display = m === 'date' ? '' : 'none'; fStart.style.display = fEnd.style.display = qk.style.display = m === 'interval' ? '' : 'none'; fDays.style.display = aoRow.style.display = m === 'weekly' ? '' : 'none'; if (m === 'weekly') renderDays(); fTime.style.display = ''; tlab.textContent = m === 'interval' ? 'Ends at (time)' : 'Due time'; mSel.value = m; }
+  mSel.onchange = () => { c.mode = mSel.value; if (c.mode === 'interval') { if (!c.start) c.start = kdayStr(Date.now()); if (!c.end) c.end = kaddDays(c.start, 6); si.value = c.start; ei.value = c.end; } if (c.mode !== 'weekly') { c.park = false; c.free = ''; } showMode(); if (c.mode === 'weekly') kPopSync(() => { c.free = ''; kOrganize(c, Date.now(), true); }, false); else sync(); };
   // tags: a big bank grouped by area of life, with search; a card keeps up to 8
   const openG = new Set(), tagSel = h('div', 'ktags'), tagQ = h('input', 'kin'), tagList = h('div', 'ktaglist'), tagCnt = h('span', 'ksub');
   tagQ.type = 'search'; tagQ.placeholder = 'Search tags (e.g. dog, budget, garden)…'; tagQ.setAttribute('aria-label', 'Search tags');
@@ -1453,7 +1490,7 @@ function openKan(id) {
   const conf = h('div', 'conf', null, h('span', null, 'Delete this card and its checklist?'), yes, no); conf.style.display = 'none'; del.style.marginTop = '12px';
   del.onclick = () => { del.style.display = 'none'; conf.style.display = 'flex'; }; no.onclick = () => { conf.style.display = 'none'; del.style.display = ''; };
   yes.onclick = () => { kan.cards = kan.cards.filter(z => z !== c); closeKan(); sync(); };
-  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fTime, fld('Assigned', ai)), h('div', 'kq', null, doneBtn, autoBtn), qk, repSw.lab, repNote,
+  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fDays, fTime, fld('Assigned', ai)), h('div', 'kq', null, doneBtn, autoBtn), aoRow, qk, repSw.lab, repNote,
     tuSw.lab, remSw.lab, h('div', 'kchead', null, h('span', null, '🏷 Tags'), tagCnt), tagSel, tagDD, h('div', 'kchead', null, h('span', null, '☑ Checklist'), psub), h('div', 'kpr', null, ptxt, pbar), list, kundo, addWrap, del, conf);
   renderList(); renderTags(); showMode(); showAuto();
   m.addEventListener('keydown', e => { if (e.key === 'Escape') closeKan(); });
