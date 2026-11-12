@@ -587,7 +587,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnok{padding:2px 10px}
 .mnb{background:transparent;font-size:14px;line-height:1;padding:2px 8px;border-radius:7px;opacity:.85;text-shadow:none;cursor:pointer}
 .mnb:hover{background:rgba(255,255,255,.16);opacity:1}
-.mnpk{position:absolute;left:0;right:0;z-index:5;padding:3px 12px;background:rgba(8,10,30,.9);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;display:none;pointer-events:none}
+.mnpk{position:absolute;left:0;right:0;z-index:5;padding:3px 12px;background:rgba(8,10,30,.9);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;display:none;cursor:pointer}
+.mnpk:hover{background:rgba(28,34,90,.95)}
 .mnpk.t{top:0}.mnpk.b{bottom:0}
 .shell.pk-t .mnpk.t,.shell.pk-b .mnpk.b{display:block}
 .mnpk:empty{display:none!important}
@@ -1605,6 +1606,8 @@ try { const v = GM_getValue('miniPins', {}); if (v && typeof v === 'object' && !
 const savePins = () => { try { GM_setValue('miniPins', { ...miniPinned }); } catch (e) {} };
 const mnPk = h('div', 'mnpk t'), mnPkB = h('div', 'mnpk b'), mnBody = h('div', 'mnbody');
 const mini = h('div', 'mini', null, mnBody, mnPk, mnPkB);
+mnPk.title = 'Go to the previous timer'; mnPkB.title = 'Go to the next timer';
+mnPk.onclick = e => { e.stopPropagation(); miniGo(-1); }; mnPkB.onclick = e => { e.stopPropagation(); miniGo(1); };   // clicking a banner moves to that timer
 shell.append(mini);
 const miniIdx = () => (miniSel ? rows.findIndex(r => r.t === miniSel.t || (miniSel.id && r.t.kan && r.t.id === miniSel.id)) : -1);
 const miniSet = t => { miniSel = { t, id: t.kan ? t.id : null }; };
@@ -1623,7 +1626,7 @@ function miniPeek(t, b, hold) {   // no animation: the lines simply appear and d
   shell.classList.toggle('pk-t', !!t); shell.classList.toggle('pk-b', !!b);
   if (hold) { clearTimeout(miniPeekT); miniPeekT = setTimeout(() => { miniPeekT = 0; shell.classList.remove('pk-t', 'pk-b'); }, 1500); }
 }
-mini.addEventListener('mousemove', e => { if (!miniOn || miniPeekT) return; const r = mini.getBoundingClientRect(); miniPeek(e.clientY - r.top < 20, r.bottom - e.clientY < 20, false); });
+mini.addEventListener('mousemove', e => { if (!miniOn || miniPeekT) return; const r = mini.getBoundingClientRect(); miniPeek(e.clientY - r.top < 30, r.bottom - e.clientY < 30, false); });
 mini.addEventListener('mouseleave', () => { if (!miniPeekT) miniPeek(false, false, false); });
 function miniRender() {
   if (!miniOn) return;
@@ -1636,17 +1639,17 @@ function miniRender() {
   miniRefs.prev = n > 1 ? rows[(i - 1 + n) % n] : null; miniRefs.next = n > 1 ? rows[(i + 1) % n] : null;
   const view = miniView === 'card' && r.t.kan ? 'card' : 'time';
   if (view === 'time') {
-    const t = r.t, cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), ok = h('button', 'add sm2 mnok', '✓ Got it');
-    cdS.style.display = 'none'; ok.style.display = 'none'; ok.onclick = () => r.ok.click();
+    const t = r.t, cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill');
+    cdS.style.display = 'none';
     const es = mkSw('Elapsed', true); setSw(es.i, !!t.el); es.i.onchange = () => { r.sw.i.checked = es.i.checked; r.sw.i.onchange(); };
     const ttl = h('div', 'mnttl', t.title || ''); ttl.title = t.title || ''; if (!t.title) ttl.style.display = 'none';
-    miniRefs.t = { cdM, cdS, cd, fill, ok };
-    mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, ok, es.lab));
+    miniRefs.t = { cdM, cdS, cd, fill };
+    mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, es.lab));
     return;
   }
   const [cid, iid] = String(r.t.id).split(':'), c = kan.cards.find(z => z.id === cid);
   if (!c) { mnBody.replaceChildren(h('p', 'mnnote', 'That card no longer exists.')); return; }
-  const coll = !!miniColl[cid], pins = new Set(miniPinned[cid] || []); if (iid) pins.add(iid);   // the checklist item you picked is always shown, even with the card collapsed
+  const coll = !!miniColl[cid], pins = new Set(miniPinned[cid] || []);   // collapsed: the checklist items are hidden and only the main card shows (items you pinned with 📌 stay)
   const arr = h('button', 'mnb', coll ? '▸' : '▾'); arr.type = 'button'; arr.title = coll ? 'Expand the card and its checklist' : 'Collapse the card'; arr.setAttribute('aria-label', arr.title); arr.setAttribute('aria-expanded', String(!coll));
   arr.onclick = () => { miniColl[cid] = !coll; miniRender(); miniTick(); };
   const done = c.items.filter(x => x.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : 0, pf = h('div', 'fill'); pf.style.width = pct + '%';
@@ -1672,8 +1675,8 @@ function miniRender() {
     }
     list.append(row);
   });
-  if (!shown.length) list.append(h('p', 'mnnote', coll ? 'Collapsed. Expand the card, or pin checklist timers with 📌.' : 'No checklist items yet.'));
-  mnBody.replaceChildren(head, cl, h('div', 'bar', null, pf), list);
+  if (!shown.length && !coll) list.append(h('p', 'mnnote', 'No checklist items yet.'));
+  mnBody.replaceChildren(head, cl, h('div', 'bar', null, pf), ...(coll && !shown.length ? [] : [list]));
 }
 function miniTick() {
   const m = miniRefs; if (!m) return;
@@ -1681,7 +1684,7 @@ function miniTick() {
   if (m.t) {
     const r = m.r, x = m.t;
     x.cdM.textContent = r.cdMain.textContent; x.cdS.textContent = r.cdSup.textContent; x.cdS.style.display = r.cdSup.style.display;
-    x.cd.className = 'mncd' + r.cd.className.slice(2); x.fill.style.width = r.f.style.width; x.ok.style.display = r.ok.style.display === 'none' ? 'none' : '';
+    x.cd.className = 'mncd' + r.cd.className.slice(2); x.fill.style.width = r.f.style.width;
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
     if (ref) {
@@ -1722,7 +1725,7 @@ mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, si
 }, { passive: false });
 // press and release on the card = back to the normal window; press, move and release = drag the small window
 mini.addEventListener('pointerdown', e => {
-  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist')) return;
+  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk')) return;
   const st = { x: e.screenX, y: e.screenY, p: null, moved: false }; miniDrag = st; mini.setPointerCapture(e.pointerId);
   sk.getPos().then(p => { st.p = p; });
 });
