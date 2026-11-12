@@ -1731,7 +1731,7 @@ mini.addEventListener('pointermove', e => {
   if (!d.moved && Math.hypot(e.screenX - d.x, e.screenY - d.y) < 4) return;
   d.moved = true; if (d.p) sk.setPos(d.p[0] + e.screenX - d.x, d.p[1] + e.screenY - d.y);
 });
-mini.addEventListener('pointerup', () => { const d = miniDrag; miniDrag = null; if (d && !d.moved) miniExit(); });
+mini.addEventListener('pointerup', e => { const d = miniDrag; miniDrag = null; if (d && !d.moved && Math.hypot(e.screenX - d.x, e.screenY - d.y) < 4) miniExit(); });   // only a click that never moved goes back to the normal window
 mini.addEventListener('pointercancel', () => { miniDrag = null; });
 addEventListener('keydown', e => {   // capture, so it also works while a button inside the panel has focus
   if (!miniOn || kmod || (typeof scRec !== 'undefined' && scRec) || e.ctrlKey || e.altKey || e.metaKey) return;
@@ -1784,7 +1784,7 @@ function build() {
     const mkChip = (cls, label, tip) => { const live = h('span', 'trl', '● LIVE'); live.style.display = 'none'; const box = h('span', 'trk dot ' + cls, null, h('span', 'trn', label), live); box.setAttribute('aria-label', label); box.style.display = 'none'; tipOn(box, () => tip + ' ● LIVE means that window is happening right now.' + (box.classList.contains('past') ? '\n\nDashed ring: this time already passed today, so this shows tomorrow’s window.' : '')); return { box, live }; };
     const chips = [mkChip('sun', '☀️ Daylight', 'Your chosen time falls between sunrise and sunset, so there is still daylight then.'), mkChip('gold', '🌇 Golden hour', 'Your chosen time falls inside a golden-hour window: low sun and soft, warm light.'), mkChip('blue', '🔵 Blue hour', 'Your chosen time falls inside a blue-hour window: deep twilight just before sunrise or after sunset.')];
     const chipRow = h('div', 'trkr', null, ...chips.map(c => c.box)); chipRow.style.display = 'none'; tr1.append(chipRow);
-    const mb = h('button', 'x', '⧉'); mb.title = 'Show only this timer in a small window'; mb.setAttribute('aria-label', 'Show only this timer in a small window'); mb.onclick = () => miniEnter(t);
+    const mb = h('button', 'x', '⌚'); mb.title = 'Show only this timer in a small window'; mb.setAttribute('aria-label', 'Show only this timer in a small window'); mb.onclick = () => miniEnter(t);
     const head = h('div', 'trh', null, lblBox, cd, ok, ...(sk && sk.miniSize ? [mb] : []), x), row = h('div', 'tr', null, head, h('div', 'bar sm', null, f), h('div', 'trf', null, sw.lab));
     if (planning && !t.kan && (t.prev != null || (t.hist && t.hist.length))) { row.classList.add('pchg'); if (t === lastChg) row.classList.add('pnew'); }   // re-planning: a blue outline marks every countdown whose time was changed, and it pulses right after each new change
     x.onclick = () => {   // first tap only asks; nothing is removed until "Remove"

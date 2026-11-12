@@ -9,7 +9,7 @@ if (!gotLock) app.quit();
 app.setAppUserModelId('com.skyclock.desktop');        // needed for Windows notifications
 
 let win = null, tray = null, quitting = false, cfg = {}, saveTimer = null;
-let miniOn = false, fullBounds = null;               // mini timer mode: the window is one card, and the full-size bounds are kept to restore
+let miniOn = false, fullBounds = null, miniSz = { w: 0, h: 0 };               // mini timer mode: the window is one card, and the full-size bounds are kept to restore
 const cfgPath = () => path.join(app.getPath('userData'), 'window.json');
 const loadCfg = () => { try { return JSON.parse(fs.readFileSync(cfgPath(), 'utf8')); } catch (e) { return {}; } };
 const saveCfg = () => { try { fs.writeFileSync(cfgPath(), JSON.stringify(cfg)); } catch (e) {} };
@@ -185,7 +185,7 @@ if (gotLock) {
     if (!win) return;
     if (!on) { leaveMini(); return; }
     if (!Number.isFinite(w) || !Number.isFinite(h)) return;
-    w = Math.round(Math.max(200, Math.min(w, 900))); h = Math.round(Math.max(40, Math.min(h, 900)));
+    w = Math.round(Math.max(200, Math.min(w, 900))); h = Math.round(Math.max(40, Math.min(h, 900))); miniSz = { w, h };
     if (!miniOn) {
       miniOn = true; fullBounds = win.getBounds();
       const cur = fullBounds, p = cfg.miniPos && onScreen({ x: cfg.miniPos.x, y: cfg.miniPos.y, width: w, height: h }) ? cfg.miniPos : { x: cur.x, y: cur.y };
@@ -205,8 +205,10 @@ if (gotLock) {
   ipcMain.on('win:setPos', (e, x, y) => {
     if (!win || !Number.isFinite(x) || !Number.isFinite(y)) return;
     if (miniOn) {                                       // the small card may touch the very edge of the screen, but never leave it
-      const [w, h] = win.getSize(), d = screen.getDisplayNearestPoint({ x: Math.round(x + w / 2), y: Math.round(y + h / 2) }).bounds;
+      const { w, h } = miniSz, d = screen.getDisplayNearestPoint({ x: Math.round(x + w / 2), y: Math.round(y + h / 2) }).bounds;
       x = Math.max(d.x, Math.min(x, d.x + d.width - w)); y = Math.max(d.y, Math.min(y, d.y + d.height - h));
+      win.setBounds({ x: Math.round(x), y: Math.round(y), width: w, height: h });   // position AND size together: setPosition alone lets the size drift on scaled Windows displays
+      return;
     }
     win.setPosition(Math.round(x), Math.round(y));
   });
