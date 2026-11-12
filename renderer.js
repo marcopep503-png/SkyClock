@@ -600,7 +600,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnit input[type=checkbox]{flex:none;width:16px;height:16px;padding:0;margin-top:1px;accent-color:#7c83f0}
 .mnib{flex:1;min-width:0}
 .mnix{overflow-wrap:anywhere}.mnit.done .mnix{text-decoration:line-through;opacity:.55}
-.mnic{display:flex;align-items:center;gap:8px;margin:3px 0 4px;font-size:11px;font-variant-numeric:tabular-nums}
+.mnic{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:3px 0 4px;font-size:11px;font-variant-numeric:tabular-nums}
 .mnpill{flex:none;padding:0 8px;border-radius:99px;border:1px solid rgba(255,255,255,.4);font-weight:700;font-size:10.5px;white-space:nowrap}
 .mnpin{flex:none;opacity:.4;background:transparent;font-size:13px;padding:0 3px}
 .mnpin.on{opacity:1}
@@ -1684,9 +1684,9 @@ function miniRender() {
   const pt = h('span', 'mnpt', '☑ ' + (total ? pct + '% · ' + done + '/' + total + ' done' : 'no checklist items yet'));   // checklist: percentage and how many of the total
   const ipf = h('div', 'fill'), ipt = h('span', 'mnpt'), ipb = h('div', 'mnprog', null, h('div', 'bar', null, ipf), ipt); ipb.style.display = 'none';   // interval: shown only for a card with an interval due date
   miniRefs.ip = { box: ipb, f: ipf, t: ipt };
-  const cl = h('div', 'mncl'), head = h('div', 'mnch', null, h('div', 'mnct', c.title || 'Untitled'), arr); head.style.setProperty('--mc', kcat(c.cat).color);
-  miniRefs.c = c; miniRefs.cl = cl;
-  const list = h('div', 'mnlist'), shown = coll ? c.items.filter(x => x.time && pins.has(x.id)) : c.items;
+  const cl = h('div', 'mncl'), dtl = h('div', 'mncl', kdtText(c)), head = h('div', 'mnch', null, h('div', 'mnct', c.title || 'Untitled'), arr); head.style.setProperty('--mc', kcat(c.cat).color);   // dtl: the card's due date / interval
+  miniRefs.c = c; miniRefs.cl = cl; miniRefs.dt = dtl;
+  const list = h('div', 'mnlist'), shown = coll ? c.items.filter(x => (x.time || x.date) && pins.has(x.id)) : c.items;
   shown.forEach(it => {
     const body = h('div', 'mnib', null, h('div', 'mnix', it.text)), row = h('div', 'mnit' + (it.done ? ' done' : ''));
     if (!coll) {
@@ -1694,11 +1694,12 @@ function miniRender() {
       cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kSettle(c); saveKan(); kanRender(); build(); };
       row.append(cb);
     }
-    if (it.time) {
-      const rem = h('span'), f = h('div', 'fill'); body.append(h('div', 'mnic', null, h('span', 'mnpill', '⏰ ' + ktime(it.time)), rem), h('div', 'bar sm', null, f)); miniRefs.items.push({ it, rem, f });
+    if (it.time || it.date) {
+      const rem = h('span'), f = h('div', 'fill');
+      body.append(h('div', 'mnic', null, h('span', 'mnpill', it.time ? '⏰ ' + ktime(it.time) : '⏰ end of day'), ...(it.date ? [h('span', 'mnpill', '📅 ' + kdatew(it.date))] : []), rem), h('div', 'bar sm', null, f)); miniRefs.items.push({ it, rem, f });
     }
     row.append(body);
-    if (it.time && !coll) {   // pin a checklist timer so it stays visible when the card is collapsed
+    if ((it.time || it.date) && !coll) {   // pin a checklist timer so it stays visible when the card is collapsed
       const on = (miniPinned[cid] || []).includes(it.id), pb = h('button', 'mnpin' + (on ? ' on' : ''), '📌'); pb.type = 'button';
       pb.title = on ? 'Unpin this timer' : 'Pin this timer (it stays visible when the card is collapsed)'; pb.setAttribute('aria-label', pb.title); pb.setAttribute('aria-pressed', String(on));
       pb.onclick = () => { const s = new Set(miniPinned[cid] || []); if (on) s.delete(it.id); else s.add(it.id); if (s.size) miniPinned[cid] = [...s]; else delete miniPinned[cid]; savePins(); miniRender(); miniTick(); };
@@ -1707,7 +1708,7 @@ function miniRender() {
     list.append(row);
   });
   if (!shown.length && !coll) list.append(h('p', 'mnnote', 'No checklist items yet.'));
-  mnBody.replaceChildren(head, cl, ipb, h('div', 'mnprog', null, h('div', 'bar', null, pf), pt), ...(coll && !shown.length ? [] : [list]));
+  mnBody.replaceChildren(head, cl, dtl, ipb, h('div', 'mnprog', null, h('div', 'bar', null, pf), pt), ...(coll && !shown.length ? [] : [list]));
 }
 function miniTimerRender(kind) {   // the alarm and the pomodoro share one small layout: end time top left, countdown top right, bar, length bottom left, Elapsed switch bottom right
   const al = kind === 'alarm';
@@ -1749,6 +1750,7 @@ function miniTick() {
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
     if (ref) {
+      if (m.dt) m.dt.textContent = ref.dt.textContent;
       m.cl.textContent = [ref.dd.textContent, ref.tmr.style.display === 'none' ? '' : ref.tmr.textContent, ref.ov.textContent, ref.elp.textContent].filter(Boolean).join(' · ');
       if (m.ip) { const on = ref.ip.box.style.display !== 'none'; m.ip.box.style.display = on ? '' : 'none'; if (on) { m.ip.f.style.width = ref.ip.f.style.width; m.ip.t.textContent = '📅 ' + ref.ip.t.textContent; } }   // the interval bar and its percentage
       m.items.forEach(x => { const y = ref.its.find(z => z.it === x.it); if (y) { x.rem.textContent = y.rem.textContent; x.f.style.width = y.f.style.width; } });
