@@ -20,9 +20,9 @@ const onScreen = b => b && [b.x, b.y, b.width, b.height].every(Number.isFinite) 
 });
 
 // ---------- keyboard shortcuts (work from anywhere, even while the window is hidden) ----------
-const DEFAULT_KEYS = { toggle: 'Alt+Shift+K', theme: 'Alt+Shift+B', flip: 'Alt+Shift+F', ind: 'Alt+Shift+I', mil: 'Alt+Shift+M', mini: 'Alt+Shift+T', mview: 'Alt+Shift+V', worked: 'Alt+Shift+W', quit: 'Alt+Shift+Q' };
+const DEFAULT_KEYS = { toggle: 'Alt+Shift+K', theme: 'Alt+Shift+B', flip: 'Alt+Shift+F', ind: 'Alt+Shift+I', mil: 'Alt+Shift+M', mini: 'Alt+Shift+T', mview: 'Alt+Shift+V', worked: 'Alt+Shift+W', pause: 'Alt+Shift+P', quit: 'Alt+Shift+Q' };
 let shortcuts = { ...DEFAULT_KEYS };
-const scOk = { toggle: false, theme: false, flip: false, ind: false, mil: false, mini: false, mview: false, worked: false, quit: false };          // did Windows let us have that key combination?
+const scOk = { toggle: false, theme: false, flip: false, ind: false, mil: false, mini: false, mview: false, worked: false, pause: false, quit: false };          // did Windows let us have that key combination?
 const quitApp = () => { quitting = true; app.quit(); };
 const toggleTheme = () => { if (win) win.webContents.send('theme:toggle'); };   // the page switches Sky <-> Black
 const flipBoard = () => { if (win) win.webContents.send('flip:toggle'); };   // the page flips Time until <-> Kanban
@@ -31,7 +31,8 @@ const toggleMil = () => { if (win) win.webContents.send('mil:toggle'); };   // t
 const toggleMini = () => { if (!win) return; if (!win.isVisible() || win.isMinimized()) { if (win.isMinimized()) win.restore(); win.show(); } win.focus(); win.webContents.send('mini:toggle'); };   // the page shrinks to the chosen timer, or expands back
 const miniView = () => { if (win) win.webContents.send('mview:toggle'); };   // inside mini mode: Kanban card <-> Time until view
 const toggleWorked = () => { if (win) win.webContents.send('worked:toggle'); };   // the page shows or hides the pomodoro's "time worked" line (full window and mini window)
-const actions = { toggle: () => toggle(), theme: toggleTheme, flip: flipBoard, ind: toggleInd, mil: toggleMil, mini: toggleMini, mview: miniView, worked: toggleWorked, quit: quitApp };
+const togglePause = () => { if (win) win.webContents.send('pause:toggle'); };   // the page pauses or resumes the running pomodoro (full window and mini window)
+const actions = { toggle: () => toggle(), theme: toggleTheme, flip: flipBoard, ind: toggleInd, mil: toggleMil, mini: toggleMini, mview: miniView, worked: toggleWorked, pause: togglePause, quit: quitApp };
 const MODS = ['Ctrl', 'Control', 'CommandOrControl', 'CmdOrCtrl', 'Alt', 'Option', 'AltGr', 'Shift', 'Super', 'Meta', 'Command', 'Cmd'];
 const BLOCKED = ['ctrl+c', 'ctrl+v', 'ctrl+x', 'ctrl+z', 'ctrl+y', 'ctrl+a', 'ctrl+s', 'alt+f4', 'alt+tab'];
 function validAccel(a) {                               // '' means "off"
@@ -59,6 +60,7 @@ const scSnapshot = () => ({
   mini: { accel: shortcuts.mini, ok: scOk.mini },
   mview: { accel: shortcuts.mview, ok: scOk.mview },
   worked: { accel: shortcuts.worked, ok: scOk.worked },
+  pause: { accel: shortcuts.pause, ok: scOk.pause },
   quit: { accel: shortcuts.quit, ok: scOk.quit },
 });
 
@@ -87,6 +89,7 @@ function rebuildMenu() {
     { label: 'Mini timer window' + hint('mini'), click: toggleMini },
     { label: 'Mini: switch card / Time until' + hint('mview'), click: miniView },
     { label: 'Pomodoro: show / hide time worked' + hint('worked'), click: toggleWorked },
+    { label: 'Pomodoro: pause / resume' + hint('pause'), click: togglePause },
     { label: 'Always on top', type: 'checkbox', checked: win.isAlwaysOnTop(), click: i => setPin(i.checked) },
     { label: 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings(loginOpts()).openAtLogin, click: i => setAutostart(i.checked) },
     { type: 'separator' },

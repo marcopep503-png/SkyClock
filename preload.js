@@ -25,4 +25,5 @@ contextBridge.exposeInMainWorld('skyclock', {
   onMini: cb => ipcRenderer.on('mini:toggle', () => cb()),
   onMiniView: cb => ipcRenderer.on('mview:toggle', () => cb()),
   onWorked: cb => ipcRenderer.on('worked:toggle', () => cb()),
+  onPause: cb => ipcRenderer.on('pause:toggle', () => cb()),
 });

@@ -326,6 +326,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
 .pmopts{display:flex;justify-content:flex-end;margin:-2px 0 4px}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}
+.pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
 .pms{font-weight:600;opacity:.9;margin:12px 0 4px;font-size:12px}
 .pmsum{margin:10px 0;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.3);font-size:12px;line-height:1.5}
 .pmt{white-space:pre-line;margin-bottom:6px}
@@ -714,7 +716,7 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini timer window (shrink to one timer / expand back)'], ['mview', 'Mini window: switch Kanban card / Time until'], ['worked', 'Pomodoro: show / hide time worked (full and mini window)'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini timer window (shrink to one timer / expand back)'], ['mview', 'Mini window: switch Kanban card / Time until'], ['worked', 'Pomodoro: show / hide time worked (full and mini window)'], ['pause', 'Pomodoro: pause / resume (full and mini window)'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
@@ -775,7 +777,7 @@ const pmGo = h('button', 'add', 'Start'), pmChips = h('div', 'chips'), pmLbl = h
 const pmCtl = h('div', null, null, pmLbl, h('div', 'ctl', null, pmH, h('span', 'unit', 'h'), pmMin, h('span', 'unit', 'min'), pmGo), pmChips);
 const pmShowSw = mkSw('Show time worked', true); setSw(pmShowSw.i, pmShow);
 const pmOpts = h('div', 'pmopts', null, pmShowSw.lab);
-const pmHead = h('div', 'pmh'), pmTMain = h('span'), pmTSup = h('sup'), pmTime = h('div', 'alt', null, pmTMain, pmTSup), pmEnd = h('div', 'ale'), pmFill = h('div', 'fill'), pmBar = h('div', 'bar sm', null, pmFill), pmWork = h('div', 'ale');
+const pmHeadTxt = h('span'), pmHeadSup = h('sup'), pmHead = h('div', 'pmh', null, pmHeadTxt, pmHeadSup), pmTMain = h('span'), pmTSup = h('sup'), pmTime = h('div', 'alt', null, pmTMain, pmTSup), pmEnd = h('div', 'ale'), pmFill = h('div', 'fill'), pmBar = h('div', 'bar sm', null, pmFill), pmWork = h('div', 'ale');
 pmTSup.style.display = 'none';
 const pmPause = h('button', 'add sm2', 'Pause'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
 const pmKeepSw = mkSw('Keep counting time after a pomodoro ends'); setSw(pmKeepSw.i, pmKeep);
@@ -1749,7 +1751,7 @@ function miniTick() {
     } else {
       const s = pm.session; if (!s) return;
       const cls = pmTime.className;
-      x.head.textContent = pmHead.textContent; x.endEl.textContent = pmEnd.textContent;
+      x.head.textContent = pmHeadTxt.textContent + (pmHeadSup.style.display === 'none' ? '' : ' ' + pmHeadSup.textContent); x.endEl.textContent = pmEnd.textContent;
       x.cdM.textContent = pmTMain.textContent; x.cdS.textContent = pmTSup.textContent; x.cdS.style.display = pmTSup.style.display;
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
@@ -2194,6 +2196,7 @@ pmClear.onclick = () => {
   clearTimeout(pmClearT); pmClear.textContent = 'Clear history'; pm.days = {}; pm.last = null; pm.log = []; savePm(); pmRender();
 };
 pmShowSw.i.onchange = () => { pmShow = pmShowSw.i.checked; pmShowSw.i.setAttribute('aria-checked', String(pmShow)); try { GM_setValue('pmShow', pmShow); } catch (e) {} pmRender(); pmTick(Date.now()); };
+if (skc && skc.onPause) skc.onPause(() => { const s = pm.session; if (!s) return; if (s.pauseAt) pmResume(); else if (s.cur || pmKeep) pmPauseNow(); });   // the pause / resume keybind: works in the full and the mini window
 if (skc && skc.onWorked) skc.onWorked(() => { pmShowSw.i.checked = !pmShow; pmShowSw.i.onchange(); });   // the show / hide time worked keybind (works in the mini window too)
 pmKeepSw.i.onchange = () => {                          // keep counting after a pomodoro ends: on / off
   pmKeep = pmKeepSw.i.checked; pmKeepSw.i.setAttribute('aria-checked', String(pmKeep)); try { GM_setValue('pmKeep', pmKeep); } catch (e) {}
@@ -2254,7 +2257,7 @@ function pmRender() {                                  // layout: which parts ar
   pmCtl.style.display = running ? 'none' : 'block';
   pmLbl.textContent = between ? 'Start pomodoro ' + (s.n + 1) + ' of ' + PM_MAX : 'Start a pomodoro (a session is up to ' + PM_MAX + ')';
   pmRunBox.style.display = s ? 'block' : 'none';
-  pmHead.textContent = !s ? '' : 'Pomodoro ' + s.n + ' of ' + PM_MAX + (running ? ' · ' + pmLen(s.cur.dur) : s.lastKind === 'quit' ? ' stopped early' : s.lastKind === 'discard' ? ' · the last one was discarded' : ' complete');
+  pmHeadTxt.textContent = !s ? '' : 'Pomodoro ' + s.n + ' of ' + PM_MAX + (running ? ' · ' + pmLen(s.cur.dur) : (s.lastKind === 'quit' ? ' stopped early' : s.lastKind === 'discard' ? ' · the last one was discarded' : ' complete') + (s.lastDur ? ' · ' + pmLen(s.lastDur) : ''));   // the planned length shows while it runs and after it ends
   pmBar.style.display = running ? '' : 'none';
   pmKeepBox.style.display = between ? '' : 'none';                       // only after a pomodoro has finished
   setSw(pmKeepSw.i, pmKeep);
@@ -2295,6 +2298,8 @@ function pmTick(n) {                                   // every tick: finish a p
   pmStop.title = s && !s.cur && pmKeep && !s.pauseAt ? 'Time is still being counted. Press to stop it.' : '';
   if (!s) return;
   const c = s.cur, paused = !!s.pauseAt;
+  const ovr = !c && s.lastKind === 'full' && s.endedAt;   // a pomodoro that ran out: a small red + timer shows how long ago
+  pmHeadSup.style.display = ovr ? '' : 'none'; if (ovr) pmHeadSup.textContent = '+ ' + clockFmt(Math.max(0, Math.floor((n - s.endedAt) / 1000)));
   let worked;
   if (c) {
     const elMs = pmElapsed(s, n);
