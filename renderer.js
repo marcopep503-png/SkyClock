@@ -714,7 +714,7 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini timer window (shrink to one timer / expand back)'], ['mview', 'Mini window: switch Kanban card / Time until'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini timer window (shrink to one timer / expand back)'], ['mview', 'Mini window: switch Kanban card / Time until'], ['worked', 'Pomodoro: show / hide time worked (full and mini window)'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
@@ -2194,6 +2194,7 @@ pmClear.onclick = () => {
   clearTimeout(pmClearT); pmClear.textContent = 'Clear history'; pm.days = {}; pm.last = null; pm.log = []; savePm(); pmRender();
 };
 pmShowSw.i.onchange = () => { pmShow = pmShowSw.i.checked; pmShowSw.i.setAttribute('aria-checked', String(pmShow)); try { GM_setValue('pmShow', pmShow); } catch (e) {} pmRender(); pmTick(Date.now()); };
+if (skc && skc.onWorked) skc.onWorked(() => { pmShowSw.i.checked = !pmShow; pmShowSw.i.onchange(); });   // the show / hide time worked keybind (works in the mini window too)
 pmKeepSw.i.onchange = () => {                          // keep counting after a pomodoro ends: on / off
   pmKeep = pmKeepSw.i.checked; pmKeepSw.i.setAttribute('aria-checked', String(pmKeep)); try { GM_setValue('pmKeep', pmKeep); } catch (e) {}
   const s = pm.session, now = Date.now();
