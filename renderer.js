@@ -613,6 +613,14 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnprog{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px;font-variant-numeric:tabular-nums}
 .mnprog .bar{flex:1;min-width:30px}
 .mnpt{flex:none;white-space:nowrap;opacity:.92}
+.mnwork{margin-top:6px;font-size:11px;line-height:1.35;opacity:.92;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mnsess{min-height:1.4em}
+/* checklist item progress bars sit on their own full-width line below the due time / due date pills, so nothing gets squished */
+.kclb{flex-wrap:wrap;gap:6px 10px}
+.kclb .kbar{flex:1 1 100%;min-width:100%;order:2}
+.kclb .kitp{order:1}
+.kitb{flex:1 1 100%;min-width:100%}
+.kitr{row-gap:8px}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -1712,14 +1720,14 @@ function miniRender() {
 }
 function miniTimerRender(kind) {   // the alarm and the pomodoro share one small layout: end time top left, countdown top right, bar, length bottom left, Elapsed switch bottom right
   const al = kind === 'alarm';
-  const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true);
+  const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true), work = al ? null : h('div', 'mnwork');
   const head = al ? null : h('div', 'mnsess');   // pomodoro: the session number in a black header (not clickable)
   cdS.style.display = 'none';
   setSw(es.i, al ? alEl : pmKeep);
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
-  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head };
-  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, lens, es.lab));
+  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
+  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, es.lab));
   miniTick();
 }
 function miniTick() {
@@ -1741,11 +1749,12 @@ function miniTick() {
     } else {
       const s = pm.session; if (!s) return;
       const cls = pmTime.className;
-      x.head.textContent = pmHeadTxt.textContent; x.endEl.textContent = pmEnd.textContent;
+      x.head.textContent = pmHead.textContent; x.endEl.textContent = pmEnd.textContent;
       x.cdM.textContent = pmTMain.textContent; x.cdS.textContent = pmTSup.textContent; x.cdS.style.display = pmTSup.style.display;
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
       x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
+      if (x.work) { x.work.textContent = pmWork.textContent; x.work.style.display = pmShow && pmWork.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
     }
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
