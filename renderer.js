@@ -1797,6 +1797,19 @@ function miniAlert(target) {   // an alarm or pomodoro just finished: leave the 
   };
   go(); setTimeout(go, 150); setTimeout(go, 500);   // again once the window has grown back to full size
 }
+function miniJump() {   // clicking the mini card: back to the normal window, scrolled to whatever the card was showing (and highlighted)
+  const en = miniList()[miniIdx()], kanView = !!(en && en.kind === 'row' && en.r.t.kan && miniView === 'card'), t = en && en.kind === 'row' ? en.r.t : null;
+  miniExit();
+  if (!en) return;
+  const calm = kReduce();
+  const show = el => { el.scrollIntoView({ block: 'center', behavior: 'auto' }); };
+  const hl2 = el => { el.classList.remove('khl'); void el.offsetWidth; el.classList.add('khl'); setTimeout(() => el.classList.remove('khl'), 3200); };
+  const find = () => en.kind === 'alarm' ? alBox : en.kind === 'pomo' ? (pm.session ? pmRunBox : pmSum) : (rows.find(z => z.t === t || (t.kan && z.t.id === t.id)) || {}).row;
+  if (kanView) { kanGoto(String(t.id).split(':')[0]); return; }   // the Kanban card view: flip to the board and highlight that card
+  if (t && kan.side !== 'time') flipTo('time', true);
+  const go = (mark) => { const el = find(); if (!el) return; show(el); if (mark) hl2(el); };
+  go(false); setTimeout(() => go(false), 150); setTimeout(() => go(true), 500);   // again once the window has grown back to full size
+}
 function miniExit() { if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b'); miniRefs = null; sk.miniSize(false, 0, 0); }
 mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, sideways scroll switches the view
   if (!miniOn) return;
@@ -1820,7 +1833,7 @@ mini.addEventListener('pointermove', e => {
   if (!d.moved && Math.hypot(e.screenX - d.x, e.screenY - d.y) < 4) return;
   d.moved = true; if (d.p) sk.setPos(d.p[0] + e.screenX - d.x, d.p[1] + e.screenY - d.y);
 });
-mini.addEventListener('pointerup', e => { const d = miniDrag; miniDrag = null; if (d && !d.moved && Math.hypot(e.screenX - d.x, e.screenY - d.y) < 4) miniExit(); });   // only a click that never moved goes back to the normal window
+mini.addEventListener('pointerup', e => { const d = miniDrag; miniDrag = null; if (d && !d.moved && Math.hypot(e.screenX - d.x, e.screenY - d.y) < 4) miniJump(); });   // only a click that never moved goes back to the normal window
 mini.addEventListener('pointercancel', () => { miniDrag = null; });
 addEventListener('keydown', e => {   // capture, so it also works while a button inside the panel has focus
   if (!miniOn || kmod || (typeof scRec !== 'undefined' && scRec) || e.ctrlKey || e.altKey || e.metaKey) return;
