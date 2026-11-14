@@ -1,7 +1,12 @@
+# Hop On Sky Clock!
+
+Sky clock is an analogue utility stationed inside of your device, condensing the noise of life into a single glance at your screen.  The bigness of daily life is simulated into the smallness of your personal device, to make sure your momentum can always be grounded at the core of whatever you pursue.  From Pomodoro, alarms, kanbans, checklists, day spans, blue light hours, moon cycles, and countdowns, your life is now running on your personally curated algorithm of events and activities without getting lost in the digital world.
+
 # Sky Clock for Windows
 
 A desktop version of the Sky Clock widget: Eastern-time clock, Tallahassee day/night tracker (Dawn, Day, Dusk, Night),
 a Custom wake time with auto-reset, time zones with work-culture notes, tracked times, and an alarm timer.
+
 
 ## What it does that the browser version can't
 - Lives in its own window and the system tray, so it is not stuck in a browser tab.
