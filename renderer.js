@@ -2112,7 +2112,7 @@ const timePct = d => (d.fs + d.ps > 0 && d.pn === d.pc ? Math.round(100 * (d.fs 
 const eodOf = ms => ms + (86400 - sodOf(ms)) * 1000;                       // the next midnight (Eastern)
 const pmEff = (s, n) => s.pauseAt || n;                                    // while paused, time stands still
 const pmElapsed = (s, n) => Math.max(0, Math.min(s.cur.dur, pmEff(s, n) - s.cur.start - (s.cur.shift || 0)));   // ms of the running pomodoro, paused time left out
-const PM_OT_RATE = 0.25, PM_CAP_MULT = 1, PM_CAP_MIN = 2220;   // overtime penalty: past the pomodoro's own length extra time counts at half, and counting stops by itself at 3x its length (at least 30 minutes)
+const PM_OT_RATE = 0, PM_CAP_MULT = 1, PM_CAP_MIN = 2220;   // overtime penalty: past the pomodoro's own length extra time counts at half, and counting stops by itself at 3x its length (at least 30 minutes)
 const pmRaw = (s, n) => (s.extra || 0) + (s.mark ? Math.max(0, pmEff(s, n) - s.mark) / 1000 : 0);   // seconds really elapsed since the last pomodoro ended
 const pmGrace = s => (s.lastDur || 0) / 1000;
 const pmCap = s => Math.max(pmGrace(s) * PM_CAP_MULT, PM_CAP_MIN);
