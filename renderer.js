@@ -1763,7 +1763,7 @@ function miniTick() {
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
       x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
-      if (x.work) { const ot = pmOt.style.display === 'none' ? '' : pmOt.textContent, wk = pmShow ? pmWork.textContent : ''; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = x.work.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
+      if (x.work) { const ot = pmOt.style.display === 'none' ? '' : pmOt.textContent, wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = x.work.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
     }
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
@@ -2441,13 +2441,13 @@ function pmTick(n) {                                   // every tick: finish a p
   const c = s.cur, paused = !!s.pauseAt; pmOtUpdate(s, n);
   const ovr = !c && s.lastKind === 'full' && s.endedAt;   // a pomodoro that ran out: a small red + timer shows how long ago
   pmHeadSup.style.display = ovr ? '' : 'none'; if (ovr) pmHeadSup.textContent = '+ ' + clockFmt(Math.max(0, Math.floor((n - s.endedAt) / 1000)));
-  let worked;
+  let worked, curTxt = '';
   if (c) {
     const elMs = pmElapsed(s, n);
     pmTMain.textContent = clockFmt(Math.max(0, Math.ceil((c.dur - elMs) / 1000))); pmTSup.style.display = 'none'; pmTime.className = 'alt';
     pmEnd.textContent = 'Ends at ' + clk.format(c.start + c.dur + (c.shift || 0)) + (paused ? ' · paused' : '');
     pmFill.style.width = Math.min(100, 100 * elMs / c.dur) + '%';
-    worked = s.worked + elMs / 1000;
+    worked = s.worked + elMs / 1000; curTxt = 'This pomodoro started ' + clk.format(c.start) + ' · running ' + fmt(Math.floor(elMs / 1000)) + '\n';
   } else {
     const raw = pmRawC(s, n), gap = pmCredit(s, raw), stopped = s.lastKind === 'quit' || s.lastKind === 'discard';
     pmEnd.textContent = (stopped ? 'Stopped at ' : 'Ended at ') + clk.format(s.endedAt || n) + (paused ? ' · paused' : '');
@@ -2458,7 +2458,7 @@ function pmTick(n) {                                   // every tick: finish a p
     } else { pmTMain.textContent = stopped ? 'Stopped' : s.lastKind === 'early' ? 'Done early' : "Time's up"; pmTSup.style.display = 'none'; pmTime.className = 'alt ring'; }
     worked = s.worked + gap;
   }
-  pmWork.textContent = 'Started ' + clk.format(s.startAt) + ' · worked so far ' + fmt(Math.floor(worked)) + ' · session ' + fmt(Math.max(0, Math.floor((pmEff(s, n) - s.startAt - (s.pausedTotal || 0)) / 1000)));
+  pmWork.style.whiteSpace = 'pre-line'; pmWork.textContent = curTxt + 'Session started ' + clk.format(s.startAt) + ' · worked so far ' + fmt(Math.floor(worked)) + ' · session ' + fmt(Math.max(0, Math.floor((pmEff(s, n) - s.startAt - (s.pausedTotal || 0)) / 1000)));
 }
 
 // ---------- tick ----------
