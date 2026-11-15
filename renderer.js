@@ -2125,7 +2125,7 @@ function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
   if (!s.cur && pmKeep && s.lastDur) {
     const raw = pmRawC(s, n), g = pmGrace(s), cap = pmCap(s);
     if (raw >= cap) { txt = '⏹ Counting stopped by itself (you were away, or went far past the pomodoro). Nothing past this point is counted. Start the next pomodoro or end the session.'; cls = 'sevr'; }
-    else if (raw > g) { txt = '⚠ Overtime: extra time now counts at half. Counting stops by itself in ' + clockFmt(Math.ceil(cap - raw)) + '. A break or the next pomodoro beats pushing on.'; cls = 'sevo'; }
+    else if (raw > g) { txt = '⚠ Overtime: extra time now counts at 0. Counting stops by itself in ' + clockFmt(Math.ceil(cap - raw)) + '. A break or the next pomodoro beats pushing on.'; cls = 'sevo'; }
     else txt = 'Full credit for ' + clockFmt(Math.ceil(g - raw)) + ' more, then 0 credit.';
     if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time now counts as 0. Take a break or start the next pomodoro.'); pmChime(); }
     if (raw >= cap && !s.ot2) { s.ot2 = 1; savePm(); notify('Counting stopped', 'Time past this point is no longer counted. Start the next pomodoro or end the session.'); }
