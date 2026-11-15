@@ -1,6 +1,6 @@
 {
   "name": "sky-clock-desktop",
-  "version": "1.6.0",
+  "version": "1.7.1",
   "description": "Sky Clock for Windows: clock and day/night tracker for every US time zone, sky extras (sun, golden hour, blue hour, moon), custom wake time, world time zones, tracked times, alarm and pomodoro timers.",
   "main": "main.js",
   "author": "Sky Clock",

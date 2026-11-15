@@ -623,6 +623,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .kclb .kitp{order:1}
 .kitb{flex:1 1 100%;min-width:100%}
 .kitr{row-gap:8px}
+.sevg{color:#7be495;font-weight:700}.sevo{color:#ffa24d;font-weight:700}.sevr{color:#ff5a6a;font-weight:700}
+.sevg,.sevo,.sevr{text-shadow:0 1px 2px rgba(0,0,0,.65)}
 :focus-visible{outline:2px solid #9db4ff;outline-offset:2px}`;
 
 // ---------- build the panel ----------
@@ -788,13 +790,13 @@ const pmMini = h('button', 'add sm2', '⌚ Mini'); pmMini.title = 'Show only thi
 const pmBtns = h('div', 'ctl', null, pmPause, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
 const pmRunBox = h('div', null, null, pmHead, pmTime, pmEnd, pmBar, pmWork, pmKeepBox, pmBtns, pmConf);
 const pmSumTxt = h('div', 'pmt'), pmSumOk = h('button', 'add sm2', 'OK'), pmSum = h('div', 'pmsum', null, pmSumTxt, pmSumOk); pmSum.style.display = 'none';
-const pmDayT = h('div', 'pms'), pmFull = h('b', 'pmv'), pmPart = h('b', 'pmv'), pmRate = h('b', 'pmv'), pmTot = h('b', 'pmv'), pmWeek = h('div', 'note'), pmIns = h('div', 'note');
-const pmHistBtn = h('button', 'add sm2', 'Show history'), pmClear = h('button', 'add sm2', 'Clear history'), pmHist = h('div'); pmHist.style.display = 'none';
-const pmFoot = h('div', 'ctl', null, pmHistBtn, pmClear); pmFoot.style.marginTop = '8px';
+const pmDayT = h('div', 'pms'), pmFull = h('b', 'pmv'), pmPart = h('b', 'pmv'), pmRate = h('b', 'pmv'), pmTot = h('b', 'pmv'), pmWeek = h('div', 'note'), pmIns = h('div', 'note'), pmCons = h('div', 'note');
+const pmHistBtn = h('button', 'add sm2', 'Show history'), pmClear = h('button', 'add sm2', 'Clear history'), pmPdfBtn = h('button', 'add sm2', '📄 Save PDF'), pmPdfMsg = h('p', 'note', 'Only about four months of history are kept. Save a PDF now and then to keep your older days.'), pmHist = h('div'); pmHist.style.display = 'none';
+const pmFoot = h('div', 'ctl', null, pmHistBtn, pmPdfBtn, pmClear); pmFoot.style.marginTop = '8px'; pmFoot.style.flexWrap = 'wrap'; pmPdfBtn.title = 'Make a printable PDF of your whole pomodoro history'; pmPdfMsg.setAttribute('role', 'status'); pmPdfMsg.style.marginTop = '6px';
 const pmStats = h('div', null, null, pmDayT,
   h('div', 'ev', null, h('span', null, 'Full pomodoros'), pmFull), h('div', 'ev', null, h('span', null, 'Quit early'), pmPart),
   h('div', 'ev', null, h('span', null, 'Completion'), pmRate), h('div', 'ev', null, h('span', null, 'Worked today'), pmTot),
-  pmWeek, pmIns, pmFoot, pmHist);
+  pmWeek, pmIns, pmCons, pmFoot, pmPdfMsg, pmHist);
 const pomoCard = h('section', 'g', null, cmpHdr('Pomodoro (focus timer)', 'pomo'), pmOpts, pmCtl, pmRunBox, pmSum, pmStats);
 [alBox, pmRunBox, pmSum].forEach(e => e.classList.add('keep'));   // these stay visible while the box is compact
 cmpHeads.forEach(x => x.apply());
@@ -2204,6 +2206,21 @@ pmExit.onclick = () => pmAsk('Exit now? This pomodoro counts as quit early and t
 pmStop.onclick = () => { pmEndSession(Date.now()); savePm(); pmRender(); };
 pmSumOk.onclick = () => { pm.last = null; savePm(); pmRender(); };
 pmHistBtn.onclick = () => { pmHistOpen = !pmHistOpen; pmRender(); };
+pmPdfBtn.onclick = async () => {   // one PDF with every day that is still remembered (about four months)
+  if (!Object.keys(pm.days).some(k => pm.days[k].fc + pm.days[k].pc > 0)) { pmPdfMsg.textContent = 'There is no history to save yet.'; return; }
+  try {
+    const bytes = pmPdfBuild(), name = 'pomodoro-history-' + pmDay(Date.now()) + '.pdf';
+    if (window.skyclock && window.skyclock.savePdf) {   // desktop app: a Save dialog, then the PDF opens so you can print it
+      const r = await window.skyclock.savePdf(bytes, name);
+      pmPdfMsg.textContent = r && r.ok ? 'Saved to ' + r.path : r && r.canceled ? 'Save cancelled.' : 'Could not save the PDF.';
+    } else {
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })), a = document.createElement('a');
+      a.href = url; a.download = name; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      pmPdfMsg.textContent = 'PDF downloaded (' + name + '). Open it to print.';
+    }
+  } catch (e) { pmPdfMsg.textContent = 'Could not make the PDF.'; }
+};
 pmClear.onclick = () => {
   if (pmClear.textContent === 'Clear history') { pmClear.textContent = 'Tap again to erase'; clearTimeout(pmClearT); pmClearT = setTimeout(() => { pmClear.textContent = 'Clear history'; }, 4000); return; }
   clearTimeout(pmClearT); pmClear.textContent = 'Clear history'; pm.days = {}; pm.last = null; pm.log = []; savePm(); pmRender();
@@ -2226,6 +2243,83 @@ function pmLastDays(n, now) {                          // date keys for today an
   return Array.from({ length: n }, (_, i) => pmDay(base - i * 864e5));
 }
 function pmAgg(keys) { const a = pmEmpty(); keys.forEach(k => { const d = pm.days[k]; if (d) for (const f in a) a[f] += d[f] || 0; }); return a; }
+// ---------- consistency numbers: how much of a session's length was really spent working ----------
+const pmLogDay = () => { const m = {}; (pm.log || []).forEach(e => { (m[e.day] = m[e.day] || []).push(e); }); return m; };
+const pmGapOf = e => Math.max(0, Math.round(e.span - Math.min(e.worked, e.span)));   // seconds of the session that were not worked
+const pmFocus = (w, s) => (s > 0 ? Math.round(100 * Math.min(w, s) / s) : null);
+// severity of the "not worked" time: its share of the session (green up to 15%, orange 15-35%, red over 35%); a gap under 5 minutes is always green
+const pmSev = (gap, span) => (span > 0 && gap >= 300 ? (gap / span > 0.35 ? 'r' : gap / span > 0.15 ? 'o' : 'g') : 'g');
+const pmSevEl = (txt, gap, span) => { const e = h('span', 'sev' + pmSev(gap, span), txt); e.title = 'Share of the session that was not worked. Green: up to 15%. Orange: 15% to 35%. Red: over 35%. A gap under 5 minutes always stays green.'; return e; };
+const pmLegend = () => h('div', null, null, 'Not worked colors: ', h('span', 'sevg', 'green'), ' up to 15% of the session · ', h('span', 'sevo', 'orange'), ' 15–35% · ', h('span', 'sevr', 'red'), ' over 35% (a gap under 5 minutes always stays green)');      // worked / session length, as a percentage
+function pmConsist(keys) {   // totals and day-to-day spread of the focus ratio for the given days (needs logged sessions)
+  const L = pmLogDay(), ds = [];
+  keys.forEach(k => { const a = L[k]; if (!a || !a.length) return; const S = a.reduce((t, e) => t + e.span, 0), W = a.reduce((t, e) => t + Math.min(e.worked, e.span), 0); if (S > 0) ds.push({ k, S, W, r: W / S }); });
+  if (!ds.length) return null;
+  const TS = ds.reduce((t, d) => t + d.S, 0), TW = ds.reduce((t, d) => t + d.W, 0), mean = ds.reduce((t, d) => t + d.r, 0) / ds.length;
+  const sd = ds.length > 1 ? Math.sqrt(ds.reduce((t, d) => t + (d.r - mean) * (d.r - mean), 0) / (ds.length - 1)) * 100 : null;
+  return { ds, TS, TW, ratio: TW / TS, sd, label: sd == null ? 'need 2+ days' : sd < 5 ? 'very steady' : sd < 10 ? 'steady' : sd < 20 ? 'variable' : 'uneven' };
+}
+// ---------- a printable PDF of the whole pomodoro history (plain PDF written by hand: no libraries, works offline) ----------
+function pmPdfBuild() {
+  const PW = 612, PH = 792, M = 46, pages = [], COLS = [150, 205, 245, 285, 365, 445, 515], SEVC = { g: [0.1, 0.55, 0.25], o: [0.85, 0.45, 0.05], r: [0.8, 0.1, 0.15] };
+  let ops = [], y = PH - M, inTable = false;
+  const esc = s => String(s).replace(/[\u202f\u00a0]/g, ' ').replace(/[\u2013\u2014\u2212]/g, '-').replace(/[^\x20-\x7e]/g, '').replace(/[\\()]/g, '\\$&');
+  const T = (s, x, size, bold, gray) => ops.push((Array.isArray(gray) ? gray.join(' ') + ' rg' : (gray || 0) + ' g') + ' BT /' + (bold ? 'F2' : 'F1') + ' ' + size + ' Tf ' + x + ' ' + y.toFixed(1) + ' Td (' + esc(s) + ') Tj ET');
+  const flush = () => { pages.push(ops.join('\n')); ops = []; y = PH - M; if (inTable) tHead(); };
+  const need = k => { if (y - k < M) flush(); };
+  const line = (cols, size, bold, gap, gray) => { need(size + gap); y -= size; cols.forEach(([s, x, c]) => T(s, x, size, bold, c || gray)); y -= gap; };
+  const rule = () => { ops.push('0.75 G 0.5 w ' + M + ' ' + y.toFixed(1) + ' m ' + (PW - M) + ' ' + y.toFixed(1) + ' l S'); y -= 6; };
+  const wrapTo = (s, n) => { const out = []; let cur = ''; String(s).split(' ').forEach(w => { if ((cur + ' ' + w).trim().length > n) { out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }); if (cur) out.push(cur); return out; };
+  const para = s => wrapTo(s, 108).forEach(t => line([[t, M]], 8.5, false, 2.5, 0.3));
+  const kv = (a, b, c) => line([[a, M], [b, M + 190, c]], 9.5, false, 3.5, 0);
+  function tHead() { need(16); ops.push('0.9 g ' + (M - 4) + ' ' + (y - 15).toFixed(1) + ' ' + (PW - 2 * M + 8) + ' 15 re f'); line([['Date / session', M], ['Sessions', COLS[0]], ['Full', COLS[1]], ['Quit', COLS[2]], ['Worked', COLS[3]], ['Session', COLS[4]], ['Not worked', COLS[5]], ['Focus', COLS[6]]], 8, true, 5, 0); }
+  const keys = Object.keys(pm.days).filter(k => { const d = pm.days[k]; return d.fc + d.pc > 0; }).sort().reverse();
+  const tot = pmAgg(keys), cs = pmConsist(keys), L = pmLogDay(), now = Date.now();
+  line([['Pomodoro History', M]], 20, true, 3, 0);
+  line([['Created ' + pmDay(now) + ' ' + clk.format(now) + ' - ' + keys.length + ' days with history (' + (keys[keys.length - 1] || '') + ' to ' + (keys[0] || '') + ')', M]], 9, false, 10, 0.35);
+  line([['Summary', M]], 12, true, 3, 0); rule();
+  kv('Sessions', String(tot.ss));
+  kv('Pomodoros', (tot.fc + tot.pc) + ' (' + tot.fc + ' completed, ' + tot.pc + ' quit early)');
+  kv('Completion', tot.fc + tot.pc ? Math.round(100 * tot.fc / (tot.fc + tot.pc)) + '% of pomodoros completed' : '-');
+  kv('Time in pomodoros', fmt(Math.round(tot.fs + tot.ps)) + '  (about ' + fmt(avgOf(tot.fs + tot.ps, keys.length) || 0) + ' per day)');
+  if (tot.pn) kv('When quitting early', 'about ' + Math.round(100 * tot.pf / tot.pn) + '% of the planned time was done');
+  y -= 8;
+  line([['Consistency: session length vs time worked', M]], 12, true, 3, 0); rule();
+  if (cs) {
+    const hi = cs.ds.reduce((a, b) => (b.r > a.r ? b : a)), lo = cs.ds.reduce((a, b) => (b.r < a.r ? b : a));
+    kv('Total session time', fmt(Math.round(cs.TS)));
+    kv('Total time worked', fmt(Math.round(cs.TW)));
+    kv('Not worked (the disparity)', fmt(Math.round(cs.TS - cs.TW)) + '  (' + Math.round(100 * (1 - cs.ratio)) + '% of session time)', SEVC[pmSev(cs.TS - cs.TW, cs.TS)]);
+    kv('Overall focus', Math.round(100 * cs.ratio) + '%  (time worked / session length)');
+    kv('Day-to-day spread', cs.sd == null ? 'needs 2 or more days with logged sessions' : '+/- ' + cs.sd.toFixed(1) + ' points  (' + cs.label + ')');
+    kv('Highest / lowest focus day', hi.k + ' ' + Math.round(100 * hi.r) + '%   /   ' + lo.k + ' ' + Math.round(100 * lo.r) + '%');
+  } else para('No finished sessions are in the session log yet, so there are no session-length figures to compare.');
+  const wd = keys.map(k => { const d = dayOf(k); return d.fs + d.ps; }), wm = wd.reduce((a, b) => a + b, 0) / (wd.length || 1);
+  if (wd.length > 1 && wm > 0) { const wsd = Math.sqrt(wd.reduce((a, b) => a + (b - wm) * (b - wm), 0) / (wd.length - 1)); kv('Pomodoro time per day', 'avg ' + fmt(Math.round(wm)) + ', range ' + fmt(Math.round(Math.min(...wd))) + ' to ' + fmt(Math.round(Math.max(...wd))) + ', varies ' + Math.round(100 * wsd / wm) + '% from the average'); }
+  y -= 2;
+  para('How to read this: session length is the time from the first start to the end of a session, with paused time left out. Worked is the time spent inside pomodoros (plus time counted between pomodoros when "Keep counting" is on). Not worked is the difference, and focus is worked divided by session length. A focus percentage that stays about the same from day to day, and a small spread, suggest a consistent routine. Session figures come from the session log, so days saved before the log existed show a dash.');
+  y -= 8;
+  line([['Not worked colors:', M], ['green: up to 15% of the session', M + 100, SEVC.g], ['orange: 15-35%', M + 270, SEVC.o], ['red: over 35%', M + 355, SEVC.r]], 8.5, true, 4, 0); para('Colors show what share of the session was not worked. A gap under 5 minutes always stays green, however short the session was.'); y -= 6;
+  line([['Day by day', M]], 12, true, 3, 0); rule();
+  inTable = true; tHead();
+  keys.forEach(k => {
+    const x = dayOf(k), c = pmConsist([k]), logs = (L[k] || []).slice().sort((a, b) => a.startAt - b.startAt);
+    need(26);
+    line([[k, M], [x.ss ? String(x.ss) : '-', COLS[0]], [String(x.fc), COLS[1]], [String(x.pc), COLS[2]], [fmt(Math.round(c ? c.TW : x.fs + x.ps)), COLS[3]], [c ? fmt(Math.round(c.TS)) : '-', COLS[4]], [c ? fmt(Math.round(c.TS - c.TW)) : '-', COLS[5], c ? SEVC[pmSev(c.TS - c.TW, c.TS)] : undefined], [c ? Math.round(100 * c.ratio) + '%' : '-', COLS[6]]], 8.5, true, 3, 0);
+    logs.forEach(e => { const f = pmFocus(e.worked, e.span); line([[clk.format(e.startAt) + ' - ' + clk.format(e.endAt), M + 10], [e.n + ' pom.', COLS[0]], [String(e.full), COLS[1]], [String(e.part), COLS[2]], [fmt(Math.round(e.span > 0 ? Math.min(e.worked, e.span) : e.worked)), COLS[3]], [fmt(Math.round(e.span)), COLS[4]], [fmt(pmGapOf(e)), COLS[5], SEVC[pmSev(pmGapOf(e), e.span)]], [f == null ? '-' : f + '%', COLS[6]]], 8, false, 2.5, 0.3); });
+    y -= 3;
+  });
+  inTable = false; flush();
+  const n = pages.length;
+  const body = pages.map((c, i) => c + '\n0.5 g BT /F1 8 Tf ' + M + ' 24 Td (Sky Clock - pomodoro history - page ' + (i + 1) + ' of ' + n + ') Tj ET');
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [' + body.map((_, i) => (5 + 2 * i) + ' 0 R').join(' ') + '] /Count ' + n + ' >>', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'];
+  body.forEach((c, i) => { objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + (6 + 2 * i) + ' 0 R >>'); objs.push('<< /Length ' + c.length + ' >>\nstream\n' + c + '\nendstream'); });
+  let out = '%PDF-1.4\n'; const off = [];
+  objs.forEach((o, i) => { off.push(out.length); out += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const xr = out.length;
+  out += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + off.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('') + 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF';
+  return new TextEncoder().encode(out);
+}
 function pmStatsRender() {
   const now = Date.now(), today = pmDay(now), d = dayOf(today);
   pmDayT.textContent = 'Today · ' + pmFmtDay.format(now) + (d.ss ? ' · ' + d.ss + (d.ss === 1 ? ' session' : ' sessions') : '');
@@ -2238,18 +2332,20 @@ function pmStatsRender() {
   pmWeek.textContent = 'Last 7 days: full avg ' + fmtOr(fa) + ' (' + w.fc + ' pomodoros) · quit-early avg ' + fmtOr(pa) + ' (' + w.pc + ')';
   pmIns.textContent = w.pn ? 'When you quit early, it is at about ' + Math.round(100 * w.pf / w.pn) + '% of the planned time on average.' : '';
   pmIns.style.display = pmIns.textContent ? '' : 'none';
+  const cs7 = pmConsist(pmLastDays(7, now));
+  pmCons.replaceChildren(...(cs7 ? ['Focus, last 7 days (worked ÷ session length): ' + Math.round(100 * cs7.ratio) + '% · ', pmSevEl(fmt(Math.round(cs7.TS - cs7.TW)) + ' of ' + fmt(Math.round(cs7.TS)) + ' session time not worked', cs7.TS - cs7.TW, cs7.TS), (cs7.sd == null ? '' : ' · day-to-day spread ±' + cs7.sd.toFixed(1) + ' pts (' + cs7.label + ')')] : ['Focus (worked ÷ session length) appears here once you have finished a session.']), (() => { const lg = pmLegend(); lg.style.marginTop = '4px'; return lg; })());
   pmHistBtn.textContent = pmHistOpen ? 'Hide history' : 'Show history';
   pmHist.style.display = pmHistOpen ? 'block' : 'none';
   if (pmHistOpen) {
     const ks = Object.keys(pm.days).filter(k => pm.days[k].fc + pm.days[k].pc > 0).sort().reverse().slice(0, 14);
     const logByDay = {}; (pm.log || []).forEach(e => { (logByDay[e.day] = logByDay[e.day] || []).push(e); });
     pmHist.replaceChildren(...(ks.length ? ks.flatMap(k => {
-      const x = dayOf(k), p = k.split('-').map(Number);
+      const x = dayOf(k), p = k.split('-').map(Number), dc = pmConsist([k]);
       const row = h('div', 'ev', null, h('span', null, pmFmtDay.format(Date.UTC(p[0], p[1] - 1, p[2], 12))),
-        h('b', 'pmv', (x.fc ? x.fc + ' full avg ' + fmt(avgOf(x.fs, x.fc)) : '0 full') + ' · ' + (x.pc ? x.pc + ' quit avg ' + fmt(avgOf(x.ps, x.pc)) : '0 quit')));
+        h('b', 'pmv', (x.fc ? x.fc + ' full avg ' + fmt(avgOf(x.fs, x.fc)) : '0 full') + ' · ' + (x.pc ? x.pc + ' quit avg ' + fmt(avgOf(x.ps, x.pc)) : '0 quit') , ...(dc ? [' · ', pmSevEl(fmt(Math.round(dc.TS - dc.TW)) + ' not worked', dc.TS - dc.TW, dc.TS), ' · ' + Math.round(100 * dc.ratio) + '% focus'] : [])));
       const sess = (logByDay[k] || []).sort((a, b) => a.startAt - b.startAt).map(e => {
         const rowEl = h('div', 'ev sess'), x = h('button', 'x', '×'); x.title = 'Delete this session'; x.setAttribute('aria-label', 'Delete the session that started at ' + clk.format(e.startAt));
-        const info = [h('span', null, clk.format(e.startAt) + ' – ' + clk.format(e.endAt)), h('b', 'pmv', fmt(e.span) + ' session · ' + fmt(e.worked) + ' worked · ' + e.n + (e.n === 1 ? ' pomodoro' : ' pomodoros'))];
+        const info = [h('span', null, clk.format(e.startAt) + ' – ' + clk.format(e.endAt)), h('b', 'pmv', fmt(e.span) + ' session · ' + fmt(e.worked) + ' worked · ' + e.n + (e.n === 1 ? ' pomodoro' : ' pomodoros'), ...(e.span > 0 ? [' · ', pmSevEl(fmt(pmGapOf(e)) + ' not worked', pmGapOf(e), e.span), ' · ' + pmFocus(e.worked, e.span) + '% focus'] : []))];
         const showRow = () => rowEl.replaceChildren(...info, x);
         x.onclick = () => {                              // first tap only asks; nothing is deleted until "Delete"
           const yes = h('button', 'cf yes', 'Delete'), no = h('button', 'cf', 'Keep');
@@ -2286,6 +2382,7 @@ function pmRender() {                                  // layout: which parts ar
     pmSumTxt.textContent = l.empty ? 'Nothing was recorded: the pomodoro was stopped in under ' + PM_SLIP + ' seconds, so it was treated as a slip and not counted.'
       : 'Session finished · ' + l.n + (l.n === 1 ? ' pomodoro' : ' pomodoros') + ' (' + l.full + ' completed, ' + l.part + ' quit early)\n' +
         'You worked ' + fmt(Math.round(l.worked)) + '\nStarted ' + clk.format(l.startAt) + ' · session length ' + fmt(l.span != null ? l.span : Math.round((l.endAt - l.startAt) / 1000));
+    if (!l.empty && l.span > 0) { const g = Math.max(0, Math.round(l.span - Math.min(l.worked, l.span))); pmSumTxt.append('\nNot worked ', pmSevEl(fmt(g), g, l.span), ' of the session · focus ' + pmFocus(l.worked, l.span) + '%'); }
   }
   pmStatsRender();
   if (miniOn) miniRender();

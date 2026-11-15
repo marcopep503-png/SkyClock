@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('skyclock', {
   togglePin: () => ipcRenderer.invoke('pin:toggle'),
   lookupLocation: () => ipcRenderer.invoke('geo:lookup'),
   keepAwake: on => ipcRenderer.send('power:keep', !!on),
+  savePdf: (bytes, name) => ipcRenderer.invoke('file:savePdf', bytes, String(name)),
   reload: () => ipcRenderer.send('win:reload'),
   minimize: () => ipcRenderer.send('win:minimize'),
   hide: () => ipcRenderer.send('win:hide'),

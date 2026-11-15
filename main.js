@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, globalShortcut, nativeImage, screen, powerSaveBlocker, net } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, globalShortcut, nativeImage, screen, powerSaveBlocker, net, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -228,6 +228,19 @@ if (gotLock) {
     if (win && win.isVisible() && !win.isFocused()) { win.flashFrame(true); win.once('focus', () => win.flashFrame(false)); }   // blink the taskbar button
   });
 
+  ipcMain.handle('file:savePdf', async (e, bytes, name) => {   // the pomodoro history PDF: a Save dialog, then it opens so it can be printed
+    try {
+      if (!win) return { ok: false };
+      const buf = Buffer.from(bytes);
+      if (!buf.length || buf.length > 20e6 || buf.slice(0, 5).toString() !== '%PDF-') return { ok: false };
+      const safe = String(name || 'pomodoro-history.pdf').replace(/[^\w.\- ]/g, '_').slice(0, 80);
+      const r = await dialog.showSaveDialog(win, { title: 'Save pomodoro history', defaultPath: path.join(app.getPath('documents'), safe), filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+      if (r.canceled || !r.filePath) return { ok: false, canceled: true };
+      fs.writeFileSync(r.filePath, buf);
+      shell.openPath(r.filePath);
+      return { ok: true, path: r.filePath };
+    } catch (err) { return { ok: false }; }
+  });
   ipcMain.handle('shortcuts:get', () => scSnapshot());
   ipcMain.on('shortcuts:pause', (e, on) => { if (on) globalShortcut.unregisterAll(); else registerAll(); });   // so recording a combo does not trigger it
   ipcMain.handle('shortcuts:set', (e, name, accel) => {
