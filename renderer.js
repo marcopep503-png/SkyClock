@@ -324,7 +324,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;justify-content:flex-end;margin:-2px 0 4px}
+.pmopts{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:-2px 0 4px}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -778,7 +778,11 @@ try { const len = +GM_getValue('pmLen', 25) || 25; pmH.value = len >= 60 ? Strin
 const pmGo = h('button', 'add', 'Start'), pmChips = h('div', 'chips'), pmLbl = h('div', 'pms');
 const pmCtl = h('div', null, null, pmLbl, h('div', 'ctl', null, pmH, h('span', 'unit', 'h'), pmMin, h('span', 'unit', 'min'), pmGo), pmChips);
 const pmShowSw = mkSw('Show time worked', true); setSw(pmShowSw.i, pmShow);
+const pmRulesBtn = h('button', 'add sm2', '⚙ Overtime rules'); pmRulesBtn.setAttribute('aria-expanded', 'false'); pmRulesBtn.title = 'Choose how long you get full credit, when counting stops by itself, and how overtime is credited';
 const pmOpts = h('div', 'pmopts', null, pmShowSw.lab);
+const pmMkRule = (label, unit) => { const i = h('input'); i.type = 'number'; i.min = '0'; i.step = 'any'; i.setAttribute('inputmode', 'decimal'); i.setAttribute('aria-label', label); return { i, row: h('label', 'pmr', null, h('span', null, label), i, h('span', 'unit', unit)) }; };
+const pmRuleG = pmMkRule('Full credit lasts for', 'min'), pmRuleW = pmMkRule('Then counting stops after', 'min'), pmRuleR = pmMkRule('Overtime is credited at', '%');
+const pmRuleTxt = h('div', 'note'), pmRulesBox = h('div', 'pmrules', null, pmRuleG.row, pmRuleW.row, pmRuleR.row, pmRuleTxt); pmRulesBox.style.display = 'none';
 const pmHeadTxt = h('span'), pmHeadSup = h('sup'), pmHead = h('div', 'pmh', null, pmHeadTxt, pmHeadSup), pmTMain = h('span'), pmTSup = h('sup'), pmTime = h('div', 'alt', null, pmTMain, pmTSup), pmEnd = h('div', 'ale'), pmFill = h('div', 'fill'), pmBar = h('div', 'bar sm', null, pmFill), pmWork = h('div', 'ale');
 pmTSup.style.display = 'none';
 const pmPause = h('button', 'add sm2', 'Pause'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
@@ -815,7 +819,7 @@ try { locCard.open = GM_getValue('locOpen', false) === true; } catch (e) {}
 locCard.addEventListener('toggle', () => { try { GM_setValue('locOpen', locCard.open); } catch (e) {} });
 // ---------- sync between devices: a code made on one device is pasted into the site on another ----------
 // (a static site has no server or account, so the code carries the data itself. Per-device things stay put: location, running alarm/pomodoro, window state.)
-const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pomo'];
+const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pmOtRules', 'pomo'];
 const synBox = h('textarea', 'synct'); synBox.rows = 4; synBox.spellcheck = false; synBox.setAttribute('autocapitalize', 'off'); synBox.setAttribute('autocorrect', 'off');
 synBox.setAttribute('aria-label', 'Sync code'); synBox.placeholder = 'Your sync code appears here, or paste a code from another device';
 const synGet = h('button', 'add sm2', 'Get code from this device'), synUse = h('button', 'add sm2', 'Use this code here');
@@ -1605,6 +1609,7 @@ const wrap = h('div', 'wrap', null,
   h('section', 'g', null, h('div', 'ttl', 'Event countdowns'), evSeg, evBox),
   synCard,
   shortcutCard,
+  h('section', 'g', null, pmRulesBtn, pmRulesBox),
   h('p', 'credit', 'Some visual elements borrowed from Sky Clock'));
 const sk = window.skyclock || null;   // bridge to the desktop shell (preload.js)
 const pinBtn = h('button', null, '📌'), minBtn = h('button', null, '–'), xBtn = h('button', null, '✕');
@@ -2112,12 +2117,15 @@ const timePct = d => (d.fs + d.ps > 0 && d.pn === d.pc ? Math.round(100 * (d.fs 
 const eodOf = ms => ms + (86400 - sodOf(ms)) * 1000;                       // the next midnight (Eastern)
 const pmEff = (s, n) => s.pauseAt || n;                                    // while paused, time stands still
 const pmElapsed = (s, n) => Math.max(0, Math.min(s.cur.dur, pmEff(s, n) - s.cur.start - (s.cur.shift || 0)));   // ms of the running pomodoro, paused time left out
-const PM_OT_RATE = 0, PM_CAP_MULT = 1, PM_CAP_MIN = 600;   // overtime penalty: past the pomodoro's own length extra time counts at half, and counting stops by itself at 3x its length (at least 30 minutes)
+let pmRules = { g: 5, w: 12, r: 25 };   // overtime rules (Overtime rules panel): g = minutes of full credit after a pomodoro ends, w = minutes of overtime before counting stops, r = percent credited in overtime
+const pmNum = (x, d) => (x === null || x === '' || x === undefined || !Number.isFinite(+x)) ? d : +x;
+try { const v = JSON.parse(GM_getValue('pmOtRules', 'null')); if (v) pmRules = { g: Math.max(0, pmNum(v.g, 5)), w: Math.max(0, pmNum(v.w, 12)), r: Math.min(100, Math.max(0, pmNum(v.r, 25))) }; } catch (e) {}
+const pmRateTxt = () => pmRules.r === 0 ? 'no longer counts' : 'now counts at ' + pmRules.r + '%';
 const pmRaw = (s, n) => (s.extra || 0) + (s.mark ? Math.max(0, pmEff(s, n) - s.mark) / 1000 : 0);   // seconds really elapsed since the last pomodoro ended
-const pmGrace = s => Math.max((s.lastDur || 0) / 1000, 300);
-const pmCap = s => Math.max(pmGrace(s) * PM_CAP_MULT, PM_CAP_MIN);
+const pmGrace = s => pmRules.g * 60;   // seconds of full credit after a pomodoro ends
+const pmCap = s => pmGrace(s) + pmRules.w * 60;   // counting freezes this many seconds after it ended
 const pmRawC = (s, n) => { const r = pmRaw(s, n); return s.lastDur ? Math.min(r, pmCap(s)) : r; };   // elapsed time, frozen at the cap
-const pmCredit = (s, r) => { const g = pmGrace(s); return !s.lastDur || r <= g ? r : g + (r - g) * PM_OT_RATE; };   // what that elapsed time is worth
+const pmCredit = (s, r) => { const g = pmGrace(s); return !s.lastDur || r <= g ? r : g + (r - g) * (pmRules.r / 100); };   // what that elapsed time is worth
 const pmGap = (s, n) => pmCredit(s, pmRawC(s, n));
 function pmSettle(s, n) { const r = pmRawC(s, n), c = pmCredit(s, r); s.lost = (s.lost || 0) + (r - c); return c; }   // closes a counting period: credits it and remembers what the penalty took
 function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
@@ -2125,9 +2133,9 @@ function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
   if (!s.cur && pmKeep && s.lastDur) {
     const raw = pmRawC(s, n), g = pmGrace(s), cap = pmCap(s);
     if (raw >= cap) { txt = '⏹ Counting stopped by itself (you were away, or went far past the pomodoro). Nothing past this point is counted. Start the next pomodoro or end the session.'; cls = 'sevr'; }
-    else if (raw > g) { txt = '⚠ Overtime: extra time now counts at 0. Counting stops by itself in ' + clockFmt(Math.ceil(cap - raw)) + '. A break or the next pomodoro beats pushing on.'; cls = 'sevo'; }
-    else txt = 'Full credit for ' + clockFmt(Math.ceil(g - raw)) + ' more, then 0 credit.';
-    if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time now counts as 0. Take a break or start the next pomodoro.'); pmChime(); }
+    else if (raw > g) { txt = '⚠ Overtime: extra time ' + pmRateTxt() + '. Counting stops by itself in ' + clockFmt(Math.ceil(cap - raw)) + '. A break or the next pomodoro beats pushing on.'; cls = 'sevo'; }
+    else txt = 'Full credit for ' + clockFmt(Math.ceil(g - raw)) + ' more, then ' + (pmRules.r === 0 ? 'no credit' : pmRules.r + '% credit') + '.';
+    if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time ' + pmRateTxt() + '. Take a break or start the next pomodoro.'); pmChime(); }
     if (raw >= cap && !s.ot2) { s.ot2 = 1; savePm(); notify('Counting stopped', 'Time past this point is no longer counted. Start the next pomodoro or end the session.'); }
   }
   pmOt.textContent = txt; pmOt.className = 'pmot ' + cls; pmOt.style.display = txt ? '' : 'none';
@@ -2244,6 +2252,10 @@ pmClear.onclick = () => {
   if (pmClear.textContent === 'Clear history') { pmClear.textContent = 'Tap again to erase'; clearTimeout(pmClearT); pmClearT = setTimeout(() => { pmClear.textContent = 'Clear history'; }, 4000); return; }
   clearTimeout(pmClearT); pmClear.textContent = 'Clear history'; pm.days = {}; pm.last = null; pm.log = []; savePm(); pmRender();
 };
+const pmRuleShow = () => { pmRuleG.i.value = String(pmRules.g); pmRuleW.i.value = String(pmRules.w); pmRuleR.i.value = String(pmRules.r); pmRulePreview(); };
+function pmRulePreview() { const g = pmRules.g, r = pmRules.r; pmRuleTxt.textContent = 'Full credit lasts ' + g + ' min after a pomodoro ends' + (g === 0 ? ' (so the overtime warning comes right away)' : '') + ', then ' + (r === 0 ? 'no credit' : r + '% credit') + ', and counting stops by itself ' + (g + pmRules.w) + ' min after it ended (everything after that is ignored). A blank box means the default: 5 min, 12 min, 25%.'; }
+[[pmRuleG, 'g', 5], [pmRuleW, 'w', 12], [pmRuleR, 'r', 25]].forEach(([f, k, d]) => { f.i.oninput = () => { let v = Math.max(0, pmNum(f.i.value, d)); if (k === 'r') v = Math.min(100, v); pmRules[k] = v; try { GM_setValue('pmOtRules', JSON.stringify(pmRules)); } catch (e) {} pmRulePreview(); pmTick(Date.now()); }; });
+pmRulesBtn.onclick = () => { const open = pmRulesBox.style.display === 'none'; pmRulesBox.style.display = open ? '' : 'none'; pmRulesBtn.setAttribute('aria-expanded', String(open)); if (open) pmRuleShow(); };
 pmShowSw.i.onchange = () => { pmShow = pmShowSw.i.checked; pmShowSw.i.setAttribute('aria-checked', String(pmShow)); try { GM_setValue('pmShow', pmShow); } catch (e) {} pmRender(); pmTick(Date.now()); };
 if (skc && skc.onPause) skc.onPause(() => { const s = pm.session; if (!s) return; if (s.pauseAt) pmResume(); else if (s.cur || pmKeep) pmPauseNow(); });   // the pause / resume keybind: works in the full and the mini window
 if (skc && skc.onWorked) skc.onWorked(() => { pmShowSw.i.checked = !pmShow; pmShowSw.i.onchange(); });   // the show / hide time worked keybind (works in the mini window too)
@@ -2389,7 +2401,7 @@ function pmRender() {                                  // layout: which parts ar
   pmBar.style.display = running ? '' : 'none';
   pmKeepBox.style.display = between ? '' : 'none';                       // only after a pomodoro has finished
   setSw(pmKeepSw.i, pmKeep);
-  pmKeepTxt.textContent = pmKeep ? 'Counting: the time since it ended is added to your total. Overtime has a penalty: once you pass the length of the pomodoro, extra time counts at half, and counting stops by itself at 3 times that length (at least 30 minutes). Press End session & see total to stop it.' : 'Not counting: your time stopped when the pomodoro ended.';
+  pmKeepTxt.textContent = pmKeep ? 'Counting: the time since it ended is added to your total. Overtime has a penalty (set it under ⚙ Overtime rules at the very bottom of the app). Press End session & see total to stop it.' : 'Not counting: your time stopped when the pomodoro ended.';
   pmPause.style.display = running || (between && (pmKeep || paused)) ? '' : 'none';
   pmPause.textContent = paused ? 'Resume' : running ? 'Pause' : 'Pause counting';
   pmDone.style.display = pmQuit.style.display = pmExit.style.display = running ? '' : 'none'; pmStop.style.display = between ? '' : 'none';
@@ -2401,7 +2413,7 @@ function pmRender() {                                  // layout: which parts ar
     pmSumTxt.textContent = l.empty ? 'Nothing was recorded: the pomodoro was stopped in under ' + PM_SLIP + ' seconds, so it was treated as a slip and not counted.'
       : 'Session finished · ' + l.n + (l.n === 1 ? ' pomodoro' : ' pomodoros') + ' (' + l.full + ' completed, ' + l.part + ' quit early)\n' +
         'You worked ' + fmt(Math.round(l.worked)) + '\nStarted ' + clk.format(l.startAt) + ' · session length ' + fmt(l.span != null ? l.span : Math.round((l.endAt - l.startAt) / 1000));
-    if (!l.empty && l.lost > 0) pmSumTxt.append('\nOvertime penalty: ' + fmt(l.lost) + ' of extra time was not credited (it counts at half past the pomodoro length).'); if (!l.empty && l.span > 0) { const g = Math.max(0, Math.round(l.span - Math.min(l.worked, l.span))); pmSumTxt.append('\nNot worked ', pmSevEl(fmt(g), g, l.span), ' of the session · focus ' + pmFocus(l.worked, l.span) + '%'); }
+    if (!l.empty && l.lost > 0) pmSumTxt.append('\nOvertime penalty: ' + fmt(l.lost) + ' of extra time was not credited (overtime is credited at ' + pmRules.r + '%).'); if (!l.empty && l.span > 0) { const g = Math.max(0, Math.round(l.span - Math.min(l.worked, l.span))); pmSumTxt.append('\nNot worked ', pmSevEl(fmt(g), g, l.span), ' of the session · focus ' + pmFocus(l.worked, l.span) + '%'); }
   }
   pmStatsRender();
   if (miniOn) miniRender();
