@@ -797,7 +797,7 @@ const pmKeepTxt = h('div', 'pmkd'), pmKeepBox = h('div', 'pmkeep', null, pmKeepS
 const pmCMsg = h('span'), pmC1 = h('button', 'cf yes', 'Yes'), pmC2 = h('button', 'cf', 'No'), pmC3 = h('button', 'cf', 'Keep going');
 const pmConf = h('div', 'conf big', null, pmCMsg, pmC1, pmC2, pmC3); pmConf.style.display = 'none';
 const pmMini = h('button', 'add sm2', '⌚ Mini'); pmMini.title = 'Show only this pomodoro in a small window'; pmMini.setAttribute('aria-label', 'Show only this pomodoro in a small window'); pmMini.onclick = () => miniEnter('pomo'); if (!hasMini) pmMini.style.display = 'none';
-const pmBtns = h('div', 'ctl', null, pmPause, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
+const pmBtns = h('div', 'ctl', null, sndMkSil('pomo'), pmPause, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
 const pmOt = h('div', 'pmot'); pmOt.style.display = 'none'; const pmRunBox = h('div', null, null, pmHead, pmTime, pmEnd, pmOt, pmBar, pmWork, pmKeepBox, pmBtns, pmConf);
 const pmSumTxt = h('div', 'pmt'), pmSumOk = h('button', 'add sm2', 'OK'), pmSum = h('div', 'pmsum', null, pmSumTxt, pmSumOk); pmSum.style.display = 'none';
 const pmDayT = h('div', 'pms'), pmFull = h('b', 'pmv'), pmPart = h('b', 'pmv'), pmRate = h('b', 'pmv'), pmTot = h('b', 'pmv'), pmWeek = h('div', 'note'), pmIns = h('div', 'note'), pmCons = h('div', 'note');
@@ -1590,7 +1590,7 @@ let ind = true; try { ind = GM_getValue('ind', true) !== false; } catch (e) {}
 const indSw = mkSw('Show the dots & LIVE badges (Time until)', true), indRow = h('div', 'indrow', null, indSw.lab); setSw(indSw.i, ind);
 function applyInd(v) { ind = !!v; setSw(indSw.i, ind); shell.classList.toggle('noind', !ind); try { GM_setValue('ind', ind); } catch (e) {} }
 indSw.i.onchange = () => applyInd(indSw.i.checked);
-const timeSec = h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), flipBtn, indRow, planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl);
+const timeSec = h('section', 'g', null, h('div', 'tuh', null, h('div', 'ttl', 'Time until'), planSw.lab), sndMkSil('until'), flipBtn, indRow, planBar, h('div', 'ctl', null, inp, addBtn), tIn, chipBox, undoBar, tl);
 const kanSec = h('section', 'g kan', null, flipBack, kMonth, h('p', 'note', 'Tap a card to open its checklist.'), h('div', 'kopt', null, incSw.lab), ...kSecs.map(s => s.box)); kanSec.style.display = 'none';
 const flipBox = h('div', 'flip', null, timeSec, kanSec);
 function flipTo(side, instant) {   // the box turns over like a card
@@ -1696,7 +1696,7 @@ function miniRender() {
     const es = mkSw('Elapsed', true); setSw(es.i, !!t.el); es.i.onchange = () => { r.sw.i.checked = es.i.checked; r.sw.i.onchange(); };
     const ttl = h('div', 'mnttl', t.title || ''); ttl.title = t.title || ''; if (!t.title) ttl.style.display = 'none';
     miniRefs.t = { cdM, cdS, cd, fill };
-    mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, es.lab));
+    mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, sndMkSil('until'), es.lab));
     return;
   }
   const [cid, iid] = String(r.t.id).split(':'), c = kan.cards.find(z => z.id === cid);
@@ -1743,7 +1743,7 @@ function miniTimerRender(kind) {   // the alarm and the pomodoro share one small
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
   miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
-  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, es.lab));
+  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, ...(al ? [] : [sndMkSil('pomo')]), es.lab));
   miniTick();
 }
 function miniTick() {
@@ -2067,7 +2067,7 @@ function beep(n = 1) {                                 // the Time until beep: l
     if (sndCfg.until === 'custom' && sndAud.until) { if (sndPlayFile('until', true)) GM_setValue('lock', Date.now()); else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || sndPlayFile('until', true)); } return; }
     const p = sndOf('until'); if (!p.list) return;
     const list = []; for (let k = 0; k < n; k++) p.list.forEach(([st, d, f]) => list.push([st + k * p.span, d, f]));
-    const play = () => tones(list, Math.min(1, .65 * (p.g || 1) * sndCfg.vol / 100), p);
+    const play = () => tones(list, Math.min(1, .65 * (p.g || 1) * sndCfg.vol / 100), p, 'until');
     if (play()) GM_setValue('lock', Date.now());
     else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || play()); }   // audio blocked: play it as soon as it is back (gives up after 10 minutes)
   } catch (e) {}
@@ -2075,7 +2075,7 @@ function beep(n = 1) {                                 // the Time until beep: l
 
 // ---------- alarm sound: rings again and again until you silence it (or 60 seconds pass) ----------
 const RING = [0, 1, 2, 3].map(i => [i * .28, .16, i % 2 ? 1320 : 880]);   // beep-beep-beep-beep, two alternating pitches
-function tones(list, vol, p) {   // p (optional): { type: waveform, decay: bell-like fade instead of a flat beep }
+function tones(list, vol, p, tag) {   // p (optional): { type: waveform, decay: bell-like fade instead of a flat beep }; tag: 'alarm' / 'pomo' / 'until', so a Silence button can cut it off
   const c = AC; if (!c) return false;
   try {
     if (c.state === 'suspended') c.resume();
@@ -2088,6 +2088,7 @@ function tones(list, vol, p) {   // p (optional): { type: waveform, decay: bell-
       if (!decay) g.gain.setValueAtTime(vol, t + d - .03);
       g.gain.exponentialRampToValueAtTime(.0001, t + d);
       o.start(t); o.stop(t + d + .02);
+      if (tag) { (sndOsc[tag] = sndOsc[tag] || []).push(o); sndEndT[tag] = Math.max(sndEndT[tag] || 0, t + d); o.onended = () => { const a = sndOsc[tag], i = a ? a.indexOf(o) : -1; if (i >= 0) a.splice(i, 1); }; }
     });
     return true;
   } catch (e) { return false; }
@@ -2112,12 +2113,13 @@ const sndSave = () => { try { GM_setValue('sndCfg', JSON.stringify(sndCfg)); } c
 function sndPlay(k, loud) {   // plays the sound chosen for k: 'alarm', 'pomo' or 'until'. loud = the Time until beep (about double the alarm ring)
   if (sndCfg[k] === 'custom') { const r = sndPlayFile(k, loud); if (r !== null) return r; }   // no file loaded: falls back to the classic beeps below
   const p = sndOf(k); if (!p.list) return true;
-  return tones(p.list, Math.min(1, (loud ? .65 : .3) * (p.g || 1) * sndCfg.vol / 100), p);
+  return tones(p.list, Math.min(1, (loud ? .65 : .3) * (p.g || 1) * sndCfg.vol / 100), p, k);
 }
 const pmSnd = () => sndPlay('pomo', false);
 // ---------- your own audio files: kept in this browser's IndexedDB (they stay on this device; sync codes do not carry them), and streamed from there so even a 7 minute file needs no big decode ----------
 const sndAud = {}, sndGain = {}, sndNode = {}, sndUrl = {}, sndMeta = {};   // the audio element, its volume control, its source node, its temporary address, its file name
 const SND_MAX_BYTES = 20e6, SND_MAX_SEC = 450;
+const sndOsc = {}, sndEndT = {}; let pmChimeT = [], pmChimeUntil = 0;   // the beeps still playing per sound, when they end, and the pomodoro chime's repeats
 const sndDB = () => new Promise((res, rej) => { try { const r = indexedDB.open('skyclock-sounds', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
 const sndIdb = (mode, fn) => sndDB().then(db => new Promise((res, rej) => { const t = db.transaction('files', mode), q = fn(t.objectStore('files')); t.oncomplete = () => { res(q && q.result); db.close(); }; t.onerror = t.onabort = () => { rej(t.error); db.close(); }; }));
 const sndBarSync = () => { try { sndBar.style.display = Object.values(sndAud).some(a => a && !a.paused && !a.ended) ? '' : 'none'; [sndA, sndP, sndU].forEach(f => { const a = sndAud[f.k], on = !!(a && !a.paused && !a.ended); f.test.textContent = on ? '⏸' : '▶'; }); } catch (e) {} };
@@ -2164,6 +2166,21 @@ function sndPlayFile(k, loud) {   // plays the uploaded file for k from the star
     return true;
   } catch (e) { return false; }
 }
+function sndActive(tag) {   // is this sound making noise right now (a beep, a chime still to repeat, or your uploaded file)?
+  const a = sndAud[tag];
+  return !!((AC && (sndEndT[tag] || 0) > AC.currentTime) || (a && !a.paused && !a.ended) || (tag === 'pomo' && Date.now() < pmChimeUntil));
+}
+function sndSilence(tag) {   // cut the sound off now (beeps, the pomodoro chime's repeats, and your uploaded file)
+  if (tag === 'pomo') { pmChimeT.forEach(clearTimeout); pmChimeT = []; pmChimeUntil = 0; }
+  (sndOsc[tag] || []).forEach(o => { try { o.stop(); } catch (e) {} try { o.disconnect(); } catch (e) {} });
+  sndOsc[tag] = []; sndEndT[tag] = 0; sndStopFile(tag);
+}
+function sndSilSync() { try { ['pomo', 'until'].forEach(t => { const on = sndActive(t); root.querySelectorAll('.sndsil[data-t="' + t + '"]').forEach(b => { b.style.display = on ? '' : 'none'; }); }); } catch (e) {} }
+function sndMkSil(tag) {   // a Silence button that only shows while that sound is playing
+  const b = h('button', 'add sm2 sndsil', '🔇 Silence'); b.type = 'button'; b.dataset.t = tag; b.title = 'Silence this sound'; b.style.display = 'none';
+  b.onclick = () => { sndSilence(tag); sndSilSync(); }; return b;
+}
+setInterval(sndSilSync, 400);
 async function sndLoad(k) {   // at start-up: bring the saved file back
   try { const rec = await sndIdb('readonly', s => s.get(k)); if (rec && rec.blob) { const r = await sndMakeAud(rec.blob); sndAttach(k, r.a, r.url, rec.name); } } catch (e) { sndDrop(k); }
   sndUiSync();
@@ -2296,7 +2313,7 @@ function pmResume() {                                  // the end time moves lat
   s.pauseAt = null; savePm(); pmRender(); pmTick(now);
 }
 function pmChime() {
-  const born = Date.now(), go = () => { if (Date.now() - born > 6e5) return true; if (!pmSnd()) return false; setTimeout(pmSnd, 2400); setTimeout(pmSnd, 4800); return true; };
+  const born = Date.now(), go = () => { if (Date.now() - born > 6e5) return true; if (!pmSnd()) return false; pmChimeT = [setTimeout(pmSnd, 2400), setTimeout(pmSnd, 4800)]; pmChimeUntil = Date.now() + 7500; return true; };
   if (!go()) pendingSounds.push(go);   // audio blocked (screen was off): chime as soon as it is back
 }
 let pmConfT = 0, pmClearT = 0, pmHistOpen = false, pmDayKey = '';
