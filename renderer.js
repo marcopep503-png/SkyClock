@@ -324,7 +324,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:-2px 0 4px}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}
+.pmopts{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:-2px 0 4px}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -783,6 +783,12 @@ const pmOpts = h('div', 'pmopts', null, pmShowSw.lab);
 const pmMkRule = (label, unit) => { const i = h('input'); i.type = 'number'; i.min = '0'; i.step = 'any'; i.setAttribute('inputmode', 'decimal'); i.setAttribute('aria-label', label); return { i, row: h('label', 'pmr', null, h('span', null, label), i, h('span', 'unit', unit)) }; };
 const pmRuleG = pmMkRule('Full credit lasts for', 'min'), pmRuleW = pmMkRule('Then counting stops after', 'min'), pmRuleR = pmMkRule('Overtime is credited at', '%');
 const pmRuleTxt = h('div', 'note'), pmRulesBox = h('div', 'pmrules', null, pmRuleG.row, pmRuleW.row, pmRuleR.row, pmRuleTxt); pmRulesBox.style.display = 'none';
+const sndBtn = h('button', 'add sm2', '🔔 Sounds'); sndBtn.setAttribute('aria-expanded', 'false'); sndBtn.title = 'Choose the alarm, pomodoro and Time until sounds';
+const sndMkRow = (label, k) => { const sel = h('select'), test = h('button', 'add sm2', '▶'), up = h('button', 'add sm2', '📁 Upload'), rm = h('button', 'add sm2', 'Remove'), fin = h('input'), nm = h('span', 'unit sndnm'), msg = h('div', 'note'); sel.setAttribute('aria-label', label + ' sound'); test.type = 'button'; test.title = 'Play it (pauses and resumes your uploaded file)'; test.setAttribute('aria-label', 'Play or pause the ' + label + ' sound'); up.type = 'button'; up.title = 'Use your own audio file (mp3, wav or ogg)'; rm.type = 'button'; fin.type = 'file'; fin.accept = 'audio/*,.mp3,.wav,.ogg,.m4a'; fin.style.display = 'none'; fin.setAttribute('aria-label', 'Upload ' + label + ' sound'); return { k, label, sel, test, up, rm, fin, nm, msg, row: h('div', null, null, h('div', 'pmr', null, h('span', null, label), sel, test), h('div', 'pmr', null, nm, up, rm, fin), msg) }; };
+const sndA = sndMkRow('Alarm', 'alarm'), sndP = sndMkRow('Pomodoro', 'pomo'), sndU = sndMkRow('Time until', 'until');
+const sndVol = h('input'), sndVolTxt = h('span', 'unit'); sndVol.type = 'range'; sndVol.min = '10'; sndVol.max = '100'; sndVol.step = '5'; sndVol.setAttribute('aria-label', 'Sound volume');
+const sndBox = h('div', 'pmrules', null, sndA.row, sndP.row, sndU.row, h('label', 'pmr', null, h('span', null, 'Volume'), sndVol, sndVolTxt), h('div', 'note', 'Alarm: rings until you silence it. Pomodoro: when a pomodoro ends, and at overtime. Time until: when a countdown is reached. Press ▶ to hear a sound; on your own uploaded file it becomes ⏸ to pause, and ▶ carries on from there. 📁 Upload lets you use your own mp3, wav, ogg or m4a file (up to 20 MB and 7 minutes 30 seconds). It plays all the way through once each time, and a ⏹ Stop bar appears at the top of the app while it plays. Uploaded files are saved on this device only and are not included in sync codes.')); sndBox.style.display = 'none';
+const sndStopBtn = h('button', 'add sm2', '⏹ Stop'), sndBar = h('section', 'g sndbar', null, h('span', null, '🔊 Playing your sound'), sndStopBtn); sndBar.style.display = 'none';
 const pmHeadTxt = h('span'), pmHeadSup = h('sup'), pmHead = h('div', 'pmh', null, pmHeadTxt, pmHeadSup), pmTMain = h('span'), pmTSup = h('sup'), pmTime = h('div', 'alt', null, pmTMain, pmTSup), pmEnd = h('div', 'ale'), pmFill = h('div', 'fill'), pmBar = h('div', 'bar sm', null, pmFill), pmWork = h('div', 'ale');
 pmTSup.style.display = 'none';
 const pmPause = h('button', 'add sm2', 'Pause'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
@@ -819,7 +825,7 @@ try { locCard.open = GM_getValue('locOpen', false) === true; } catch (e) {}
 locCard.addEventListener('toggle', () => { try { GM_setValue('locOpen', locCard.open); } catch (e) {} });
 // ---------- sync between devices: a code made on one device is pasted into the site on another ----------
 // (a static site has no server or account, so the code carries the data itself. Per-device things stay put: location, running alarm/pomodoro, window state.)
-const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pmOtRules', 'pomo'];
+const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pmOtRules', 'sndCfg', 'pomo'];
 const synBox = h('textarea', 'synct'); synBox.rows = 4; synBox.spellcheck = false; synBox.setAttribute('autocapitalize', 'off'); synBox.setAttribute('autocorrect', 'off');
 synBox.setAttribute('aria-label', 'Sync code'); synBox.placeholder = 'Your sync code appears here, or paste a code from another device';
 const synGet = h('button', 'add sm2', 'Get code from this device'), synUse = h('button', 'add sm2', 'Use this code here');
@@ -1597,6 +1603,7 @@ function flipTo(side, instant) {   // the box turns over like a card
 flipBtn.onclick = () => flipTo('kanban'); flipBack.onclick = () => flipTo('time');
 function kanInit() { kanRender(); if (kan.side === 'kanban') flipTo('kanban', true); }
 const wrap = h('div', 'wrap', null,
+  sndBar,
   h('section', 'g c', null, seg, cTime, cDate, cBadge, h24Sw.lab),
   locCard,
   h('section', 'g', null, phTitle,
@@ -1609,7 +1616,7 @@ const wrap = h('div', 'wrap', null,
   h('section', 'g', null, h('div', 'ttl', 'Event countdowns'), evSeg, evBox),
   synCard,
   shortcutCard,
-  h('section', 'g', null, pmRulesBtn, pmRulesBox),
+  h('section', 'g', null, h('div', 'ctl', null, pmRulesBtn, sndBtn), pmRulesBox, sndBox),
   h('p', 'credit', 'Some visual elements borrowed from Sky Clock'));
 const sk = window.skyclock || null;   // bridge to the desktop shell (preload.js)
 const pinBtn = h('button', null, '📌'), minBtn = h('button', null, '–'), xBtn = h('button', null, '✕');
@@ -1993,7 +2000,7 @@ function startAlarm(ms, cap) {
   unlockAudio(true);
   ms = Math.min(ms, 48 * 36e5); alarm = { end: Date.now() + ms, dur: ms, done: false, cap: cap || '' }; saveAlarm(); alarmTick(Date.now()); if (miniOn) miniRender();
 }
-function endAlarm() { ringOff(); alarm = null; saveAlarm(); alarmTick(Date.now()); if (miniOn) miniRender(); }
+function endAlarm() { ringOff(); sndStopFile('alarm'); alarm = null; saveAlarm(); alarmTick(Date.now()); if (miniOn) miniRender(); }
 const lenWords = ms => {   // 25 minutes, 1 hour 30 minutes, 45 seconds
   const t = Math.round(ms / 1000), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60, p = [];
   if (H) p.push(H + (H === 1 ? ' hour' : ' hours')); if (M) p.push(M + (M === 1 ? ' minute' : ' minutes')); if (S && !H) p.push(S + (S === 1 ? ' second' : ' seconds'));
@@ -2019,7 +2026,7 @@ function alarmTick(n) {
 alGo.onclick = () => startAlarm((Math.max(0, +alH.value || 0) * 60 + Math.max(0, +alM.value || 0)) * 6e4);
 [alH, alM].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') alGo.click(); }));
 [[5, '5 min', '5 minutes'], [10, '10 min', '10 minutes'], [15, '15 min', '15 minutes'], [25, '25 min', '25 minutes'], [45, '45 min', '45 minutes'], [60, '1 hr', '1 hour']].forEach(([m, l, long]) => { const b = h('button', 'chip', l); b.onclick = () => startAlarm(m * 6e4, 'Lasts ' + long); alChips.append(b); });
-alSilence.onclick = () => { ringOff(); alarmTick(Date.now()); }; alTest.onclick = () => { unlockAudio(true); ringCycle(); };
+alSilence.onclick = () => { ringOff(); sndStopFile('alarm'); alarmTick(Date.now()); }; alTest.onclick = () => { unlockAudio(true); ringCycle(); };
 alCancel.onclick = endAlarm; alDone.onclick = endAlarm; alAgain.onclick = () => { if (alarm) startAlarm(alarm.dur, alarm.cap); };
 
 function addT(v) {
@@ -2054,33 +2061,113 @@ const wakeUp = () => { try { if (AC && AC.state !== 'running') { const r = AC.re
 document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeUp(); });
 addEventListener('focus', wakeUp); addEventListener('pageshow', wakeUp);
 try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}   // desktop app: Electron lets sound start without a click, so beeps work even if you never touched the window since Windows started it
-function beep(n = 1) {                                 // the Time until beep: loud (about double the alarm ring), n rounds of four pulses
+function beep(n = 1) {                                 // the Time until beep: loud (about double the alarm ring), n rounds
   try {
     if (Date.now() - (+GM_getValue('lock', 0)) < 5000) return;
-    const list = []; for (let k = 0; k < n; k++) RING.forEach(([st, d, f]) => list.push([st + k * 1.4, d, f]));
-    if (tones(list, .65)) GM_setValue('lock', Date.now());
-    else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || tones(list, .65)); }   // audio blocked: play it as soon as it is back (gives up after 10 minutes)
+    if (sndCfg.until === 'custom' && sndAud.until) { if (sndPlayFile('until', true)) GM_setValue('lock', Date.now()); else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || sndPlayFile('until', true)); } return; }
+    const p = sndOf('until'); if (!p.list) return;
+    const list = []; for (let k = 0; k < n; k++) p.list.forEach(([st, d, f]) => list.push([st + k * p.span, d, f]));
+    const play = () => tones(list, Math.min(1, .65 * (p.g || 1) * sndCfg.vol / 100), p);
+    if (play()) GM_setValue('lock', Date.now());
+    else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || play()); }   // audio blocked: play it as soon as it is back (gives up after 10 minutes)
   } catch (e) {}
 }
 
 // ---------- alarm sound: rings again and again until you silence it (or 60 seconds pass) ----------
 const RING = [0, 1, 2, 3].map(i => [i * .28, .16, i % 2 ? 1320 : 880]);   // beep-beep-beep-beep, two alternating pitches
-function tones(list, vol) {
+function tones(list, vol, p) {   // p (optional): { type: waveform, decay: bell-like fade instead of a flat beep }
   const c = AC; if (!c) return false;
   try {
     if (c.state === 'suspended') c.resume();
     if (c.state !== 'running') return false;
+    const type = p && p.type || 'square', decay = !!(p && p.decay);
     list.forEach(([s, d, f]) => {
       const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + s;
-      o.type = 'square'; o.frequency.value = f; o.connect(g); g.connect(c.destination);
+      o.type = type; o.frequency.value = f; o.connect(g); g.connect(c.destination);
       g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .01);
-      g.gain.setValueAtTime(vol, t + d - .03); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      if (!decay) g.gain.setValueAtTime(vol, t + d - .03);
+      g.gain.exponentialRampToValueAtTime(.0001, t + d);
       o.start(t); o.stop(t + d + .02);
     });
     return true;
   } catch (e) { return false; }
 }
-const ringCycle = () => tones(RING, .3);
+const ringCycle = () => sndPlay('alarm', false);
+// ---------- sound choices (🔔 Sounds panel at the bottom of the app): one sound each for the alarm, the pomodoro and the Time until beep ----------
+const SOUNDS = {
+  classic: { name: 'Classic beeps (original)', type: 'square', g: 1, span: 1.4, list: RING },
+  chime: { name: 'Soft chime', type: 'sine', g: 1.6, decay: true, span: 1.8, list: [[0, .9, 523], [.2, .9, 659], [.4, 1.3, 784]] },
+  bell: { name: 'Bell', type: 'sine', g: 1, decay: true, span: 2.2, list: [[0, 1.7, 880], [0, 1.7, 1320], [0, 1.2, 2217]] },
+  marimba: { name: 'Marimba', type: 'triangle', g: 1.5, decay: true, span: 1.5, list: [[0, .35, 659], [.18, .35, 784], [.36, .35, 988], [.54, .6, 1319]] },
+  harp: { name: 'Harp run', type: 'triangle', g: 1.5, decay: true, span: 1.8, list: [[0, .6, 392], [.12, .6, 523], [.24, .6, 659], [.36, .6, 784], [.48, 1, 1047]] },
+  digital: { name: 'Digital watch', type: 'square', g: .7, span: 1.5, list: [0, .12, .24, .36, .6, .72, .84, .96].map(s => [s, .07, 1760]) },
+  siren: { name: 'Siren', type: 'sawtooth', g: .5, span: 2.2, list: [0, 1, 2, 3, 4, 5].map(i => [i * .3, .3, i % 2 ? 880 : 660]) },
+  gentle: { name: 'Gentle two-note', type: 'sine', g: 1.7, decay: true, span: 1.9, list: [[0, .9, 660], [.5, 1.2, 523]] },
+  silent: { name: 'Silent (notification only)', list: null },
+};
+let sndCfg = { alarm: 'classic', pomo: 'classic', until: 'classic', vol: 100 };
+try { const v = JSON.parse(GM_getValue('sndCfg', 'null')); if (v) { ['alarm', 'pomo', 'until'].forEach(k => { if (typeof v[k] === 'string' && (SOUNDS[v[k]] || v[k] === 'custom')) sndCfg[k] = v[k]; }); sndCfg.vol = Math.min(100, Math.max(10, +v.vol || 100)); } } catch (e) {}
+const sndOf = k => SOUNDS[sndCfg[k]] || SOUNDS.classic;
+const sndSave = () => { try { GM_setValue('sndCfg', JSON.stringify(sndCfg)); } catch (e) {} };
+function sndPlay(k, loud) {   // plays the sound chosen for k: 'alarm', 'pomo' or 'until'. loud = the Time until beep (about double the alarm ring)
+  if (sndCfg[k] === 'custom') { const r = sndPlayFile(k, loud); if (r !== null) return r; }   // no file loaded: falls back to the classic beeps below
+  const p = sndOf(k); if (!p.list) return true;
+  return tones(p.list, Math.min(1, (loud ? .65 : .3) * (p.g || 1) * sndCfg.vol / 100), p);
+}
+const pmSnd = () => sndPlay('pomo', false);
+// ---------- your own audio files: kept in this browser's IndexedDB (they stay on this device; sync codes do not carry them), and streamed from there so even a 7 minute file needs no big decode ----------
+const sndAud = {}, sndGain = {}, sndNode = {}, sndUrl = {}, sndMeta = {};   // the audio element, its volume control, its source node, its temporary address, its file name
+const SND_MAX_BYTES = 20e6, SND_MAX_SEC = 450;
+const sndDB = () => new Promise((res, rej) => { try { const r = indexedDB.open('skyclock-sounds', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
+const sndIdb = (mode, fn) => sndDB().then(db => new Promise((res, rej) => { const t = db.transaction('files', mode), q = fn(t.objectStore('files')); t.oncomplete = () => { res(q && q.result); db.close(); }; t.onerror = t.onabort = () => { rej(t.error); db.close(); }; }));
+const sndBarSync = () => { try { sndBar.style.display = Object.values(sndAud).some(a => a && !a.paused && !a.ended) ? '' : 'none'; [sndA, sndP, sndU].forEach(f => { const a = sndAud[f.k], on = !!(a && !a.paused && !a.ended); f.test.textContent = on ? '⏸' : '▶'; }); } catch (e) {} };
+function sndStopFile(k) { const a = sndAud[k]; if (!a) return; try { a.pause(); a.currentTime = 0; } catch (e) {} sndBarSync(); }
+function sndDrop(k) {   // forget a loaded file (before replacing or removing it)
+  sndStopFile(k);
+  try { if (sndNode[k]) sndNode[k].disconnect(); if (sndGain[k]) sndGain[k].disconnect(); } catch (e) {}
+  try { if (sndUrl[k]) URL.revokeObjectURL(sndUrl[k]); } catch (e) {}
+  delete sndAud[k]; delete sndGain[k]; delete sndNode[k]; delete sndUrl[k]; delete sndMeta[k];
+}
+function sndBufPlayer(buf) {   // stand-in for an audio element that plays a fully decoded file (used when the page may not stream files, e.g. a strict security policy)
+  const o = { paused: true, ended: false, duration: buf.duration, currentTime: 0, _s: null, _t0: 0, _out: null, onplay: null, onpause: null, onended: null,
+    play() { const s = AC.createBufferSource(), from = o.currentTime > 0 && o.currentTime < buf.duration ? o.currentTime : 0; s.buffer = buf; s.connect(o._out || AC.destination); s.onended = () => { if (o._s === s) { o._s = null; o.paused = true; o.ended = true; o.currentTime = 0; if (o.onended) o.onended(); } }; o._s = s; o._t0 = AC.currentTime - from; o.paused = false; o.ended = false; s.start(0, from); if (o.onplay) o.onplay(); return Promise.resolve(); },
+    pause() { const s = o._s; o._s = null; if (s) { o.currentTime = Math.max(0, AC.currentTime - o._t0); s.onended = null; try { s.stop(); } catch (e) {} } o.paused = true; if (o.onpause) o.onpause(); } };
+  return o;
+}
+function sndMakeAud(blob) {   // resolves once the file is ready to play; tries streaming first, then decoding it; rejects if it is not audio this browser can play
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob), a = new Audio(); a.preload = 'auto'; let done = false;
+    const fallback = async () => {
+      if (done) return; done = true; try { URL.revokeObjectURL(url); } catch (e) {}
+      try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); const buf = await AC.decodeAudioData(await blob.arrayBuffer()); res({ a: sndBufPlayer(buf), url: '' }); } catch (e) { rej(new Error('unreadable')); }
+    };
+    a.onloadedmetadata = () => { if (!done) { done = true; res({ a, url }); } };
+    a.onerror = fallback; setTimeout(fallback, 8000);
+    a.src = url;
+  });
+}
+function sndAttach(k, a, url, name) {
+  sndDrop(k);
+  try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); const g = AC.createGain(); g.connect(AC.destination); sndGain[k] = g; if (typeof HTMLMediaElement !== 'undefined' && a instanceof HTMLMediaElement) { const n = AC.createMediaElementSource(a); n.connect(g); sndNode[k] = n; } else a._out = g; } catch (e) {}
+  a.onplay = a.onpause = a.onended = sndBarSync;
+  sndAud[k] = a; sndUrl[k] = url; sndMeta[k] = name;
+}
+function sndPlayFile(k, loud) {   // plays the uploaded file for k from the start. true = playing (or still playing from a moment ago), false = audio blocked, null = no file loaded
+  const a = sndAud[k]; if (!a) return null;
+  try {
+    if (AC && AC.state === 'suspended') AC.resume();
+    if (AC && sndGain[k] && AC.state !== 'running') return false;
+    if (!a.paused && !a.ended) return true;   // a long file is not started again on top of itself
+    const v = Math.min(1, (loud ? 1 : .8) * sndCfg.vol / 100); if (sndGain[k]) sndGain[k].gain.value = v; else a.volume = v;
+    a.currentTime = 0; const born = Date.now(), pr = a.play();
+    if (pr && pr.catch) pr.catch(() => { pendingSounds.push(() => Date.now() - born > 6e5 || sndPlayFile(k, loud) === true); });   // the browser wanted a tap first: try again when one comes
+    return true;
+  } catch (e) { return false; }
+}
+async function sndLoad(k) {   // at start-up: bring the saved file back
+  try { const rec = await sndIdb('readonly', s => s.get(k)); if (rec && rec.blob) { const r = await sndMakeAud(rec.blob); sndAttach(k, r.a, r.url, rec.name); } } catch (e) { sndDrop(k); }
+  sndUiSync();
+}
 let ringTimer = 0, ringUntil = 0;
 function ringOff() { clearInterval(ringTimer); ringTimer = 0; }
 function ringOn() {
@@ -2160,7 +2247,7 @@ function pmEndCur(kind, endMs) {
 }
 function pmEndSession(endMs) {
   const s = pm.session; if (!s) return;
-  if (s.cur) pmEndCur('quit', endMs); else s.worked += pmSettle(s, endMs);   // time still being counted lands in the total
+  sndStopFile('pomo'); if (s.cur) pmEndCur('quit', endMs); else s.worked += pmSettle(s, endMs);   // time still being counted lands in the total
   const recorded = s.full + s.part > 0;                // a session in which nothing was recorded is not counted (no "ghost sessions")
   if (recorded) { const d = pm.days[s.day] = Object.assign(pmEmpty(), pm.days[s.day]); d.ss++; }
   const span = Math.max(0, Math.round((pmEff(s, endMs) - s.startAt - (s.pausedTotal || 0)) / 1000));
@@ -2190,7 +2277,7 @@ function pmStart(minutes) {
   if (!s) s = pm.session = { day: pmDay(now), startAt: now, n: 0, worked: 0, full: 0, part: 0, cur: null, extra: 0, mark: null, pauseAt: null, pausedTotal: 0 };
   if (s.n >= PM_MAX) return;
   if (s.pauseAt) { s.pausedTotal = (s.pausedTotal || 0) + (now - s.pauseAt); s.pauseAt = null; }   // starting the next one ends a pause
-  s.worked += pmSettle(s, now); s.extra = 0; s.mark = null; s.endedAt = null;
+  sndStopFile('pomo'); s.worked += pmSettle(s, now); s.extra = 0; s.mark = null; s.endedAt = null;
   pm.last = null; s.n++; s.cur = { start: now, dur: ms, day: pmDay(now), shift: 0 };
   try { GM_setValue('pmLen', Math.round(ms / 6e4)); } catch (e) {}
   savePm(); pmRender(); pmTick(now);
@@ -2209,7 +2296,7 @@ function pmResume() {                                  // the end time moves lat
   s.pauseAt = null; savePm(); pmRender(); pmTick(now);
 }
 function pmChime() {
-  const born = Date.now(), go = () => { if (Date.now() - born > 6e5) return true; if (!ringCycle()) return false; setTimeout(ringCycle, 2400); setTimeout(ringCycle, 4800); return true; };
+  const born = Date.now(), go = () => { if (Date.now() - born > 6e5) return true; if (!pmSnd()) return false; setTimeout(pmSnd, 2400); setTimeout(pmSnd, 4800); return true; };
   if (!go()) pendingSounds.push(go);   // audio blocked (screen was off): chime as soon as it is back
 }
 let pmConfT = 0, pmClearT = 0, pmHistOpen = false, pmDayKey = '';
@@ -2255,6 +2342,38 @@ pmClear.onclick = () => {
 const pmRuleShow = () => { pmRuleG.i.value = String(pmRules.g); pmRuleW.i.value = String(pmRules.w); pmRuleR.i.value = String(pmRules.r); pmRulePreview(); };
 function pmRulePreview() { const g = pmRules.g, r = pmRules.r; pmRuleTxt.textContent = 'Full credit lasts ' + g + ' min after a pomodoro ends' + (g === 0 ? ' (so the overtime warning comes right away)' : '') + ', then ' + (r === 0 ? 'no credit' : r + '% credit') + ', and counting stops by itself ' + (g + pmRules.w) + ' min after it ended (everything after that is ignored). A blank box means the default: 5 min, 12 min, 25%.'; }
 [[pmRuleG, 'g', 5], [pmRuleW, 'w', 12], [pmRuleR, 'r', 25]].forEach(([f, k, d]) => { f.i.oninput = () => { let v = Math.max(0, pmNum(f.i.value, d)); if (k === 'r') v = Math.min(100, v); pmRules[k] = v; try { GM_setValue('pmOtRules', JSON.stringify(pmRules)); } catch (e) {} pmRulePreview(); pmTick(Date.now()); }; });
+function sndUiSync() { [sndA, sndP, sndU].forEach(f => { const has = !!sndAud[f.k]; if (f.cust) f.cust.disabled = !has; f.sel.value = sndCfg[f.k] === 'custom' && !has ? 'classic' : sndCfg[f.k]; f.nm.textContent = has ? 'Your file: ' + sndMeta[f.k] : 'No file yet (mp3, wav or ogg)'; f.rm.disabled = !has; }); }
+async function sndUpload(f, file) {
+  const k = f.k; if (!file) return;
+  if (file.size > SND_MAX_BYTES) { f.msg.textContent = 'That file is over 20 MB. Pick a smaller one.'; return; }
+  let r;
+  try { r = await sndMakeAud(file); } catch (e) { f.msg.textContent = 'Could not read that audio file. Try an mp3, wav or ogg.'; return; }
+  if (isFinite(r.a.duration) && r.a.duration > SND_MAX_SEC) { try { URL.revokeObjectURL(r.url); } catch (e) {} f.msg.textContent = 'That clip is longer than 7 minutes 30 seconds. Pick a shorter one.'; return; }
+  sndAttach(k, r.a, r.url, file.name); sndCfg[k] = 'custom'; sndSave(); sndUiSync();
+  try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, k)); f.msg.textContent = 'Saved on this device.'; } catch (e) { f.msg.textContent = 'Playing now, but this browser would not save it, so it will be gone after a reload.'; }
+  unlockAudio(true); sndPlay(k, k === 'until');
+}
+[sndA, sndP, sndU].forEach(f => {
+  const k = f.k;
+  Object.entries(SOUNDS).forEach(([id, p]) => { const o = h('option', null, p.name); o.value = id; f.sel.append(o); });
+  const co = h('option', null, 'My uploaded file'); co.value = 'custom'; f.cust = co; f.sel.append(co);
+  f.sel.onchange = () => { sndCfg[k] = f.sel.value; sndSave(); unlockAudio(true); sndStopFile(k); sndPlay(k, k === 'until'); };
+  f.test.onclick = () => {
+    unlockAudio(true); const a = sndAud[k];
+    if (sndCfg[k] === 'custom' && a && !a.paused && !a.ended) { a.pause(); return; }   // playing: pause it
+    if (sndCfg[k] === 'custom' && a && a.paused && !a.ended && a.currentTime > 0) { try { a.play(); } catch (e) {} return; }   // paused: carry on from there
+    sndStopFile(k); sndPlay(k, k === 'until');
+  };
+  f.up.onclick = () => f.fin.click();
+  f.fin.onchange = () => { const file = f.fin.files && f.fin.files[0]; f.fin.value = ''; sndUpload(f, file); };
+  f.rm.onclick = async () => { try { await sndIdb('readwrite', s => s.delete(k)); } catch (e) {} sndDrop(k); if (sndCfg[k] === 'custom') { sndCfg[k] = 'classic'; sndSave(); } f.msg.textContent = 'Removed.'; sndUiSync(); };
+});
+sndStopBtn.onclick = () => { ringOff(); Object.keys(sndAud).forEach(sndStopFile); try { alarmTick(Date.now()); } catch (e) {} };
+sndUiSync(); ['alarm', 'pomo', 'until'].forEach(sndLoad);
+sndVol.value = String(sndCfg.vol); sndVolTxt.textContent = sndCfg.vol + '%';
+sndVol.oninput = () => { sndCfg.vol = Math.min(100, Math.max(10, pmNum(sndVol.value, 100))); sndVolTxt.textContent = sndCfg.vol + '%'; sndSave(); };
+sndVol.onchange = () => { unlockAudio(true); sndPlay('alarm', false); };
+sndBtn.onclick = () => { const open = sndBox.style.display === 'none'; sndBox.style.display = open ? '' : 'none'; sndBtn.setAttribute('aria-expanded', String(open)); };
 pmRulesBtn.onclick = () => { const open = pmRulesBox.style.display === 'none'; pmRulesBox.style.display = open ? '' : 'none'; pmRulesBtn.setAttribute('aria-expanded', String(open)); if (open) pmRuleShow(); };
 pmShowSw.i.onchange = () => { pmShow = pmShowSw.i.checked; pmShowSw.i.setAttribute('aria-checked', String(pmShow)); try { GM_setValue('pmShow', pmShow); } catch (e) {} pmRender(); pmTick(Date.now()); };
 if (skc && skc.onPause) skc.onPause(() => { const s = pm.session; if (!s) return; if (s.pauseAt) pmResume(); else if (s.cur || pmKeep) pmPauseNow(); });   // the pause / resume keybind: works in the full and the mini window
