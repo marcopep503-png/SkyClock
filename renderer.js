@@ -666,7 +666,8 @@ alM.value = '25';
 const alChips = h('div', 'chips'), alTime = h('div', 'alt'), alEnd = h('div', 'ale'), alFill = h('div', 'fill'), alCap = h('div', 'alc');
 const alCancel = h('button', 'add sm2', 'Cancel'), alAgain = h('button', 'add sm2', 'Again'), alDone = h('button', 'add sm2', 'Dismiss');
 const alSilence = h('button', 'add sm2', 'Silence'), alLapMain = h('span'), alLapSup = h('sup'), alLap = h('div', 'alp', null, alLapMain, alLapSup), alTest = h('button', 'add sm2', '🔔 Test alarm sound');
-alSilence.style.display = 'none'; alLap.style.display = 'none'; alTest.style.marginTop = '10px';
+alSilence.style.display = 'none'; alLap.style.display = 'none';
+const alTestRow = h('div', 'ctl', null, alTest, sndMkSil('alarm')); alTestRow.style.marginTop = '10px'; alTestRow.style.flexWrap = 'wrap';   // the test button plus a Silence button that shows while the sound plays
 const mkSw = (text, small) => { const i = h('input'); i.type = 'checkbox'; i.setAttribute('role', 'switch'); return { i, lab: h('label', 'sw' + (small ? ' sm' : ''), null, i, h('span', 'tk'), h('span', 'sl', text)) }; };
 const setSw = (i, v) => { i.checked = !!v; i.setAttribute('aria-checked', String(!!v)); };
 const alElSw = mkSw('Show elapsed time after it rings'); setSw(alElSw.i, alEl);
@@ -685,7 +686,7 @@ function cmpHdr(title, key) {   // a title row with a button that collapses the 
   cmpHeads.push(hd); return hd;
 }
 const alBox = h('div', null, null, alTime, alEnd, alLap, h('div', 'bar sm', null, alFill), alCap, alBtns); alBox.style.display = 'none';
-const alarmCard = h('section', 'g', null, cmpHdr('Alarm timer', 'alarm'), h('div', 'ctl', null, alH, h('span', 'unit', 'h'), alM, h('span', 'unit', 'min'), alGo), alChips, alElSw.lab, alBox, alTest);
+const alarmCard = h('section', 'g', null, cmpHdr('Alarm timer', 'alarm'), h('div', 'ctl', null, alH, h('span', 'unit', 'h'), alM, h('span', 'unit', 'min'), alGo), alChips, alElSw.lab, alBox, alTestRow);
 const phName = h('span'), phLeft = h('span'), fill = h('div', 'fill');
 const inp = h('input'); inp.type = 'time'; inp.setAttribute('aria-label', 'Custom time');
 const addBtn = h('button', 'add', 'Add'), chipBox = h('div', 'chips'), tl = h('div'), undoBar = h('div', 'undo');
@@ -2026,7 +2027,7 @@ function alarmTick(n) {
 alGo.onclick = () => startAlarm((Math.max(0, +alH.value || 0) * 60 + Math.max(0, +alM.value || 0)) * 6e4);
 [alH, alM].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') alGo.click(); }));
 [[5, '5 min', '5 minutes'], [10, '10 min', '10 minutes'], [15, '15 min', '15 minutes'], [25, '25 min', '25 minutes'], [45, '45 min', '45 minutes'], [60, '1 hr', '1 hour']].forEach(([m, l, long]) => { const b = h('button', 'chip', l); b.onclick = () => startAlarm(m * 6e4, 'Lasts ' + long); alChips.append(b); });
-alSilence.onclick = () => { ringOff(); sndStopFile('alarm'); alarmTick(Date.now()); }; alTest.onclick = () => { unlockAudio(true); ringCycle(); };
+alSilence.onclick = () => { ringOff(); sndStopFile('alarm'); alarmTick(Date.now()); }; alTest.onclick = () => { unlockAudio(true); if (sndActive('alarm') && !ringTimer) { sndSilence('alarm'); } else { ringCycle(); } sndSilSync(); };   // pressing it again while it plays stops it
 alCancel.onclick = endAlarm; alDone.onclick = endAlarm; alAgain.onclick = () => { if (alarm) startAlarm(alarm.dur, alarm.cap); };
 
 function addT(v) {
@@ -2176,7 +2177,7 @@ function sndSilence(tag) {   // cut the sound off now (beeps, the pomodoro chime
   sndOsc[tag] = []; sndEndT[tag] = 0; sndStopFile(tag);
   if (tag === 'alarm') { ringOff(); try { alarmTick(Date.now()); } catch (e) {} }   // the same as the alarm card's own Silence button
 }
-function sndSilSync() { try { ['alarm', 'pomo', 'until'].forEach(t => { const on = sndActive(t); root.querySelectorAll('.sndsil[data-t="' + t + '"]').forEach(b => { b.style.display = on ? '' : 'none'; }); }); } catch (e) {} }
+function sndSilSync() { try { alTest.textContent = (sndActive('alarm') && !ringTimer) ? '⏹ Stop test sound' : '🔔 Test alarm sound'; ['alarm', 'pomo', 'until'].forEach(t => { const on = sndActive(t); root.querySelectorAll('.sndsil[data-t="' + t + '"]').forEach(b => { b.style.display = on ? '' : 'none'; }); }); } catch (e) {} }
 function sndMkSil(tag) {   // a Silence button that only shows while that sound is playing
   const b = h('button', 'add sm2 sndsil', '🔇 Silence'); b.type = 'button'; b.dataset.t = tag; b.title = 'Silence this sound'; b.style.display = 'none';
   b.onclick = () => { sndSilence(tag); sndSilSync(); }; return b;
