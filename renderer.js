@@ -1743,7 +1743,7 @@ function miniTimerRender(kind) {   // the alarm and the pomodoro share one small
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
   miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
-  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, ...(al ? [] : [sndMkSil('pomo')]), es.lab));
+  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab));
   miniTick();
 }
 function miniTick() {
@@ -2168,14 +2168,15 @@ function sndPlayFile(k, loud) {   // plays the uploaded file for k from the star
 }
 function sndActive(tag) {   // is this sound making noise right now (a beep, a chime still to repeat, or your uploaded file)?
   const a = sndAud[tag];
-  return !!((AC && (sndEndT[tag] || 0) > AC.currentTime) || (a && !a.paused && !a.ended) || (tag === 'pomo' && Date.now() < pmChimeUntil));
+  return !!((AC && (sndEndT[tag] || 0) > AC.currentTime) || (a && !a.paused && !a.ended) || (tag === 'pomo' && Date.now() < pmChimeUntil) || (tag === 'alarm' && !!ringTimer));
 }
 function sndSilence(tag) {   // cut the sound off now (beeps, the pomodoro chime's repeats, and your uploaded file)
   if (tag === 'pomo') { pmChimeT.forEach(clearTimeout); pmChimeT = []; pmChimeUntil = 0; }
   (sndOsc[tag] || []).forEach(o => { try { o.stop(); } catch (e) {} try { o.disconnect(); } catch (e) {} });
   sndOsc[tag] = []; sndEndT[tag] = 0; sndStopFile(tag);
+  if (tag === 'alarm') { ringOff(); try { alarmTick(Date.now()); } catch (e) {} }   // the same as the alarm card's own Silence button
 }
-function sndSilSync() { try { ['pomo', 'until'].forEach(t => { const on = sndActive(t); root.querySelectorAll('.sndsil[data-t="' + t + '"]').forEach(b => { b.style.display = on ? '' : 'none'; }); }); } catch (e) {} }
+function sndSilSync() { try { ['alarm', 'pomo', 'until'].forEach(t => { const on = sndActive(t); root.querySelectorAll('.sndsil[data-t="' + t + '"]').forEach(b => { b.style.display = on ? '' : 'none'; }); }); } catch (e) {} }
 function sndMkSil(tag) {   // a Silence button that only shows while that sound is playing
   const b = h('button', 'add sm2 sndsil', '🔇 Silence'); b.type = 'button'; b.dataset.t = tag; b.title = 'Silence this sound'; b.style.display = 'none';
   b.onclick = () => { sndSilence(tag); sndSilSync(); }; return b;
