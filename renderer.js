@@ -325,7 +325,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.sndtod{margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:10px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%}.sndstrip b{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
+.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -2487,7 +2487,7 @@ const sndTodFill = sel => {
 };
 [sndA, sndT, sndP, sndU].forEach(f => {
   const k = f.k, td = sndCfg.tod[k], sw = mkSw('Change by time of day (blue and golden hours)', true), box = h('div', 'sndtod'), strip = h('div', 'sndstrip'), sched = h('div', 'note sndsch');
-  setSw(sw.i, td.on); f.tod = { sw, box, strip, sched, rows: [] }; sw.lab.title = 'Use a different ' + f.label + ' sound after each blue or golden hour begins';
+  setSw(sw.i, td.on); const tip = h('div', 'sndtip'), now = document.createElement('b'); tip.style.display = 'none'; tip.setAttribute('role', 'tooltip'); f.tod = { sw, box, strip, sched, rows: [], tip, now, sig: '' }; sw.lab.title = 'Use a different ' + f.label + ' sound after each blue or golden hour begins';
   box.append(h('div', 'note', 'Each sound stays on until the next one begins, so this countdown always has exactly one sound. "Same as the main sound" keeps the sound chosen above for that stretch.'));
   SND_PERIODS.forEach(p => {
     const sel = h('select'), test = h('button', 'add sm2', '▶'), lab = h('span'), cust = sndTodFill(sel);
@@ -2497,8 +2497,14 @@ const sndTodFill = sel => {
     f.tod.rows.push({ p, sel, lab, cust }); box.append(h('div', 'pmr', null, lab, sel, test));
   });
   sw.i.onchange = () => { td.on = sw.i.checked; sw.i.setAttribute('aria-checked', String(td.on)); sndSave(); sndTodSync(); sndTodUiSync(); };
-  const swRow = h('div', 'pmr', null, sw.lab); f.tod.swRow = swRow; box.append(strip, sched); f.row.append(swRow, box);
+  const swRow = h('div', 'pmr', null, sw.lab); f.tod.swRow = swRow; box.append(strip, tip, sched); f.row.append(swRow, box);
 });
+function sndStripTip(T, el, text) {   // the pop-up over a coloured segment: shows its time range and sound, kept inside the panel
+  const tip = T.tip; tip.textContent = text; tip.style.display = '';
+  const b = T.box.getBoundingClientRect(), s = el.getBoundingClientRect(), st = T.strip.getBoundingClientRect(), w = tip.offsetWidth;
+  let x = s.left - b.left + s.width / 2; x = Math.max(w / 2 + 2, Math.min(b.width - w / 2 - 2, x));
+  tip.style.left = x + 'px'; tip.style.top = (st.top - b.top - 6) + 'px';
+}
 function sndTodUiSync() {   // the time-of-day rows, today's times, and the all-day schedule for each countdown type
   const n = Date.now(), d = sndTodDay(n), cur = sndTodPeriod(n), pct = ms => sodOf(ms) / 864, valid = SND_PERIODS.filter(p => d.st[p.id] != null);
   [sndA, sndT, sndP, sndU].forEach(f => {
@@ -2513,13 +2519,31 @@ function sndTodUiSync() {   // the time-of-day rows, today's times, and the all-
       lines.push('Plays all day: every hour of the day is covered, with one sound at a time.');
     } else lines.push('The sun has no blue or golden hour here today, so the main sound plays all day.');
     T.sched.textContent = lines.join('\n');
-    const segs = []; if (valid.length) { let prev = 0, id = valid[valid.length - 1].id; const mk = (pid, w) => { const e = document.createElement('i'); e.style.width = Math.max(0, w) + '%'; e.style.background = SND_PERIODS.find(p => p.id === pid).col; e.title = SND_PERIODS.find(p => p.id === pid).name + ' sound: ' + sndNameOf(k, pick(pid)); segs.push(e); };
-      valid.forEach(p => { const x = pct(d.st[p.id]); mk(id, x - prev); prev = x; id = p.id; }); mk(id, 100 - prev); const nw = document.createElement('b'); nw.style.left = pct(n) + '%'; segs.push(nw); }
-    T.strip.replaceChildren(...segs); T.strip.style.display = segs.length ? '' : 'none';
+    const segs = [];   // each stretch of the day that has its own sound, with where it starts and ends (null = midnight): drives the bar and its hover text
+    if (valid.length) {
+      const nextMb = d.tom != null ? clk.format(d.tom) + ' tomorrow' : 'the next morning blue hour';
+      segs.push({ pid: valid[valid.length - 1].id, a: null, b: d.st[valid[0].id], note: 'carried over from yesterday evening' });
+      valid.forEach((p, i) => segs.push({ pid: p.id, a: d.st[p.id], b: i + 1 < valid.length ? d.st[valid[i + 1].id] : null, note: i + 1 < valid.length ? '' : 'keeps playing until ' + nextMb }));
+    }
+    const sig = JSON.stringify(segs.map(s => [s.pid, s.a, s.b, s.note, pick(s.pid)]));
+    if (sig !== T.sig) {   // rebuilt only when something changed, so a hover is not interrupted every few seconds
+      T.sig = sig; T.tip.style.display = 'none';
+      const els = segs.map(s => {
+        const P = SND_PERIODS.find(p => p.id === s.pid), e = document.createElement('i'), w = (s.b == null ? 100 : pct(s.b)) - (s.a == null ? 0 : pct(s.a));
+        const text = P.ico + ' ' + P.name + '\n' + (s.a == null ? 'midnight' : clk.format(s.a)) + ' – ' + (s.b == null ? 'midnight' : clk.format(s.b)) + '\nSound: ' + sndNameOf(k, pick(s.pid)) + (s.note ? '\n(' + s.note + ')' : '');
+        e.style.width = Math.max(0, w) + '%'; e.style.background = P.col; e.tabIndex = 0; e.setAttribute('aria-label', text.replace(/\n/g, ', '));
+        const show = () => sndStripTip(T, e, text), hide = () => { T.tip.style.display = 'none'; };
+        e.onmouseenter = show; e.onfocus = show; e.onclick = show; e.onmouseleave = hide; e.onblur = hide;   // hover (or focus, or a tap on a touch screen) shows the pop-up
+        return e;
+      });
+      T.strip.replaceChildren(...els, T.now);
+    }
+    T.now.style.left = pct(n) + '%'; T.strip.style.display = segs.length ? '' : 'none';
   });
 }
 setInterval(() => { sndTodSync(); if (sndBox.style.display !== 'none') { try { sndTodUiSync(); } catch (e) {} } }, 2000);
 sndBtn.addEventListener('click', () => setTimeout(sndTodUiSync, 0));
+root.addEventListener('pointerdown', e => { const t = e.target; if (t && t.closest && t.closest('.sndstrip')) return; [sndA, sndT, sndP, sndU].forEach(f => { if (f.tod) f.tod.tip.style.display = 'none'; }); }, true);   // a tap anywhere else closes the pop-up (touch screens have no mouse-leave)
 sndUiSync(); ['alarm', 'test', 'pomo', 'until'].forEach(sndLoad);
 sndVol.value = String(sndCfg.vol); sndVolTxt.textContent = sndCfg.vol + '%';
 sndVol.oninput = () => { sndCfg.vol = Math.min(100, Math.max(10, pmNum(sndVol.value, 100))); sndVolTxt.textContent = sndCfg.vol + '%'; sndSave(); };
