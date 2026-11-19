@@ -122,8 +122,8 @@ try { const z = JSON.parse(GM_getValue('zone', 'null')); if (z && ZONES.some(x =
 try { const v = +GM_getValue('wake', -1); if (v >= 0 && v < 1440) wake = v; } catch (e) {}
 // auto-reset: when the Custom cycle you are running finishes, go back to the real dawn
 let autoReset = true, wakeEnd = null, resetAt = 0;
-let alEl = true, pmKeep = true, pmShow = true, pmPK = false;   // alarm: show elapsed time; pomodoro: keep counting after it ends; pomodoro: show time worked
-try { alEl = GM_getValue('alEl', true) !== false; pmKeep = GM_getValue('pmKeep', true) !== false; pmShow = GM_getValue('pmShow', true) !== false; pmPK = GM_getValue('pmPK', false) === true; } catch (e) {}
+let alEl = true, pmKeep = true, pmShow = true;   // alarm: show elapsed time; pomodoro: keep counting after it ends; pomodoro: show time worked
+try { alEl = GM_getValue('alEl', true) !== false; pmKeep = GM_getValue('pmKeep', true) !== false; pmShow = GM_getValue('pmShow', true) !== false; } catch (e) {}
 try { autoReset = GM_getValue('autoReset', true) !== false; const e = +GM_getValue('wakeEnd', 0); if (e > 0) wakeEnd = e; } catch (e) {}
 
 // ---------- sun maths (NOAA-style) ----------
@@ -325,7 +325,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
+.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -586,7 +586,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.mncd.lap.over{animation:none}}
 .mnbody .bar{margin-top:8px}
 .mnfoot{display:flex;align-items:center;gap:8px;margin-top:6px;min-height:22px}
-.mnfoot .sw{margin-left:auto}.mnfoot.mnk .sw{margin-left:0}
+.mnfoot .sw{margin-left:auto}
 .mnok{padding:2px 10px}
 .mnb{background:transparent;font-size:14px;line-height:1;padding:2px 8px;border-radius:7px;opacity:.85;text-shadow:none;cursor:pointer}
 .mnb:hover{background:rgba(255,255,255,.16);opacity:1}
@@ -720,7 +720,7 @@ const evBox = h('div', null, null,
 
 // ---------- keyboard shortcuts (desktop app only) ----------
 const skc = window.skyclock || null;
-const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini timer window (shrink to one timer / expand back)'], ['mview', 'Mini window: switch Kanban card / Time until'], ['worked', 'Pomodoro: show / hide time worked (full and mini window)'], ['pause', 'Pomodoro: pause / resume (full and mini window)'], ['quit', 'Quit the app']];
+const SC = [['toggle', 'Show / hide the app'], ['theme', 'Switch Sky / Black'], ['flip', 'Flip Time until / Kanban'], ['ind', 'Show / hide the dots & LIVE badges (Time until)'], ['mil', 'Switch 12-hour / 24-hour time'], ['mini', 'Mini timer window (shrink to one timer / expand back)'], ['mview', 'Mini window: switch Kanban card / Time until'], ['worked', 'Pomodoro: show / hide time worked (full and mini window)'], ['pause', 'Pomodoro: Pause / resume (the session keeps running; full and mini window)'], ['stop', 'Pomodoro: Stop / un-stop (everything freezes; full and mini window)'], ['quit', 'Quit the app']];
 const SCKEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Backquote: '`' };
 const scKey = c => /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Digit\d$/.test(c) ? c.slice(5) : /^F([1-9]|1\d|2[0-4])$/.test(c) ? c : (SCKEYS[c] || null);
 const scBtn = {}, scMsg = h('p', 'note');
@@ -780,9 +780,8 @@ try { const len = +GM_getValue('pmLen', 25) || 25; pmH.value = len >= 60 ? Strin
 const pmGo = h('button', 'add', 'Start'), pmChips = h('div', 'chips'), pmLbl = h('div', 'pms');
 const pmCtl = h('div', null, null, pmLbl, h('div', 'ctl', null, pmH, h('span', 'unit', 'h'), pmMin, h('span', 'unit', 'min'), pmGo), pmChips);
 const pmShowSw = mkSw('Show time worked', true); setSw(pmShowSw.i, pmShow);
-const pmPKSw = mkSw('Pause keeps session running', true); setSw(pmPKSw.i, pmPK); pmPKSw.lab.title = 'Pause the countdown only. The session clock keeps running, and the paused time counts as worked time at the percentage set under ⚙ Overtime rules. Applies the next time you press Pause.';
 const pmRulesBtn = h('button', 'add sm2', '⚙ Overtime rules'); pmRulesBtn.setAttribute('aria-expanded', 'false'); pmRulesBtn.title = 'Choose how long you get full credit, when counting stops by itself, and how overtime and paused time are credited';
-const pmOpts = h('div', 'pmopts', null, pmPKSw.lab, pmShowSw.lab);
+const pmOpts = h('div', 'pmopts', null, pmShowSw.lab);
 const pmMkRule = (label, unit) => { const i = h('input'); i.type = 'number'; i.min = '0'; i.step = 'any'; i.setAttribute('inputmode', 'decimal'); i.setAttribute('aria-label', label); return { i, row: h('label', 'pmr', null, h('span', null, label), i, h('span', 'unit', unit)) }; };
 const pmRuleG = pmMkRule('Full credit lasts for', 'min'), pmRuleW = pmMkRule('Then counting stops after', 'min'), pmRuleR = pmMkRule('Overtime is credited at', '%'), pmRuleP = pmMkRule('Paused time is credited at', '%');
 const pmRuleTxt = h('div', 'note'), pmRulesBox = h('div', 'pmrules', null, pmRuleG.row, pmRuleW.row, pmRuleR.row, pmRuleP.row, pmRuleTxt); pmRulesBox.style.display = 'none';
@@ -795,13 +794,13 @@ const sndCredits = h('div', 'note'); sndCredits.style.marginTop = '8px'; sndCred
 const sndStopBtn = h('button', 'add sm2', '⏹ Stop'), sndBar = h('section', 'g sndbar', null, h('span', null, '🔊 Playing your sound'), sndStopBtn); sndBar.style.display = 'none';
 const pmHeadTxt = h('span'), pmHeadSup = h('sup'), pmHead = h('div', 'pmh', null, pmHeadTxt, pmHeadSup), pmTMain = h('span'), pmTSup = h('sup'), pmTime = h('div', 'alt', null, pmTMain, pmTSup), pmEnd = h('div', 'ale'), pmFill = h('div', 'fill'), pmBar = h('div', 'bar sm', null, pmFill), pmWork = h('div', 'ale');
 pmTSup.style.display = 'none';
-const pmPause = h('button', 'add sm2', 'Pause'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
+const pmPause = h('button', 'add sm2', 'Pause'), pmHalt = h('button', 'add sm2 pmhalt', 'Stop'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
 const pmKeepSw = mkSw('Keep counting time after a pomodoro ends'); setSw(pmKeepSw.i, pmKeep);
 const pmKeepTxt = h('div', 'pmkd'), pmKeepBox = h('div', 'pmkeep', null, pmKeepSw.lab, pmKeepTxt);
 const pmCMsg = h('span'), pmC1 = h('button', 'cf yes', 'Yes'), pmC2 = h('button', 'cf', 'No'), pmC3 = h('button', 'cf', 'Keep going');
 const pmConf = h('div', 'conf big', null, pmCMsg, pmC1, pmC2, pmC3); pmConf.style.display = 'none';
 const pmMini = h('button', 'add sm2', '⌚ Mini'); pmMini.title = 'Show only this pomodoro in a small window'; pmMini.setAttribute('aria-label', 'Show only this pomodoro in a small window'); pmMini.onclick = () => miniEnter('pomo'); if (!hasMini) pmMini.style.display = 'none';
-const pmBtns = h('div', 'ctl', null, sndMkSil('pomo'), pmPause, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
+const pmBtns = h('div', 'ctl', null, sndMkSil('pomo'), pmPause, pmHalt, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
 const pmOt = h('div', 'pmot'); pmOt.style.display = 'none'; const pmRunBox = h('div', null, null, pmHead, pmTime, pmEnd, pmOt, pmBar, pmWork, pmKeepBox, pmBtns, pmConf);
 const pmSumTxt = h('div', 'pmt'), pmSumOk = h('button', 'add sm2', 'OK'), pmSum = h('div', 'pmsum', null, pmSumTxt, pmSumOk); pmSum.style.display = 'none';
 const pmDayT = h('div', 'pms'), pmFull = h('b', 'pmv'), pmPart = h('b', 'pmv'), pmRate = h('b', 'pmv'), pmTot = h('b', 'pmv'), pmWeek = h('div', 'note'), pmIns = h('div', 'note'), pmCons = h('div', 'note');
@@ -829,7 +828,7 @@ try { locCard.open = GM_getValue('locOpen', false) === true; } catch (e) {}
 locCard.addEventListener('toggle', () => { try { GM_setValue('locOpen', locCard.open); } catch (e) {} });
 // ---------- sync between devices: a code made on one device is pasted into the site on another ----------
 // (a static site has no server or account, so the code carries the data itself. Per-device things stay put: location, running alarm/pomodoro, window state.)
-const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmPK', 'pmLen', 'pmOtRules', 'sndCfg', 'pomo'];
+const SYNC_KEYS = ['fx', 'sleep', 'kanban', 'times', 'mode', 'wake', 'wakeEnd', 'zone', 'autoReset', 'alEl', 'pmKeep', 'pmShow', 'pmLen', 'pmOtRules', 'sndCfg', 'pomo'];
 const synBox = h('textarea', 'synct'); synBox.rows = 4; synBox.spellcheck = false; synBox.setAttribute('autocapitalize', 'off'); synBox.setAttribute('autocorrect', 'off');
 synBox.setAttribute('aria-label', 'Sync code'); synBox.placeholder = 'Your sync code appears here, or paste a code from another device';
 const synGet = h('button', 'add sm2', 'Get code from this device'), synUse = h('button', 'add sm2', 'Use this code here');
@@ -1740,15 +1739,14 @@ function miniRender() {
 }
 function miniTimerRender(kind) {   // the alarm and the pomodoro share one small layout: end time top left, countdown top right, bar, length bottom left, Elapsed switch bottom right
   const al = kind === 'alarm';
-  const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true), work = al ? null : h('div', 'mnwork'), ks = al ? null : mkSw('Pause keeps session running', true);
+  const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true), work = al ? null : h('div', 'mnwork');
   const head = al ? null : h('div', 'mnsess');   // pomodoro: the session number in a black header (not clickable)
   cdS.style.display = 'none';
   setSw(es.i, al ? alEl : pmKeep);
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
-  if (ks) { setSw(ks.i, pmPK); ks.i.onchange = () => { pmPKSw.i.checked = ks.i.checked; pmPKSw.i.onchange(); }; ks.lab.title = 'Pause the countdown only. The session clock keeps running, and the paused time counts as worked time at the percentage set under ⚙ Overtime rules. Applies the next time you press Pause.'; }
-  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work, ks };
-  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab), ...(ks ? [h('div', 'mnfoot mnk', null, ks.lab)] : []));
+  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
+  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab));
   miniTick();
 }
 function miniTick() {
@@ -1774,7 +1772,7 @@ function miniTick() {
       x.cdM.textContent = pmTMain.textContent; x.cdS.textContent = pmTSup.textContent; x.cdS.style.display = pmTSup.style.display;
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
-      x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0); if (x.ks) setSw(x.ks.i, pmPK);
+      x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
       if (x.work) { const ot = pmOt.style.display === 'none' ? '' : pmOt.textContent, wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = x.work.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
     }
   } else if (m.c) {
@@ -2334,9 +2332,15 @@ function pmStart(minutes) {
   try { GM_setValue('pmLen', Math.round(ms / 6e4)); } catch (e) {}
   savePm(); pmRender(); pmTick(now);
 }
-function pmPauseNow() {                                // freeze the countdown and the time tracking
-  const s = pm.session; if (!s || s.pauseAt) return;
-  const now = Date.now(); s.pauseAt = now; s.pk = !!(s.cur && pmPK);   // switch on: a pause during a pomodoro stops only the countdown
+function pmPauseNow(keep) {   // keep = true is Pause: the countdown stops, the session clock keeps running and the paused time is credited at the pause rate. false is Stop: the countdown and the session clock both freeze
+  const s = pm.session; if (!s) return;
+  const now = Date.now();
+  if (s.pauseAt) {   // already paused: Stop turns a Pause into a Stop from now on (the paused time so far is credited first, and the countdown stays frozen where it was)
+    if (keep || !s.pk) return;
+    pmPSettle(s, now); if (s.cur) s.cur.shift = (s.cur.shift || 0) + (now - s.pauseAt); s.pk = 0; s.pauseAt = now; savePm(); pmRender(); pmTick(now); return;
+  }
+  if (keep && !s.cur) return;   // Pause needs a running pomodoro (between pomodoros the overtime rules already apply)
+  s.pauseAt = now; s.pk = !!keep;
   if (!s.cur && s.mark) { s.extra = (s.extra || 0) + (now - s.mark) / 1000; s.mark = null; }
   savePm(); pmRender(); pmTick(now);
 }
@@ -2366,7 +2370,12 @@ pmGo.onclick = pmGoNow;
 [pmH, pmMin].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') pmGoNow(); }));
 PM_PRESETS.forEach(([m, l]) => { const b = h('button', 'chip', l); b.onclick = () => pmStart(m); pmChips.append(b); });
 pmC3.onclick = pmCancelConf;
-pmPause.onclick = () => { if (pm.session && pm.session.pauseAt) pmResume(); else pmPauseNow(); };
+pmPause.onclick = () => pmToggle(true); pmHalt.onclick = () => pmToggle(false);
+function pmToggle(keep) {   // the Pause and Stop buttons and keybinds (keep = true for Pause): Pause / resume, Stop / un-stop; Stop also turns a running Pause into a Stop
+  const s = pm.session; if (!s) return;
+  if (s.pauseAt) { if (keep) { if (s.pk) pmResume(); } else if (s.pk) pmPauseNow(false); else pmResume(); }
+  else if (keep ? s.cur : (s.cur || pmKeep)) pmPauseNow(!!keep);
+}
 pmDone.onclick = () => pmAsk('Finished early? It counts as a completed pomodoro with the time you actually worked.', ['Yes, I finished', () => pmFinishCur('early')]);
 pmQuit.onclick = () => pmAsk('Stop this pomodoro? The session carries on.', ['Count as quit early', () => pmFinishCur('quit')], ['Discard it', () => pmFinishCur('discard')]);
 pmExit.onclick = () => pmAsk('Exit now? This pomodoro counts as quit early and the session ends.', ['Exit', () => { pmEndSession(Date.now()); savePm(); pmRender(); }]);
@@ -2393,7 +2402,7 @@ pmClear.onclick = () => {
   clearTimeout(pmClearT); pmClear.textContent = 'Clear history'; pm.days = {}; pm.last = null; pm.log = []; savePm(); pmRender();
 };
 const pmRuleShow = () => { pmRuleG.i.value = String(pmRules.g); pmRuleW.i.value = String(pmRules.w); pmRuleR.i.value = String(pmRules.r); pmRuleP.i.value = String(pmRules.p); pmRulePreview(); };
-function pmRulePreview() { const g = pmRules.g, r = pmRules.r; pmRuleTxt.textContent = 'Full credit lasts ' + g + ' min after a pomodoro ends' + (g === 0 ? ' (so the overtime warning comes right away)' : '') + ', then ' + (r === 0 ? 'no credit' : r + '% credit') + ', and counting stops by itself ' + (g + pmRules.w) + ' min after it ended (everything after that is ignored). A blank box means the default: 5 min, 12 min, 25%. When Pause keeps session running is on, paused time is credited at ' + (pmRules.p === 0 ? '0% (no credit)' : pmRules.p + '%') + ' and never stops by itself (blank means 25%).'; }
+function pmRulePreview() { const g = pmRules.g, r = pmRules.r; pmRuleTxt.textContent = 'Full credit lasts ' + g + ' min after a pomodoro ends' + (g === 0 ? ' (so the overtime warning comes right away)' : '') + ', then ' + (r === 0 ? 'no credit' : r + '% credit') + ', and counting stops by itself ' + (g + pmRules.w) + ' min after it ended (everything after that is ignored). A blank box means the default: 5 min, 12 min, 25%. When you press Pause (not Stop), the session keeps running and paused time is credited at ' + (pmRules.p === 0 ? '0% (no credit)' : pmRules.p + '%') + ' and never stops by itself (blank means 25%).'; }
 [[pmRuleG, 'g', 5], [pmRuleW, 'w', 12], [pmRuleR, 'r', 25], [pmRuleP, 'p', 25]].forEach(([f, k, d]) => { f.i.oninput = () => { let v = Math.max(0, pmNum(f.i.value, d)); if (k === 'r' || k === 'p') v = Math.min(100, v); pmRules[k] = v; try { GM_setValue('pmOtRules', JSON.stringify(pmRules)); } catch (e) {} pmRulePreview(); pmTick(Date.now()); }; });
 function sndUiSync() { try { sndTodUiSync(); } catch (e) {} [sndA, sndT, sndP, sndU].forEach(f => { const k = f.k, up = !!sndHasUp[k], c = sndCfg[k]; if (f.cust) f.cust.disabled = !up; f.sel.value = c === 'custom' && !up ? 'classic' : c; f.nm.textContent = c === 'same' ? 'Plays your Alarm sound' : sndSmpOk(c) ? 'Sample: ' + (sndMeta[k] || '…') : up ? 'Your file: ' + sndHasUp[k] : 'No file yet (mp3, wav, flac, ogg, m4a...)'; f.rm.disabled = !up; }); }
 function sndB64Blob(b64, mime) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: mime }); }
@@ -2580,9 +2589,9 @@ sndVol.oninput = () => { sndCfg.vol = Math.min(100, Math.max(10, pmNum(sndVol.va
 sndVol.onchange = () => { unlockAudio(true); sndPlay('alarm', false); };
 sndBtn.onclick = () => { const open = sndBox.style.display === 'none'; sndBox.style.display = open ? '' : 'none'; sndBtn.setAttribute('aria-expanded', String(open)); };
 pmRulesBtn.onclick = () => { const open = pmRulesBox.style.display === 'none'; pmRulesBox.style.display = open ? '' : 'none'; pmRulesBtn.setAttribute('aria-expanded', String(open)); if (open) pmRuleShow(); };
-pmPKSw.i.onchange = () => { pmPK = pmPKSw.i.checked; pmPKSw.i.setAttribute('aria-checked', String(pmPK)); try { GM_setValue('pmPK', pmPK); } catch (e) {} pmRender(); pmTick(Date.now()); };   // Pause keeps session running: applies the next time you press Pause
 pmShowSw.i.onchange = () => { pmShow = pmShowSw.i.checked; pmShowSw.i.setAttribute('aria-checked', String(pmShow)); try { GM_setValue('pmShow', pmShow); } catch (e) {} pmRender(); pmTick(Date.now()); };
-if (skc && skc.onPause) skc.onPause(() => { const s = pm.session; if (!s) return; if (s.pauseAt) pmResume(); else if (s.cur || pmKeep) pmPauseNow(); });   // the pause / resume keybind: works in the full and the mini window
+if (skc && skc.onPause) skc.onPause(() => pmToggle(true));   // the Pause keybind (Shift + Alt + P): works in the full and the mini window
+if (skc && skc.onStop) skc.onStop(() => pmToggle(false));   // the Stop keybind (Shift + Alt + S)
 if (skc && skc.onWorked) skc.onWorked(() => { pmShowSw.i.checked = !pmShow; pmShowSw.i.onchange(); });   // the show / hide time worked keybind (works in the mini window too)
 pmKeepSw.i.onchange = () => {                          // keep counting after a pomodoro ends: on / off
   pmKeep = pmKeepSw.i.checked; pmKeepSw.i.setAttribute('aria-checked', String(pmKeep)); try { GM_setValue('pmKeep', pmKeep); } catch (e) {}
@@ -2726,11 +2735,14 @@ function pmRender() {                                  // layout: which parts ar
   pmBar.style.display = running ? '' : 'none';
   pmKeepBox.style.display = between ? '' : 'none';                       // only after a pomodoro has finished
   setSw(pmKeepSw.i, pmKeep);
-  setSw(pmPKSw.i, pmPK);
   pmKeepTxt.textContent = pmKeep ? 'Counting: the time since it ended is added to your total. Overtime has a penalty (set it under ⚙ Overtime rules at the very bottom of the app). Press End session & see total to stop it.' : 'Not counting: your time stopped when the pomodoro ended.';
-  pmPause.style.display = running || (between && (pmKeep || paused)) ? '' : 'none';
-  pmPause.textContent = paused ? 'Resume' : running ? 'Pause' : 'Pause counting';
-  pmPause.title = running && !paused && pmPK ? 'Stops the countdown. The session keeps running and paused time counts at ' + pmRules.p + '%.' : '';
+  const pk = !!(s && s.pk), stopped = paused && !pk;   // Pause (the session keeps running) or Stop (everything frozen)
+  pmPause.style.display = running ? '' : 'none';
+  pmPause.textContent = pk ? 'Resume' : 'Pause'; pmPause.disabled = stopped; pmPause.style.opacity = stopped ? '.45' : ''; pmPause.setAttribute('aria-pressed', String(pk));
+  pmPause.title = stopped ? 'Un-stop first' : pk ? 'Carry on: the countdown starts again' : 'Stops the countdown, but the session keeps running. The paused time counts at ' + pmRules.p + '% (see Overtime rules).';
+  pmHalt.style.display = running || (between && (pmKeep || paused)) ? '' : 'none';
+  pmHalt.textContent = stopped ? 'Un-stop' : running ? 'Stop' : 'Stop counting'; pmHalt.classList.toggle('on', stopped); pmHalt.setAttribute('aria-pressed', String(stopped));
+  pmHalt.title = stopped ? 'Carry on: the countdown and the session clock start again' : 'Freezes the countdown and the session clock completely';
   pmDone.style.display = pmQuit.style.display = pmExit.style.display = running ? '' : 'none'; pmStop.style.display = between ? '' : 'none';
   pmConf.style.display = 'none'; pmBtns.style.display = '';
   pmWork.style.display = s && pmShow ? '' : 'none';
@@ -2772,7 +2784,7 @@ function pmTick(n) {                                   // every tick: finish a p
   if (c) {
     const elMs = pmElapsed(s, n);
     pmTMain.textContent = clockFmt(Math.max(0, Math.ceil((c.dur - elMs) / 1000))); pmTSup.style.display = 'none'; pmTime.className = 'alt';
-    pmEnd.textContent = 'Ends at ' + clk.format(c.start + c.dur + (c.shift || 0)) + (paused ? (s.pk ? ' · paused, session runs' : ' · paused') : '');
+    pmEnd.textContent = 'Ends at ' + clk.format(c.start + c.dur + (c.shift || 0)) + (paused ? (s.pk ? ' · paused' : ' · stopped') : '');
     pmFill.style.width = Math.min(100, 100 * elMs / c.dur) + '%';
     worked = s.worked + elMs / 1000 + pmPCredit(pmPLive(s, n)); curTxt = 'This pomodoro started ' + clk.format(c.start) + ' · running ' + fmt(Math.floor(elMs / 1000)) + '\n';
   } else {
