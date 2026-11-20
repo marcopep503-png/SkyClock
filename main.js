@@ -222,11 +222,11 @@ if (gotLock) {
     win.setPosition(Math.round(x), Math.round(y));
   });
   const liveNotes = new Set();
-  ipcMain.on('notify', (e, title, text) => {
+  ipcMain.on('notify', (e, title, text, token) => {
     if (!Notification.isSupported()) return;
     const n = new Notification({ title: String(title).slice(0, 100), body: String(text).slice(0, 300), icon: ICON, timeoutType: 'never' });   // stays on screen until you close it (on Windows this adds a Close button)
     liveNotes.add(n); n.on('close', () => liveNotes.delete(n));                                                                              // keep a reference so a long-lived notification is not garbage collected
-    n.on('click', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });   // click it to open the app
+    n.on('click', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); if (token) win.webContents.send('notify:click', String(token)); } });   // click it (not its close button) to open the app and go to the countdown it was about
     n.show();
     if (win && win.isVisible() && !win.isFocused()) { win.flashFrame(true); win.once('focus', () => win.flashFrame(false)); }   // blink the taskbar button
   });

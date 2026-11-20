@@ -794,7 +794,7 @@ const sndCredits = h('div', 'note'); sndCredits.style.marginTop = '8px'; sndCred
 const sndStopBtn = h('button', 'add sm2', '⏹ Stop'), sndBar = h('section', 'g sndbar', null, h('span', null, '🔊 Playing your sound'), sndStopBtn); sndBar.style.display = 'none';
 const pmHeadTxt = h('span'), pmHeadSup = h('sup'), pmHead = h('div', 'pmh', null, pmHeadTxt, pmHeadSup), pmTMain = h('span'), pmTSup = h('sup'), pmTime = h('div', 'alt', null, pmTMain, pmTSup), pmEnd = h('div', 'ale'), pmFill = h('div', 'fill'), pmBar = h('div', 'bar sm', null, pmFill), pmWork = h('div', 'ale');
 pmTSup.style.display = 'none';
-const pmPause = h('button', 'add sm2', 'Pause'), pmHalt = h('button', 'add sm2 pmhalt', 'Stop'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
+const pmPause = h('button', 'add sm2', 'Pause'), pmHalt = h('button', 'add sm2 pmhalt', '■'), pmDone = h('button', 'add sm2', 'Done early'), pmQuit = h('button', 'add sm2', 'Quit this one'), pmExit = h('button', 'add sm2', 'Exit & see total'), pmStop = h('button', 'add sm2 endbtn', 'End session & see total');
 const pmKeepSw = mkSw('Keep counting time after a pomodoro ends'); setSw(pmKeepSw.i, pmKeep);
 const pmKeepTxt = h('div', 'pmkd'), pmKeepBox = h('div', 'pmkeep', null, pmKeepSw.lab, pmKeepTxt);
 const pmCMsg = h('span'), pmC1 = h('button', 'cf yes', 'Yes'), pmC2 = h('button', 'cf', 'No'), pmC3 = h('button', 'cf', 'Keep going');
@@ -2013,7 +2013,7 @@ function alarmTick(n) {
   if (!alarm) { alBox.style.display = 'none'; return; }
   alBox.style.display = 'block';
   const left = alarm.end - n;
-  if (!alarm.done && left <= 0) { alarm.done = true; saveAlarm(); if (-left < 72e5) { ringOn(); notify('Alarm finished', 'Ended at ' + clk.format(alarm.end)); miniAlert(alBox); } }   // it rings even if the computer slept through the end (up to 2 hours late); older than that stays silent
+  if (!alarm.done && left <= 0) { alarm.done = true; saveAlarm(); if (-left < 72e5) { ringOn(); notify('Alarm finished', 'Ended at ' + clk.format(alarm.end), { kind: 'alarm' }); miniAlert(alBox); } }   // it rings even if the computer slept through the end (up to 2 hours late); older than that stays silent
   const fin = alarm.done, when = ymd.format(alarm.end) === ymd.format(n) ? clk.format(alarm.end) : wkf.format(alarm.end);
   alTime.textContent = fin ? "Time's up" : clockFmt(Math.ceil(left / 1000));
   alEnd.textContent = (fin ? 'Ended at ' : 'Ends at ') + when;
@@ -2045,7 +2045,24 @@ function chips(H) {
   if (chipKey === H) return; chipKey = H;
   chipBox.replaceChildren(...[1, 2, 3, 4].map(i => { const b = h('button', 'chip', hl((H + i) % 24, 0)); b.onclick = () => addT(((H + i) % 24) * 60); return b; }));
 }
-const notify = (t, b) => { try { if (window.skyclock) window.skyclock.notify(t, b); } catch (e) {} };   // Windows notification, works even when the window is hidden
+const notifyTargets = new Map(); let notifySeq = 0;   // what each notification is about, kept under a short token that the shell hands back when you click the notification
+const notify = (t, b, tg) => { try { if (window.skyclock) { let tok = ''; if (tg) { tok = String(++notifySeq); notifyTargets.set(tok, tg); if (notifyTargets.size > 40) notifyTargets.delete(notifyTargets.keys().next().value); } window.skyclock.notify(t, b, tok); } } catch (e) {} };   // Windows notification, works even when the window is hidden
+function notifyGo(tg) {   // you clicked a notification (not its close button): the small window jumps to that countdown; the normal window scrolls to it and highlights it
+  if (!tg) return;
+  const t = tg.t || null, row = tg.kind === 'row' ? rows.find(z => z.t === t || (tg.id && z.t.kan && z.t.id === tg.id)) : null;
+  if (tg.kind === 'row' && !row) return;   // that timer has been removed since
+  if (miniOn) {
+    if (tg.kind === 'row') miniSet(row.t);
+    else if (tg.kind === 'alarm' ? alarm : pm.session) miniSel = { kind: tg.kind };
+    else miniExit();   // nothing for the small window to show (a finished pomodoro session): carry on in the normal window
+    if (miniOn) { miniRender(); miniTick(); miniPeek(true, true, true); return; }
+  }
+  const find = () => tg.kind === 'alarm' ? alBox : tg.kind === 'pomo' ? (pm.session ? pmRunBox : pmSum) : (rows.find(z => z.t === t || (tg.id && z.t.kan && z.t.id === tg.id)) || {}).row;
+  if (tg.kind === 'row' && kan.side !== 'time') { if (row.t.kan) { kanGoto(String(row.t.id).split(':')[0]); return; } flipTo('time', true); }   // on the Kanban side: a card goes to its card, anything else flips back to the Time until side
+  const hl2 = el => { el.classList.remove('khl'); void el.offsetWidth; el.classList.add('khl'); setTimeout(() => el.classList.remove('khl'), 3200); };
+  const go = mark => { const el = find(); if (!el) return; el.scrollIntoView({ block: 'center', behavior: 'auto' }); if (mark) hl2(el); };
+  go(false); setTimeout(() => go(false), 150); setTimeout(() => go(true), 500);   // again once the window has settled
+}
 let AC = null;   // one shared audio context, unlocked by a tap/click (phones and browsers block sound until then)
 let pendingSounds = [];   // sounds that came due while audio was blocked (screen off, locked, just woke up): played the moment audio works again
 function flushPending() { const p = pendingSounds; pendingSounds = []; p.forEach(f => { if (!f()) pendingSounds.push(f); }); }
@@ -2123,12 +2140,24 @@ let sndCfg = { alarm: 'classic', test: 'same', pomo: 'classic', until: 'classic'
 try { const v = JSON.parse(GM_getValue('sndCfg', 'null')); if (v) { ['alarm', 'test', 'pomo', 'until'].forEach(k => { if (typeof v[k] === 'string' && (SOUNDS[v[k]] || v[k] === 'custom' || sndSmpOk(v[k]) || (k === 'test' && v[k] === 'same'))) sndCfg[k] = v[k]; }); sndCfg.vol = Math.min(100, Math.max(10, +v.vol || 100)); if (v.tod && typeof v.tod === 'object') ['alarm', 'test', 'pomo', 'until'].forEach(k => { const t = v.tod[k]; if (!t || typeof t !== 'object') return; sndCfg.tod[k].on = t.on === true; SND_PERIODS.forEach(p => { const x = t[p.id]; if (typeof x === 'string' && (x === '' || SOUNDS[x] || x === 'custom' || sndSmpOk(x) || /^up:(mb|mg|eg|eb)$/.test(x))) sndCfg.tod[k][p.id] = x; }); }); } } catch (e) {}
 const sndOf = k => SOUNDS[sndEffId(k)] || SOUNDS.classic;
 const sndSave = () => { try { GM_setValue('sndCfg', JSON.stringify(sndCfg)); } catch (e) {} };
+const sndRetrying = {};
+function sndRetryFile(k, loud) {   // a few quick retries while the audio engine wakes up (a long file is never started on top of itself, so extra tries are harmless)
+  if (sndRetrying[k]) return; sndRetrying[k] = true; let n = 0;
+  const go = () => { const r = sndPlayFile(k, loud); if (r === false && ++n < 12) setTimeout(go, 250); else sndRetrying[k] = false; };
+  setTimeout(go, 250);
+}
 function sndPlay(k, loud) {   // plays the sound chosen for k: 'alarm', 'pomo' or 'until'. loud = the Time until beep (about double the alarm ring)
   if (k === 'test' && sndCfg.test === 'same') k = 'alarm';   // the Test alarm sound follows the Alarm sound until it gets a sound of its own
   if (sndIsFile(k)) {
     const id = sndEffId(k);
-    if (sndLoadedId[k] !== id) { sndSetFor(k, id).then(ok => { if (ok) sndPlayFile(k, loud); else tones(SOUNDS.classic.list, Math.min(1, (loud ? .65 : .3) * sndCfg.vol / 100), SOUNDS.classic, k); }); return true; }   // the file for this time of day is not loaded yet: load it, then play it
-    const r = sndPlayFile(k, loud); if (r !== null) return r;
+    if (sndLoadedId[k] !== id) {   // the file for this time of day is not loaded yet: load it, then play it (trying again while the audio engine wakes up, and falling back to beeps so something is always heard)
+      const beep = () => tones(SOUNDS.classic.list, Math.min(1, (loud ? .65 : .3) * sndCfg.vol / 100), SOUNDS.classic, k);
+      sndSetFor(k, id).then(ok => { if (!ok) return beep(); let n = 0; const go = () => { if (sndPlayFile(k, loud) === true) return; if (++n > 24) { pendingSounds.push(() => sndPlayFile(k, loud) === true); return beep(); } setTimeout(go, 250); }; go(); });
+      return true;
+    }
+    const r = sndPlayFile(k, loud);
+    if (r === false) sndRetryFile(k, loud);   // the audio engine was asleep (it is waking up now): try again in a moment, so a one-shot sound is not lost
+    if (r !== null) return r;
   }   // no file loaded: falls back to the classic beeps below
   const p = sndOf(k); if (!p.list) return true;
   return tones(p.list, Math.min(1, (loud ? .65 : .3) * (p.g || 1) * sndCfg.vol / 100), p, k);
@@ -2271,8 +2300,8 @@ function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
     if (raw >= cap) { txt = '⏹ Counting stopped by itself (you were away, or went far past the pomodoro). Nothing past this point is counted. Start the next pomodoro or end the session.'; cls = 'sevr'; }
     else if (raw > g) { txt = '⚠ Overtime: extra time ' + pmRateTxt() + '. Counting stops by itself in ' + clockFmt(Math.ceil(cap - raw)) + '. A break or the next pomodoro beats pushing on.'; cls = 'sevo'; }
     else txt = 'Full credit for ' + clockFmt(Math.ceil(g - raw)) + ' more, then ' + (pmRules.r === 0 ? 'no credit' : pmRules.r + '% credit') + '.';
-    if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time ' + pmRateTxt() + '. Take a break or start the next pomodoro.'); pmChime(); }
-    if (raw >= cap && !s.ot2) { s.ot2 = 1; savePm(); notify('Counting stopped', 'Time past this point is no longer counted. Start the next pomodoro or end the session.'); }
+    if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time ' + pmRateTxt() + '. Take a break or start the next pomodoro.', { kind: 'pomo' }); pmChime(); }
+    if (raw >= cap && !s.ot2) { s.ot2 = 1; savePm(); notify('Counting stopped', 'Time past this point is no longer counted. Start the next pomodoro or end the session.', { kind: 'pomo' }); }
   }
   pmOt.textContent = txt; pmOt.className = 'pmot ' + cls; pmOt.style.display = txt ? '' : 'none';
 }              // seconds counted since the last pomodoro ended
@@ -2418,8 +2447,7 @@ async function sndUpload(f, file) {
   try { r = await sndMakeAud(file); } catch (e) { f.msg.textContent = 'Could not read that audio file. Try an mp3, wav, flac, ogg, opus, m4a or aac.'; return; }
   if (isFinite(r.a.duration) && r.a.duration > SND_MAX_SEC) { try { URL.revokeObjectURL(r.url); } catch (e) {} f.msg.textContent = 'That clip is longer than 7 minutes 30 seconds. Pick a shorter one.'; return; }
   sndAttach(k, r.a, r.url, file.name); sndHasUp[k] = file.name; sndCfg[k] = 'custom'; sndSave(); sndUiSync();
-  try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, k)); f.msg.textContent = 'Saved on this device.'; } catch (e) { f.msg.textContent = 'Playing now, but this browser would not save it, so it will be gone after a reload.'; }
-  unlockAudio(true); sndPlay(k, k === 'until');
+  try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, k)); f.msg.textContent = 'Saved on this device.'; } catch (e) { f.msg.textContent = 'Loaded, but this browser would not save it, so it will be gone after a reload.'; }
 }
 [sndA, sndT, sndP, sndU].forEach(f => {
   const k = f.k;
@@ -2470,8 +2498,8 @@ const sndLoadQ = {}, sndFailT = {};
 function sndSetFor(k, id) {   // makes k's audio hold the file behind a sound id ('custom' = your upload, 'smp:...' = a sample); resolves true when it is ready. Loads run one after another
   const run = async () => {
     if (sndLoadedId[k] === id && sndAud[k]) return true;
-    let ok = false; try { ok = sndSmpOk(id) ? await sndLoadSample(k, id) : id === 'custom' ? await sndReloadUpload(k) : /^up:/.test(id) ? await sndReloadSlot(k, k + '@' + id.slice(3)) : false; } catch (e) {}
-    if (ok) sndLoadedId[k] = id;
+    let ok = false; try { const load = sndSmpOk(id) ? sndLoadSample(k, id) : id === 'custom' ? sndReloadUpload(k) : /^up:/.test(id) ? sndReloadSlot(k, k + '@' + id.slice(3)) : Promise.resolve(false); ok = await Promise.race([load, new Promise(r => setTimeout(() => r(false), 25000))]); } catch (e) {}   // a load that never finishes must not block the ones queued behind it
+    if (ok) { sndLoadedId[k] = id; delete sndFailT[k + '|' + id]; }
     if (!ok) sndFailT[k + '|' + id] = Date.now();
     return ok;
   };
@@ -2523,9 +2551,10 @@ const sndTodFill = sel => {
 // and any segment can pick any file uploaded for that sound type (so one file can serve several segments).
 const sndDec = blob => (typeof SND_DECODE_MAX !== 'undefined' ? blob.size <= SND_DECODE_MAX : undefined);   // the website decodes uploads into memory (exact pause and resume); the desktop app streams them
 async function sndReloadSlot(k, key) { try { const rec = await sndIdb('readonly', s => s.get(key)); if (rec && rec.blob) { const r = await sndMakeAud(rec.blob, sndDec(rec.blob)); sndAttach(k, r.a, r.url, rec.name); return true; } } catch (e) {} return false; }
-async function sndSlotNames() {   // at start-up: which segments already have an uploaded file (names only; the file itself loads when its time of day comes)
-  for (const k of ['alarm', 'test', 'pomo', 'until']) for (const p of SND_PERIODS) { try { const rec = await sndIdb('readonly', s => s.get(k + '@' + p.id)); if (rec && rec.blob) sndHasUp[k + '@' + p.id] = rec.name; } catch (e) {} }
-  sndUiSync(); sndTodSync();
+async function sndSlotNames(tries = 0) {   // at start-up: which segments already have an uploaded file (names only; the file itself loads when its time of day comes). A read that fails is tried again
+  let bad = false;
+  for (const k of ['alarm', 'test', 'pomo', 'until']) for (const p of SND_PERIODS) { try { const rec = await sndIdb('readonly', s => s.get(k + '@' + p.id)); if (rec && rec.blob) sndHasUp[k + '@' + p.id] = rec.name; } catch (e) { bad = true; } }
+  sndUiSync(); sndTodSync(); if (bad && tries < 5) setTimeout(() => sndSlotNames(tries + 1), 10000);
 }
 async function sndUploadSlot(f, p, file, row) {
   const k = f.k, key = k + '@' + p.id; if (!file) return;
@@ -2533,8 +2562,7 @@ async function sndUploadSlot(f, p, file, row) {
   let r; try { r = await sndMakeAud(file, sndDec(file)); } catch (e) { row.msg.textContent = 'Could not read that audio file. Try an mp3, wav, flac, ogg, opus, m4a or aac.'; return; }
   if (isFinite(r.a.duration) && r.a.duration > SND_MAX_SEC) { try { URL.revokeObjectURL(r.url); } catch (e) {} row.msg.textContent = 'That clip is longer than 7 minutes 30 seconds. Pick a shorter one.'; return; }
   sndAttach(k, r.a, r.url, file.name); sndLoadedId[k] = 'up:' + p.id; sndHasUp[key] = file.name; sndCfg.tod[k][p.id] = 'up:' + p.id; sndSave(); sndUiSync();
-  try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, key)); row.msg.textContent = 'Saved on this device.'; } catch (e) { row.msg.textContent = 'Playing now, but this browser would not save it, so it will be gone after a reload.'; }
-  unlockAudio(true); sndPreview(k, 'up:' + p.id);
+  try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, key)); row.msg.textContent = 'Saved on this device.'; } catch (e) { row.msg.textContent = 'Loaded, but this browser would not save it, so it will be gone after a reload.'; }
 }
 function sndStripTip(T, el, text) {   // the pop-up over a coloured segment: shows its time range and sound, kept inside the panel
   const tip = T.tip; tip.textContent = text; tip.style.display = '';
@@ -2542,6 +2570,7 @@ function sndStripTip(T, el, text) {   // the pop-up over a coloured segment: sho
   let x = s.left - b.left + s.width / 2; x = Math.max(w / 2 + 2, Math.min(b.width - w / 2 - 2, x));
   tip.style.left = x + 'px'; tip.style.top = (st.top - b.top - 6) + 'px';
 }
+function sndLoadNote(k, id) { return sndFileId(id) && sndLoadedId[k] !== id ? (sndFailT[k + '|' + id] ? ' (could not be opened, retrying)' : ' (loading...)') : ''; }   // shown next to "Right now" so a file that is not ready can be seen
 function sndTodUiSync() {   // the time-of-day rows, today's times, and the all-day schedule for each countdown type
   const n = Date.now(), d = sndTodDay(n), cur = sndTodPeriod(n), pct = ms => sodOf(ms) / 864, valid = SND_PERIODS.filter(p => d.st[p.id] != null);
   [sndA, sndT, sndP, sndU].forEach(f => {
@@ -2550,8 +2579,8 @@ function sndTodUiSync() {   // the time-of-day rows, today's times, and the all-
     const same = k === 'test' && sndCfg.test === 'same'; T.swRow.style.display = same ? 'none' : ''; setSw(T.sw.i, td.on); T.box.style.display = td.on && !same ? '' : 'none'; if (!td.on || same) return;   // the Test alarm sound that follows the Alarm sound has no time-of-day options of its own
     T.rows.forEach(r => { const s = d.st[r.p.id]; r.cust.disabled = !sndHasUp[k]; r.cust._ups.forEach(([o, q]) => { const fn = sndHasUp[k + '@' + q.id]; o.disabled = o.hidden = !fn; o.textContent = fn ? '📁 ' + fn + ' (' + q.name.toLowerCase() + ')' : '📁 (none)'; });
       const cv = td[r.p.id]; r.sel.value = (cv === 'custom' && !sndHasUp[k]) || (/^up:/.test(cv) && !sndHasUp[k + '@' + cv.slice(3)]) ? '' : cv;
-      const own = sndHasUp[k + '@' + r.p.id]; r.nm.textContent = own ? 'Your file for this time: ' + own : 'No file uploaded for this time yet'; r.rm.disabled = !own; r.lab.textContent = r.p.ico + ' After ' + r.p.name.toLowerCase() + ' begins' + (s != null ? ' · ' + clk.format(s) : '') + (cur === r.p.id ? ' · now' : ''); r.lab.style.fontWeight = cur === r.p.id ? '700' : ''; });
-    const lines = ['Right now: ' + (cur ? SND_PERIODS.find(p => p.id === cur).name.toLowerCase() + ' stretch' : 'no blue or golden hour found here, so the main sound') + ' → ' + sndNameOf(k, cur ? pick(cur) : sndCfg[k])];
+      const own = sndHasUp[k + '@' + r.p.id]; r.nm.textContent = own ? 'Your file for this time: ' + own + (sndFailT[k + '|up:' + r.p.id] ? ' (could not be opened, retrying)' : '') : 'No file uploaded for this time yet'; r.rm.disabled = !own; r.lab.textContent = r.p.ico + ' After ' + r.p.name.toLowerCase() + ' begins' + (s != null ? ' · ' + clk.format(s) : '') + (cur === r.p.id ? ' · now' : ''); r.lab.style.fontWeight = cur === r.p.id ? '700' : ''; });
+    const lines = ['Right now: ' + (cur ? SND_PERIODS.find(p => p.id === cur).name.toLowerCase() + ' stretch' : 'no blue or golden hour found here, so the main sound') + ' → ' + sndNameOf(k, cur ? pick(cur) : sndCfg[k]) + sndLoadNote(k, sndResolve(k, cur ? pick(cur) : sndCfg[k]))];
     if (valid.length) {
       lines.push('🌙 Overnight until ' + clk.format(d.st[valid[0].id]) + ': ' + sndNameOf(k, pick(valid[valid.length - 1].id)) + ' (carried over from the evening)');
       valid.forEach((p, i) => { const e = i + 1 < valid.length ? d.st[valid[i + 1].id] : d.tom; lines.push(p.ico + ' ' + clk.format(d.st[p.id]) + ' to ' + (e != null ? clk.format(e) + (i + 1 < valid.length ? '' : ' tomorrow') : 'the next morning blue hour') + ': ' + sndNameOf(k, pick(p.id)) + (i + 1 === valid.length ? ' (plays all night)' : '')); });
@@ -2582,6 +2611,7 @@ function sndTodUiSync() {   // the time-of-day rows, today's times, and the all-
 }
 setInterval(() => { sndTodSync(); if (sndBox.style.display !== 'none') { try { sndTodUiSync(); } catch (e) {} } }, 2000);
 sndBtn.addEventListener('click', () => setTimeout(sndTodUiSync, 0)); sndSlotNames();
+addEventListener('focus', () => sndTodSync()); addEventListener('visibilitychange', () => { if (!document.hidden) sndTodSync(); });   // get each file ready again as soon as you come back to the app
 root.addEventListener('pointerdown', e => { const t = e.target; if (t && t.closest && t.closest('.sndstrip')) return; [sndA, sndT, sndP, sndU].forEach(f => { if (f.tod) f.tod.tip.style.display = 'none'; }); }, true);   // a tap anywhere else closes the pop-up (touch screens have no mouse-leave)
 sndUiSync(); ['alarm', 'test', 'pomo', 'until'].forEach(sndLoad);
 sndVol.value = String(sndCfg.vol); sndVolTxt.textContent = sndCfg.vol + '%';
@@ -2592,6 +2622,7 @@ pmRulesBtn.onclick = () => { const open = pmRulesBox.style.display === 'none'; p
 pmShowSw.i.onchange = () => { pmShow = pmShowSw.i.checked; pmShowSw.i.setAttribute('aria-checked', String(pmShow)); try { GM_setValue('pmShow', pmShow); } catch (e) {} pmRender(); pmTick(Date.now()); };
 if (skc && skc.onPause) skc.onPause(() => pmToggle(true));   // the Pause keybind (Shift + Alt + P): works in the full and the mini window
 if (skc && skc.onStop) skc.onStop(() => pmToggle(false));   // the Stop keybind (Shift + Alt + S)
+if (skc && skc.onNotifyClick) skc.onNotifyClick(tok => notifyGo(notifyTargets.get(tok)));   // a notification was clicked: go to the countdown it was about
 if (skc && skc.onWorked) skc.onWorked(() => { pmShowSw.i.checked = !pmShow; pmShowSw.i.onchange(); });   // the show / hide time worked keybind (works in the mini window too)
 pmKeepSw.i.onchange = () => {                          // keep counting after a pomodoro ends: on / off
   pmKeep = pmKeepSw.i.checked; pmKeepSw.i.setAttribute('aria-checked', String(pmKeep)); try { GM_setValue('pmKeep', pmKeep); } catch (e) {}
@@ -2741,7 +2772,7 @@ function pmRender() {                                  // layout: which parts ar
   pmPause.textContent = pk ? 'Resume' : 'Pause'; pmPause.disabled = stopped; pmPause.style.opacity = stopped ? '.45' : ''; pmPause.setAttribute('aria-pressed', String(pk));
   pmPause.title = stopped ? 'Un-stop first' : pk ? 'Carry on: the countdown starts again' : 'Stops the countdown, but the session keeps running. The paused time counts at ' + pmRules.p + '% (see Overtime rules).';
   pmHalt.style.display = running || (between && (pmKeep || paused)) ? '' : 'none';
-  pmHalt.textContent = stopped ? 'Un-stop' : running ? 'Stop' : 'Stop counting'; pmHalt.classList.toggle('on', stopped); pmHalt.setAttribute('aria-pressed', String(stopped));
+  pmHalt.textContent = stopped ? 'Un-stop' : '■'; pmHalt.setAttribute('aria-label', stopped ? 'Un-stop' : running ? 'Stop' : 'Stop counting');pmHalt.classList.toggle('on', stopped); pmHalt.setAttribute('aria-pressed', String(stopped));
   pmHalt.title = stopped ? 'Carry on: the countdown and the session clock start again' : 'Freezes the countdown and the session clock completely';
   pmDone.style.display = pmQuit.style.display = pmExit.style.display = running ? '' : 'none'; pmStop.style.display = between ? '' : 'none';
   pmConf.style.display = 'none'; pmBtns.style.display = '';
@@ -2765,7 +2796,7 @@ function pmTick(n) {                                   // every tick: finish a p
     if (n >= endAt) {
       pmEndCur('full', endAt);
       const done = s.n >= PM_MAX;
-      notify(done ? 'Pomodoro session complete' : 'Pomodoro ' + s.n + ' complete', 'Worked ' + fmt(Math.round(s.worked)) + ' so far.');
+      notify(done ? 'Pomodoro session complete' : 'Pomodoro ' + s.n + ' complete', 'Worked ' + fmt(Math.round(s.worked)) + ' so far.', { kind: 'pomo' });
       pmChime();
       if (done) pmEndSession(endAt);
       savePm(); pmRender(); s = pm.session; miniAlert(done ? pmSum : pmRunBox);
@@ -2862,7 +2893,7 @@ function tick() {
     let d = t.v * 60 - sx; if (d < 0) d += 86400;
     const since = (86400 - d) % 86400, os = nowS - since;          // when this clock time last came round, in whole seconds
     const wrapped = !fz && !isNaN(r.last) && d > r.last + 5;
-    if (wrapped) { beep(2); notify('Time reached', (t.title ? t.title + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60)); }
+    if (wrapped) { beep(2); notify('Time reached', (t.title ? t.title + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60), { kind: 'row', t, id: t.kan ? t.id : null }); }
     if (!t.armed) { t.armed = n; saveSlot(t); }
     if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; saveSlot(t); }
     else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; saveSlot(t); }

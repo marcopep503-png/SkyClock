@@ -3,7 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // The only things the page is allowed to ask the app to do.
 contextBridge.exposeInMainWorld('skyclock', {
-  notify: (title, body) => ipcRenderer.send('notify', String(title), String(body)),
+  notify: (title, body, token) => ipcRenderer.send('notify', String(title), String(body), token == null ? '' : String(token)),
+  onNotifyClick: cb => ipcRenderer.on('notify:click', (e, token) => cb(String(token))),
   getPin: () => ipcRenderer.invoke('pin:get'),
   togglePin: () => ipcRenderer.invoke('pin:toggle'),
   lookupLocation: () => ipcRenderer.invoke('geo:lookup'),
