@@ -114,6 +114,54 @@ const BAR = [['#5b4bff','#9a6bff'],['#5b4bff','#8a6bff'],['#4f5bff','#7a7bff'],[
 ['#ff7a59','#ffb347'],['#ffb347','#ffd84d'],['#ffd84d','#9be15d'],['#7ee04f','#2ad4a0'],['#2ad4a0','#2ac4ff'],['#2ab4ff','#4a8bff'],
 ['#29a7ff','#5ee7df'],['#2ad4ff','#56e39f'],['#3ad0c0','#a8e063'],['#a8e063','#ffd84d'],['#ffd84d','#ffa94d'],['#ffa94d','#ff6f61'],
 ['#ff6f61','#d94fa0'],['#d94fa0','#8a5bff'],['#8a5bff','#5b6bff'],['#6a5cff','#9a6bff'],['#5b4bff','#9a6bff'],['#5b4bff','#9a6bff']];
+// ---------- sky colours from the sun's real height above the horizon ----------
+// The colour tables above hold one entry per clock hour. Instead of reading them by the clock, the sun's real height is turned into a position in those same tables
+// (0 to 24, like an hour): the dawn glow shows when the sun is really at the horizon, golden when it is about 6 degrees up, and so on, on every day of the year and at any latitude.
+let skyLocBad = false;   // set when looking up your location fails; until a location is found (or you pick a time zone) the sky falls back to the clock hour, the original sky
+const skyLocOk = () => !skyLocBad && isFinite(LAT) && isFinite(LON) && Math.abs(LAT) <= 90 && Math.abs(LON) <= 180;
+let skyMark = null, skyMarkKey = '';   // the small white symbol in the top right corner
+function skyMarkSet(on) {   // a sun with rays when the sky follows the real sun, a plain circle when it has fallen back to the clock hour
+  if (!skyMark) return;
+  const key = on + '|' + skyLocBad; if (key === skyMarkKey) return; skyMarkKey = key;
+  const tip = on ? "The sky follows the sun's real height above the horizon at your location" : 'The sky follows the clock hour (' + (skyLocBad ? 'your location could not be found' : 'there is no usable location') + ')';
+  skyMark.textContent = on ? '☼\uFE0E' : '○'; skyMark.title = tip; skyMark.setAttribute('aria-label', tip);
+}
+function solarAlt(ms, lat = LAT, lon = LON) {   // the sun's height above the horizon in degrees (the same angles the golden hour, blue hour and twilight panels use)
+  const d = ms / 864e5 + 2440587.5 - 2451545, g = (357.529 + 0.98560028 * d) * R, q = 280.459 + 0.98564736 * d;
+  const Lm = (q + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * R, eps = (23.439 - 3.6e-7 * d) * R;
+  const dec = Math.asin(Math.sin(eps) * Math.sin(Lm)), ra = Math.atan2(Math.cos(eps) * Math.sin(Lm), Math.cos(Lm));
+  const ha = (280.46061837 + 360.98564736629 * d + lon) * R - ra;
+  return Math.asin(Math.sin(lat * R) * Math.sin(dec) + Math.cos(lat * R) * Math.cos(dec) * Math.cos(ha)) / R;
+}
+const skyDay = { key: '', noon: 0, max: 0, min: 0 };
+function skyNoon(ms) {   // the solar noon nearest to ms, and the sun's highest and lowest height around it
+  let best = null;
+  for (const o of [-1, 0, 1]) { const s = sun(ms + o * 864e5, 90.833), nn = (s[0] + s[1]) / 2; if (best == null || Math.abs(nn - ms) < Math.abs(best - ms)) best = nn; }
+  const key = Math.round(best / 6e4) + '|' + LAT + '|' + LON;
+  if (skyDay.key !== key) { skyDay.key = key; skyDay.noon = best; skyDay.max = solarAlt(best); skyDay.min = solarAlt(best + 432e5); }
+  return skyDay;
+}
+const SKY_G = [-18, -12, -6, -0.833, 6];   // sun heights that line up with table positions: night ends, deep twilight, civil twilight (the app's Dawn and Night), sunrise / sunset, golden hour
+const SKY_PM = [3, 4, 5, 6, 7], SKY_PE = [21, 20, 19, 18, 17];   // their positions in the tables, going up (morning) and coming down (evening)
+const skyLerp = (g, ys) => { for (let i = 1; i < SKY_G.length; i++) if (g <= SKY_G[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (g - SKY_G[i - 1]) / (SKY_G[i] - SKY_G[i - 1]); return ys[ys.length - 1]; };
+function skyP(a, D, evening) {   // the position in the 24-hour tables for a sun height a, going up (morning) or coming down (evening)
+  if (a >= 6) { const f = Math.min(1, (a - 6) / (Math.max(D.max, 30) - 6)); return evening ? 17 - f * 5 : 7 + f * 5; }   // full day: golden at 6 degrees, clear blue once the sun is high (a low winter sun stays golden rather than jumping to blue)
+  if (a >= -18) return skyLerp(a, evening ? SKY_PE : SKY_PM);   // sunrise glow at the horizon, purple twilight at -6, deep blue at -12, night at -18 (and the mirror image at dusk)
+  const f = Math.min(1, (-18 - a) / Math.max(1, -18 - D.min));   // deep night: 0 where twilight ends, 1 at solar midnight
+  return evening ? 21 + 3 * f : 27 - 3 * f;
+}
+function skySunColors(ms) {   // top and bottom sky colours, and the two progress-bar colours, for a moment in time
+  const D = skyNoon(ms), u = (ms - D.noon) / 36e5, a = solarAlt(ms);   // u: hours from solar noon
+  let w = u >= 0 ? 1 : 0;   // 0 = the sun is rising, 1 = it is coming down
+  if (Math.abs(u) < 1) { const x = (u + 1) / 2; w = x * x * (3 - 2 * x); }   // blend across solar noon, so there is never a jump
+  else if (u > 11) w = 1 - 0.5 * (u - 11);   // and across solar midnight (it only shows where the night never gets fully dark)
+  else if (u < -11) w = 0.5 * (-11 - u);
+  const pM = skyP(a, D, false), pE = skyP(a, D, true);
+  const col = (tbl, p) => { p = ((p % 24) + 24) % 24; const i = Math.floor(p), f = p - i, A = tbl[i], B = tbl[(i + 1) % 24]; return [0, 1].map(k => hex(A[k]).map((v, j) => v + (hex(B[k])[j] - v) * f)); };
+  const blend = tbl => { const m = col(tbl, pM), e = col(tbl, pE); return m.map((c, k) => 'rgb(' + c.map((v, j) => Math.round(v + (e[k][j] - v) * w)).join(',') + ')'); };
+  const s = blend(SKY), b = blend(BAR);
+  return { top: s[0], bot: s[1], l1: b[0], l2: b[1] };
+}
 let mode = 'sky';
 try { mode = GM_getValue('mode', 'sky') === 'grain' ? 'grain' : 'sky'; } catch (e) {}
 // custom start time (minutes after midnight, Eastern); null = real solar dawn
@@ -325,7 +373,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
+.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.skymark{flex:none;font-style:normal;font-weight:400;font-size:17px;line-height:1;color:#fff;opacity:.9;margin-left:8px;padding:0 2px;text-shadow:none;cursor:default;-webkit-app-region:no-drag}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -1632,6 +1680,7 @@ h24Sw.i.onchange = () => {   // every clock time switches between 12-hour and 24
   build(); kanRender(); pmRender(); renderZone(); tick();
 };
 const hd = h('div', 'hd', null, h('span', null, '🕰️ Sky Clock'), pinBtn, minBtn, xBtn);
+skyMark = h('i', 'skymark'); skyMark.setAttribute('role', 'img'); hd.append(skyMark);   // top right corner: shows whether the sky follows the real sun
 const refreshPin = () => { if (sk) sk.getPin().then(on => pinBtn.classList.toggle('on', !!on)); };
 pinBtn.onclick = () => { if (sk) sk.togglePin().then(on => pinBtn.classList.toggle('on', !!on)); };
 minBtn.onclick = () => { if (sk) sk.minimize(); };
@@ -2842,12 +2891,17 @@ function tick() {
   cHM.textContent = tg('hour') + ':' + tg('minute'); cSS.textContent = ':' + tg('second'); cAP.textContent = ' ' + tg('dayPeriod'); cDate.textContent = df.format(now);
   const q = hf.formatToParts(now), get = t => +q.find(x => x.type === t).value;
   const H = get('hour'), M = get('minute'), S = get('second'), sod = H * 3600 + M * 60 + S;
-  if (skyKey !== mode + H + ':' + M) {
-    skyKey = mode + H + ':' + M;
-    const a = SKY[H], b = SKY[(H + 1) % 24], c = BAR[H], d = BAR[(H + 1) % 24];
-    panel.style.setProperty('--top', mix(a[0], b[0], M / 60)); panel.style.setProperty('--bot', mix(a[1], b[1], M / 60));
-    panel.style.setProperty('--l1', mix(c[0], d[0], M / 60)); panel.style.setProperty('--l2', mix(c[1], d[1], M / 60));   // the hourly bar colours, also used by the LIVE tags on the Sky background
-    if (mode === 'grain') { panel.style.setProperty('--g1', mix(c[0], d[0], M / 60)); panel.style.setProperty('--g2', mix(c[1], d[1], M / 60)); }
+  let sk = null;   // the sky follows the sun's real height; without a working location it falls back to the clock hour (the original sky). It only repaints when a colour actually changes
+  if (skyLocOk()) { try { sk = skySunColors(n); if (/NaN/.test(sk.top + sk.bot + sk.l1 + sk.l2)) sk = null; } catch (e) { sk = null; } }
+  skyMarkSet(!!sk);
+  const skK = mode + (sk ? sk.top + sk.bot + sk.l1 + sk.l2 : H + ':' + M);
+  if (skyKey !== skK) {
+    skyKey = skK;
+    let top, bot, l1, l2;
+    if (sk) ({ top, bot, l1, l2 } = sk);
+    else { const a = SKY[H], b = SKY[(H + 1) % 24], c = BAR[H], d = BAR[(H + 1) % 24]; top = mix(a[0], b[0], M / 60); bot = mix(a[1], b[1], M / 60); l1 = mix(c[0], d[0], M / 60); l2 = mix(c[1], d[1], M / 60); }
+    panel.style.setProperty('--top', top); panel.style.setProperty('--bot', bot); panel.style.setProperty('--l1', l1); panel.style.setProperty('--l2', l2);
+    if (mode === 'grain') { panel.style.setProperty('--g1', l1); panel.style.setProperty('--g2', l2); }
     else { panel.style.removeProperty('--g1'); panel.style.removeProperty('--g2'); }
   }
   const mid = n - sod * 1000 - now.getMilliseconds();
@@ -3043,7 +3097,7 @@ function renderLoc() {
 }
 function setLoc(l, persist) {
   const tzChanged = l.tz !== TZ;
-  loc = l; TZ = l.tz; LAT = l.lat; LON = l.lon; mkFmts();
+  skyLocBad = false; loc = l; TZ = l.tz; LAT = l.lat; LON = l.lon; mkFmts();
   if (tzChanged) wakeEnd = null; skyKey = ''; chipKey = -1; resetAt = 0; fxLast = 0; moonCache.key = '';
   tracked.forEach(t => { delete t.span; delete t.dur0; }); rows.forEach(r => { r.last = NaN; r.first = true; });   // countdowns re-measure in the new zone (no false "time reached")
   if (persist) { try { GM_setValue('loc', JSON.stringify({ id: l.id, lat: l.lat, lon: l.lon, tz: l.tz, city: l.city })); if (tzChanged) GM_setValue('wakeEnd', 0); save(); } catch (e) {} }
@@ -3051,14 +3105,14 @@ function setLoc(l, persist) {
 }
 locSel.onchange = () => { const l = US_LOCS.find(x => x.id === locSel.value); if (l) { locMsg.textContent = 'Showing ' + l.city + ' (' + l.zone + ').'; setLoc(l, true); } };
 locGeo.onclick = () => {
-  if (!window.skyclock || !window.skyclock.lookupLocation) { locMsg.textContent = 'Location lookup is not available. Pick your time zone above instead.'; return; }
+  if (!window.skyclock || !window.skyclock.lookupLocation) { locMsg.textContent = 'Location lookup is not available. Pick your time zone above instead.'; skyLocBad = true; skyKey = ''; tick(); return; }
   locMsg.textContent = 'Looking up your approximate location from your internet connection…';
   window.skyclock.lookupLocation().then(g => {
-    if (!g || !g.ok) { locMsg.textContent = 'Could not find your location (are you online?). Pick your time zone above instead.'; return; }
+    if (!g || !g.ok) { locMsg.textContent = 'Could not find your location (are you online?). Pick your time zone above instead.'; skyLocBad = true; skyKey = ''; tick(); return; }
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setLoc({ id: 'gps', label: '📍 My location', city: g.city || 'your location', short: 'your location', zone: 'Your device time zone', tz, lat: g.lat, lon: g.lon }, true);
     locMsg.textContent = 'Using ' + (g.city || 'your approximate location') + ', found from your internet connection, so it can be a few miles off.';
-  }).catch(() => { locMsg.textContent = 'Could not find your location. Pick your time zone above instead.'; });
+  }).catch(() => { locMsg.textContent = 'Could not find your location. Pick your time zone above instead.'; skyLocBad = true; skyKey = ''; tick(); });
 };
 renderLoc();
 pmRender(); renderZone(); build(); applyMode(mode, false); place(); kanInit(); applyInd(ind);
