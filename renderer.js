@@ -642,7 +642,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnpk:hover{background:rgba(28,34,90,.95)}
 .mnpk.t{top:0}.mnpk.b{bottom:0}
 .shell.pk-t .mnpk.t,.shell.pk-b .mnpk.b{display:block}
-.mnpk:empty{display:none!important}
+.mnpk:empty{display:none!important}.mnback{display:none;height:22px;line-height:22px;padding:0 12px;background:rgba(8,10,30,.92);border-bottom:1px solid rgba(255,255,255,.12);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.mnback:hover,.mnback:focus-visible{background:rgba(28,34,90,.95);outline:none}.shell.hasback .mnback{display:block}.shell.hasback .mnpk.t{top:22px}
 .mnch{display:flex;align-items:center;gap:6px;padding-left:8px;border-left:3px solid var(--mc,#8ea0d8)}
 .mnct{flex:1;min-width:0;font-weight:700;font-size:13px;overflow-wrap:anywhere}
 .mncl{margin:4px 0 0 11px;font-size:11.5px;font-variant-numeric:tabular-nums;opacity:.92}
@@ -1698,12 +1698,14 @@ let rows = [];
 // Click the card to go back to the normal window. Up / Down or the scroll wheel cycle the timers (the one above and the one below show as a line over the card's
 // top and bottom edge for a moment). Left / Right, a sideways scroll or the switch-view keybind swap a Kanban timer between its Time until card and its Kanban card.
 const MINI_W = 300;
-let miniOn = false, miniSel = null, miniView = 'time', miniIdxLast = 0, miniRefs = null, miniColl = {}, miniAcc = 0, miniWheelAt = 0, miniHintT = 0, miniFitRaf = 0, miniPinned = {}, miniPeekT = 0, miniLastH = 0, miniDrag = null;
+let miniOn = false, miniSel = null, miniView = 'time', miniIdxLast = 0, miniRefs = null, miniColl = {}, miniAcc = 0, miniWheelAt = 0, miniHintT = 0, miniFitRaf = 0, miniPinned = {}, miniPeekT = 0, miniLastH = 0, miniDrag = null, miniBack = null;
 try { const v = GM_getValue('miniPins', {}); if (v && typeof v === 'object' && !Array.isArray(v)) miniPinned = v; } catch (e) {}
 const savePins = () => { try { GM_setValue('miniPins', { ...miniPinned }); } catch (e) {} };
 const mnPk = h('div', 'mnpk t'), mnPkB = h('div', 'mnpk b'), mnBody = h('div', 'mnbody');
-const mini = h('div', 'mini', null, mnBody, mnPk, mnPkB);
+const mnBack = h('div', 'mnback'); mnBack.setAttribute('role', 'button'); mnBack.tabIndex = 0; mnBack.title = 'Go back to the countdown you were on before the notification took you here (Backspace)';
+const mini = h('div', 'mini', null, mnBack, mnBody, mnPk, mnPkB);
 mnPk.title = 'Go to the previous timer'; mnPkB.title = 'Go to the next timer';
+mnBack.onclick = e => { e.stopPropagation(); miniReturn(); }; mnBack.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); miniReturn(); } };
 mnPk.onclick = e => { e.stopPropagation(); miniGo(-1); }; mnPkB.onclick = e => { e.stopPropagation(); miniGo(1); };   // clicking a banner moves to that timer
 shell.append(mini);
 const miniList = () => [...rows.map(r => ({ kind: 'row', r })), ...(alarm ? [{ kind: 'alarm' }] : []), ...(pm.session ? [{ kind: 'pomo' }] : [])];   // everything the small window can show: the Time until rows, then the alarm, then the pomodoro
@@ -1715,6 +1717,21 @@ const miniLine = (en, a) => {
   if (en.kind === 'pomo') return a + ' 🍅 Pomodoro ' + (pm.session ? pm.session.n : '') + ' · ' + pmTMain.textContent;
   const r = en.r; return a + ' ' + hl(Math.floor(r.t.v / 60), r.t.v % 60) + (r.t.title ? ' · ' + r.t.title : '') + ' · ' + r.cdMain.textContent;
 };
+const miniBackOk = () => {   // is there still a countdown to go back to (it exists, and it is not the one on screen)?
+  if (!miniBack) return false;
+  const keep = miniSel; miniSel = miniBack.sel; const bi = miniIdx(); miniSel = keep;
+  if (bi < 0 || bi === miniIdx()) { miniBack = null; return false; }
+  return true;
+};
+const miniName = en => en.kind === 'alarm' ? '⏰ Alarm' : en.kind === 'pomo' ? '🍅 Pomodoro ' + (pm.session ? pm.session.n : '') : hl(Math.floor(en.r.t.v / 60), en.r.t.v % 60) + (en.r.t.title ? ' · ' + en.r.t.title : '');
+function miniBackSync() {   // the "Back" bar at the top of the small window: shown only while there is a countdown to go back to
+  const ok = miniOn && miniBackOk();
+  shell.classList.toggle('hasback', ok);
+  if (!ok) return;
+  const keep = miniSel; miniSel = miniBack.sel; const en = miniList()[miniIdx()]; miniSel = keep;
+  const txt = en ? '↩ Back to ' + miniName(en) : ''; if (mnBack.textContent !== txt) mnBack.textContent = txt;
+}
+function miniReturn() { const b = miniBack; miniBack = null; if (b) { miniSel = b.sel; miniView = b.view; } miniRender(); miniTick(); }   // the Back bar: return to the countdown you were on before a notification took you to the one that went off
 function miniHint(msg) {
   clearTimeout(miniHintT); const old = mnBody.querySelector('.mnhint'); if (old) old.remove();
   if (!msg) return; mnBody.append(h('div', 'mnhint', msg)); miniHintT = setTimeout(() => { const o = mnBody.querySelector('.mnhint'); if (o) o.remove(); }, 3500);
@@ -1799,7 +1816,7 @@ function miniTimerRender(kind) {   // the alarm and the pomodoro share one small
   miniTick();
 }
 function miniTick() {
-  const m = miniRefs; if (!m) return;
+  const m = miniRefs; if (!m) return; miniBackSync();
   mnPk.textContent = m.prev ? miniLine(m.prev, '▲') : ''; mnPkB.textContent = m.next ? miniLine(m.next, '▼') : '';
   if (m.t) {
     const r = m.r, x = m.t;
@@ -1834,7 +1851,7 @@ function miniTick() {
     }
   }
 }
-function miniGo(d) { const L = miniList(), n = L.length; if (n < 2) return; const i = miniIdx(); miniSetEntry(L[(((i < 0 ? 0 : i) + d) % n + n) % n]); miniRender(); miniTick(); miniPeek(true, true, true); }
+function miniGo(d) { const L = miniList(), n = L.length; if (n < 2) return; miniBack = null; const i = miniIdx(); miniSetEntry(L[(((i < 0 ? 0 : i) + d) % n + n) % n]); miniRender(); miniTick(); miniPeek(true, true, true); }
 function miniSwitch() {
   if (!miniOn) return;
   const en = miniList()[miniIdx()];
@@ -1849,7 +1866,7 @@ function miniEnter(t) {   // t: a Time until timer, or 'alarm' / 'pomo'
     if (rows.length) { let b = -1; rows.forEach((r, k) => { if (isFinite(r.last) && (b < 0 || r.last < rows[b].last)) b = k; }); miniSet(rows[b < 0 ? 0 : b].t); }
     else { const L = miniList(); if (L.length) miniSetEntry(L[0]); }
   }
-  miniOn = true; miniLastH = 0; shell.classList.add('mini'); closeKan(); hideTip();
+  miniOn = true; miniBack = null; miniLastH = 0; shell.classList.add('mini'); closeKan(); hideTip();
   miniRender(); miniTick();
   requestAnimationFrame(() => { miniFit(true); setTimeout(() => miniFit(true), 200); });   // sized once now, and once more after fonts and layout have settled
 }
@@ -1876,7 +1893,7 @@ function miniJump() {   // clicking the mini card: back to the normal window, sc
   const go = (mark) => { const el = find(); if (!el) return; show(el); if (mark) hl2(el); };
   go(false); setTimeout(() => go(false), 150); setTimeout(() => go(true), 500);   // again once the window has grown back to full size
 }
-function miniExit() { if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b'); miniRefs = null; sk.miniSize(false, 0, 0); }
+function miniExit() { if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b', 'hasback'); miniBack = null; miniRefs = null; sk.miniSize(false, 0, 0); }
 mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, sideways scroll switches the view
   if (!miniOn) return;
   const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY), horiz = ax > ay || (e.shiftKey && ay > 0), amt = horiz ? (e.deltaX || e.deltaY) : e.deltaY;
@@ -1890,7 +1907,7 @@ mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, si
 }, { passive: false });
 // press and release on the card = back to the normal window; press, move and release = drag the small window
 mini.addEventListener('pointerdown', e => {
-  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk,.mnsess')) return;
+  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk,.mnsess,.mnback')) return;
   const st = { x: e.screenX, y: e.screenY, p: null, moved: false }; miniDrag = st; mini.setPointerCapture(e.pointerId);
   sk.getPos().then(p => { st.p = p; });
 });
@@ -1906,6 +1923,7 @@ addEventListener('keydown', e => {   // capture, so it also works while a button
   const el = e.composedPath()[0] || {};
   if (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type !== 'checkbox')) return;
   if (e.key === 'ArrowUp') miniGo(-1); else if (e.key === 'ArrowDown') miniGo(1);
+  else if (e.key === 'Backspace' && miniBackOk()) miniReturn();
   else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') miniSwitch(); else return;
   e.preventDefault(); e.stopPropagation();
 }, true);
@@ -2101,10 +2119,14 @@ function notifyGo(tg) {   // you clicked a notification (not its close button): 
   const t = tg.t || null, row = tg.kind === 'row' ? rows.find(z => z.t === t || (tg.id && z.t.kan && z.t.id === tg.id)) : null;
   if (tg.kind === 'row' && !row) return;   // that timer has been removed since
   if (miniOn) {
+    const was = miniIdx(), prev = was >= 0 ? { sel: { ...miniSel }, view: miniView } : null;
     if (tg.kind === 'row') miniSet(row.t);
     else if (tg.kind === 'alarm' ? alarm : pm.session) miniSel = { kind: tg.kind };
     else miniExit();   // nothing for the small window to show (a finished pomodoro session): carry on in the normal window
-    if (miniOn) { miniRender(); miniTick(); miniPeek(true, true, true); return; }
+    if (miniOn) {
+      if (prev && miniIdx() !== was && !miniBackOk()) miniBack = prev;   // remember where you were (only the first jump is kept), so the Back bar can take you there
+      miniRender(); miniTick(); miniPeek(true, true, true); return;
+    }
   }
   const find = () => tg.kind === 'alarm' ? alBox : tg.kind === 'pomo' ? (pm.session ? pmRunBox : pmSum) : (rows.find(z => z.t === t || (tg.id && z.t.kan && z.t.id === tg.id)) || {}).row;
   if (tg.kind === 'row' && kan.side !== 'time') { if (row.t.kan) { kanGoto(String(row.t.id).split(':')[0]); return; } flipTo('time', true); }   // on the Kanban side: a card goes to its card, anything else flips back to the Time until side
