@@ -1968,9 +1968,11 @@ function miniJump() {   // clicking the mini card: back to the normal window, sc
   go(false); setTimeout(() => go(false), 150); setTimeout(() => go(true), 500);   // again once the window has grown back to full size
 }
 function miniExit(keepScroll = true) {   // keepScroll: carry on exactly where the full window was (not wanted when the caller scrolls somewhere on purpose afterwards)
-  if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b', 'hasback'); miniBack = null; miniRefs = null; sk.miniSize(false, 0, 0);
-  const y = miniScroll; miniScroll = 0;
-  if (keepScroll && y > 0) { const put = () => { if (!miniOn && wrap.scrollTop === 0) wrap.scrollTop = y; }; put(); requestAnimationFrame(put); [80, 250, 600].forEach(ms => setTimeout(put, ms)); }   // the contents stay where they were; tried again while the window grows back to full size
+  if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; wrap.style.overflowAnchor = 'none'; shell.classList.remove('mini', 'pk-t', 'pk-b', 'hasback'); miniBack = null; miniRefs = null; sk.miniSize(false, 0, 0);
+  const y = miniScroll; miniScroll = 0; let userMoved = false;
+  const stop = () => { userMoved = true; }; ['wheel', 'pointerdown', 'keydown', 'touchstart'].forEach(ev => wrap.addEventListener(ev, stop, { once: true, passive: true }));
+  if (keepScroll && y > 0) { const put = () => { if (!miniOn && !userMoved && Math.abs(wrap.scrollTop - y) > 0.5) wrap.scrollTop = y; }; put(); requestAnimationFrame(put); [60, 150, 300, 600, 1000, 1500].forEach(ms => setTimeout(put, ms)); }   // the contents stay exactly where they were: set again while the window grows back to full size (until you scroll yourself)
+  setTimeout(() => { if (!miniOn) wrap.style.overflowAnchor = ''; }, 1700);
 }
 mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, sideways scroll switches the view
   if (!miniOn) return;
