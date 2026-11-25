@@ -426,7 +426,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.md strong{font-weight:800}.md em{font-style:italic}.md u{text-decoration:underline}.md s{text-decoration:line-through}.md mark{background:rgba(255,214,64,.42);color:inherit;border-radius:3px;padding:0 2px}.md code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;background:rgba(127,127,127,.3);border-radius:4px;padding:0 4px}.md .mdsp{background:rgba(127,127,127,.6);border-radius:3px;cursor:pointer;user-select:none}.md .mdsp:not(.on){color:transparent}.md .mdsp.on{background:rgba(127,127,127,.2)}.kno{display:inline-block;min-width:1.8em;margin-right:6px;padding:0 6px;border-radius:999px;font-size:.78em;font-weight:800;font-style:normal;line-height:1.55;text-align:center;vertical-align:.08em;background:var(--kc,#8ea0d8);color:#0d1230;text-decoration:none}.tcap{font-size:11px;opacity:.72;line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kcap{font-size:11px;opacity:.75;line-height:1.3;margin:-2px 0 4px;word-break:break-word}.kcapin{font-size:12px!important;margin:-4px 0 8px}.skymark{flex:none;font-style:normal;font-weight:400;font-size:17px;line-height:1;color:#fff;opacity:.9;margin-left:8px;padding:0 2px;text-shadow:none;cursor:default;-webkit-app-region:no-drag}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
+.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.md strong{font-weight:800}.md em{font-style:italic}.md u{text-decoration:underline}.md s{text-decoration:line-through}.md mark{background:rgba(255,214,64,.42);color:inherit;border-radius:3px;padding:0 2px}.md code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;background:rgba(127,127,127,.3);border-radius:4px;padding:0 4px}.md .mdsp{background:rgba(127,127,127,.6);border-radius:3px;cursor:pointer;user-select:none}.md .mdsp:not(.on){color:transparent}.md .mdsp.on{background:rgba(127,127,127,.2)}.kcard .kno{cursor:pointer}.kcard .kno:hover,.kcard .kno:focus-visible{box-shadow:0 0 0 2px rgba(20,23,58,.35);filter:brightness(1.08);outline:none}
+.kno{display:inline-block;min-width:1.8em;margin-right:6px;padding:0 6px;border-radius:999px;font-size:.78em;font-weight:800;font-style:normal;line-height:1.55;text-align:center;vertical-align:.08em;background:var(--kc,#8ea0d8);color:#0d1230;text-decoration:none}.tcap{font-size:11px;opacity:.72;line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kcap{font-size:11px;opacity:.75;line-height:1.3;margin:-2px 0 4px;word-break:break-word}.kcapin{font-size:12px!important;margin:-4px 0 8px}.skymark{flex:none;font-style:normal;font-weight:400;font-size:17px;line-height:1;color:#fff;opacity:.9;margin-left:8px;padding:0 2px;text-shadow:none;cursor:default;-webkit-app-region:no-drag}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -1389,7 +1390,7 @@ function kCard(c) {
   const box = h('div', 'kcard'); box.dataset.kid = c.id; box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
   let pctF = null; const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), elp = h('span', 'kov bad'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
-  const nm = kanNo.get(c.id), kt = h('div', 'kt md'); kt.replaceChildren(...(nm ? [kpill(nm)] : []), ...mdParse(c.title || 'Untitled'));   // the card's # in its colour, then the title: the same number the Time until list shows
+  const nm = kanNo.get(c.id), kt = h('div', 'kt md'); const np = nm ? kpill(nm) : null; if (np) kPillLink(np, c.id); kt.replaceChildren(...(np ? [np] : []), ...mdParse(c.title || 'Untitled'));   // the card's # in its colour, then the title: the same number the Time until list shows
   box.append(kt, ...(c.cap ? [mdSet(h('div', 'kcap md'), c.cap)] : []), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);   // the title formatted, and the small caption under it
   if (pct != null) { const f = h('div', 'kfill'); pctF = f; f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
   const itRefs = [], timed = c.items.filter(i => i.time || i.date);
@@ -1414,6 +1415,18 @@ function kCard(c) {
   if (c.auto && c.auto.length) { const ab = h('button', 'kautob', '↶ Reverse auto-completed checklist (' + c.auto.length + ')'); ab.type = 'button'; ab.onclick = e => { e.stopPropagation(); kFlight(c, () => { kReverseAuto(c); saveKan(); kanRender(); build(); }); }; ab.addEventListener('keydown', e => e.stopPropagation()); box.append(h('div', null, null, ab)); }
   box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
   kanRefs.push({ c, dd, tmr, ov, elp, dt, pf: pctF, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
+}
+function kanToTime(cid) {   // the # pill on a card: flip over to Time until, scroll to that card's countdown and highlight it
+  const calm = kReduce();
+  flipTo('time');
+  const find = () => { const r = rows.find(z => z.t && z.t.kan && String(z.t.id) === cid) || rows.find(z => z.t && z.t.kan && String(z.t.id).split(':')[0] === cid); return r && r.row; };
+  const go = mark => { const el = find(); if (!el) return; el.scrollIntoView({ block: 'center', behavior: 'auto' }); if (mark) { el.classList.remove('khl'); void el.offsetWidth; el.classList.add('khl'); setTimeout(() => el.classList.remove('khl'), 3200); } };
+  setTimeout(() => go(false), calm ? 30 : 520); setTimeout(() => go(true), calm ? 80 : 640);   // after the box has finished turning over
+}
+function kPillLink(p, cid) {   // makes a card's # pill a button that takes you to its countdown in the Time until list (without opening the card)
+  p.tabIndex = 0; p.setAttribute('role', 'button'); p.title = (p.title || '').replace(/ in the Time until list.*$/, '') + ' · tap to see it in the Time until list'; p.setAttribute('aria-label', 'Go to this card in the Time until list');
+  p.onclick = e => { e.stopPropagation(); kanToTime(cid); };
+  p.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); kanToTime(cid); } });
 }
 function kanGoto(id) {   // the 🗂 icon on a Time until row: flip to the Kanban board, scroll to that card (or checklist item) and highlight it
   const [cid, iid] = String(id || '').split(':'), c = kan.cards.find(z => z.id === cid);
@@ -2986,6 +2999,17 @@ function pmTick(n) {                                   // every tick: finish a p
 
 // ---------- tick ----------
 let skyKey = '';
+let elDay = ''; try { elDay = String(GM_getValue('elDay', '') || ''); } catch (e) {}   // the day the Elapsed switches were last put back to off
+function elAuto(r) {   // a Time until countdown just ended: its Elapsed switch turns itself on by default (it goes back to off at the end of the day)
+  const t = r.t; if (t.el) return; t.el = true; delete t.ack; setSw(r.sw.i, true); if (!t.kan) save();
+}
+function elDayRoll(n) {   // a new day has begun: every Elapsed switch flip is reversed, so the cycle starts again
+  const dk = kdayStr(n); if (elDay === dk) return;
+  const had = elDay; elDay = dk; try { GM_setValue('elDay', dk); } catch (e) {}
+  if (!had) return;
+  let ch = false; tracked.forEach(t => { if (t.el) { t.el = false; delete t.ack; ch = true; } }); kanSlots.forEach(x => { if (x.el) { x.el = false; delete x.ack; ch = true; } });
+  if (ch) { save(); rows.forEach(x => setSw(x.sw.i, !!x.t.el)); if (miniOn) { miniRender(); miniTick(); } }
+}
 function tick() {
   const now = new Date(), n = now.getTime();
   if (wake != null && autoReset && !wakeEnd) { wakeEnd = cycleEndFor(now); try { GM_setValue('wakeEnd', wakeEnd || 0); } catch (e) {} }
@@ -3045,13 +3069,14 @@ function tick() {
   alarmTick(n);
   if (pendingSounds.length && AC && AC.state === 'running') flushPending();
   trashTick(n, sod);
+  elDayRoll(n);
   rows.forEach(r => {
     const t = r.t, fz = t.kan && t.frz ? t.frz : 0, nx = fz || n, sx = fz ? sodOf(fz) : sod, nowS = Math.floor(nx / 1000);   // a complete Kanban card's row stands still at the moment it was completed
     kGrad(r.row, fz, true);   // a completed Kanban row keeps the gradient of its completion moment
     let d = t.v * 60 - sx; if (d < 0) d += 86400;
     const since = (86400 - d) % 86400, os = nowS - since;          // when this clock time last came round, in whole seconds
     const wrapped = !fz && !isNaN(r.last) && d > r.last + 5;
-    if (wrapped) { beep(2); notify('Time reached', (t.title ? tLabel(t) + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60), { kind: 'row', t, id: t.kan ? t.id : null }); }
+    if (wrapped) { elAuto(r); beep(2); notify('Time reached', (t.title ? tLabel(t) + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60), { kind: 'row', t, id: t.kan ? t.id : null }); }
     if (!t.armed) { t.armed = n; saveSlot(t); }
     if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; saveSlot(t); }
     else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; saveSlot(t); }
