@@ -2061,7 +2061,7 @@ function build() {
     };
     // per-timer switch: count up after it goes off (also for a time that already went off before you switched it on)
     const sw = mkSw('Elapsed', true); setSw(sw.i, !!t.el); sw.lab.title = 'Show how long ago it went off';
-    sw.i.onchange = () => { t.el = sw.i.checked; sw.i.setAttribute('aria-checked', String(t.el)); if (t.el) delete t.ack; save(); };
+    sw.i.onchange = () => { t.el = sw.i.checked; sw.i.setAttribute('aria-checked', String(t.el)); if (t.el) { delete t.ack; delete t.elOff; } else t.elOff = kdayStr(Date.now()); save(); };   // turning it off yourself is remembered for today, so it is not switched back on
     const mkChip = (cls, label, tip) => { const live = h('span', 'trl', '● LIVE'); live.style.display = 'none'; const box = h('span', 'trk dot ' + cls, null, h('span', 'trn', label), live); box.setAttribute('aria-label', label); box.style.display = 'none'; tipOn(box, () => tip + ' ● LIVE means that window is happening right now.' + (box.classList.contains('past') ? '\n\nDashed ring: this time already passed today, so this shows tomorrow’s window.' : '')); return { box, live }; };
     const chips = [mkChip('sun', '☀️ Daylight', 'Your chosen time falls between sunrise and sunset, so there is still daylight then.'), mkChip('gold', '🌇 Golden hour', 'Your chosen time falls inside a golden-hour window: low sun and soft, warm light.'), mkChip('blue', '🔵 Blue hour', 'Your chosen time falls inside a blue-hour window: deep twilight just before sunrise or after sunset.')];
     const chipRow = h('div', 'trkr', null, ...chips.map(c => c.box)); chipRow.style.display = 'none'; tr1.append(chipRow);
@@ -3080,6 +3080,7 @@ function tick() {
     if (!t.armed) { t.armed = n; saveSlot(t); }
     if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; saveSlot(t); }
     else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; saveSlot(t); }
+    if (!r.init) { r.init = true; if (!t.el && !fz && since <= sod && os * 1000 >= t.armed - 1000 && t.elOff !== kdayStr(n)) { t.el = true; delete t.ack; setSw(r.sw.i, true); if (!t.kan) save(); } }   // it already went off earlier today, after it was set (while the app was closed): Elapsed is on from the start
     const fin = !!t.el && (os * 1000 >= t.armed - 1000 || since <= sod);   // elapsed switch on: count up from when it went off (looking back as far as earlier today)
     r.last = fz ? NaN : d; r.os = fin ? os : 0; r.ok.style.display = fin && t.ack !== os ? '' : 'none';
     if (!r.chipT || n - r.chipT >= 1000) { r.chipT = n; rowChips(r, nx + d * 1000, nx, t.v * 60 < sx); }   // chosen time vs daylight / golden / blue windows   // confirming hides the check; the elapsed time keeps counting until the Elapsed switch is turned off
