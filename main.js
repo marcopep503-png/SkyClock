@@ -100,11 +100,17 @@ function rebuildMenu() {
   ]));
 }
 
-function leaveMini() {                                 // back to the full-size window where it was
+function leaveMini() {                                 // back to the full-size window, exactly where it was
   if (!miniOn || !win) return;
-  miniOn = false; win.setResizable(true); win.setMinimumSize(280, 360);
-  if (fullBounds) win.setBounds(fullBounds);
-  fullBounds = null;
+  const target = fullBounds; miniOn = false; fullBounds = null;
+  win.setResizable(true); win.setMinimumSize(280, 360);
+  if (!target) return;
+  const put = () => {                                  // Windows can nudge a frameless window by a few pixels when it becomes resizable again (it crept upwards): put it back exactly, and check again once the change has settled
+    if (!win || win.isDestroyed() || miniOn || win.isMaximized() || win.isMinimized()) return;
+    const b = win.getBounds();
+    if (b.x !== target.x || b.y !== target.y || b.width !== target.width || b.height !== target.height) win.setBounds(target);
+  };
+  win.setBounds(target); put(); setTimeout(put, 60); setTimeout(put, 250);
 }
 
 function createWindow() {

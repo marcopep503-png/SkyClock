@@ -63,6 +63,59 @@ const fmt = s => { const H = Math.floor(s / 3600), M = Math.floor(s % 3600 / 60)
 const clockFmt = x => { const H = Math.floor(x / 3600), M = Math.floor(x % 3600 / 60); return H ? H + ':' + p2(M) + ':' + p2(x % 60) : M + ':' + p2(x % 60); };
 
 // ---------- saved times ----------
+// ---------- titles: light markdown (like Obsidian, Discord and YouTube) ----------
+// **bold**   *italic* or _italic_   ***bold italic***   __underline__   ~~strikethrough~~   ==highlight==   `code`   ||spoiler|| (tap to show)
+// A backslash before a symbol shows the symbol itself. Everything is built from text nodes and elements, never from HTML, so a title can not inject anything.
+const MD_PAIRS = [['***', 'strong'], ['**', 'strong'], ['__', 'u'], ['~~', 's'], ['==', 'mark'], ['||', 'span'], ['*', 'em'], ['_', 'em']];
+const mdWord = c => !!c && /[\p{L}\p{N}]/u.test(c);
+function mdParse(s, depth = 0) {   // text -> a list of DOM nodes
+  s = String(s || ''); const out = []; let buf = '';
+  const flush = () => { if (buf) { out.push(document.createTextNode(buf)); buf = ''; } };
+  for (let i = 0; i < s.length;) {
+    const c = s[i];
+    if (c === '\\' && i + 1 < s.length && '\\`*_~=|'.includes(s[i + 1])) { buf += s[i + 1]; i += 2; continue; }
+    if (c === '`') { const j = s.indexOf('`', i + 1); if (j > i + 1) { flush(); const e = document.createElement('code'); e.textContent = s.slice(i + 1, j); out.push(e); i = j + 1; continue; } }
+    let hit = false;
+    if (depth < 6) for (const [d, tag] of MD_PAIRS) {
+      if (!s.startsWith(d, i)) continue;
+      const a = i + d.length;
+      if (a >= s.length || /\s/.test(s[a])) continue;   // an opening mark is followed by text, not by a space
+      if ((d === '_' || d === '__') && mdWord(s[i - 1])) continue;   // snake_case_names stay as they are
+      let j = a;
+      for (;;) {   // find the matching closing mark
+        j = s.indexOf(d, j); if (j < 0) break;
+        if (s[j - 1] === '\\') { j++; continue; }
+        if ((d === '*' || d === '_') && s[j + 1] === d) { j += 2; continue; }   // skip a ** or __ pair inside an italic
+        if (j === a || /\s/.test(s[j - 1])) { j++; continue; }   // a closing mark follows text, not a space
+        if ((d === '_' || d === '__') && mdWord(s[j + d.length])) { j++; continue; }
+        break;
+      }
+      if (j < 0 || /^[*_~=|]+$/.test(s.slice(a, j))) continue;   // no closing mark, or nothing but marks in between
+      flush();
+      const e = document.createElement(tag), inner = mdParse(s.slice(a, j), depth + 1);
+      if (d === '***') { const em = document.createElement('em'); inner.forEach(n => em.append(n)); e.append(em); } else inner.forEach(n => e.append(n));
+      if (d === '||') {   // a spoiler: hidden until you tap it
+        e.className = 'mdsp'; e.tabIndex = 0; e.setAttribute('role', 'button'); e.setAttribute('aria-label', 'Spoiler: tap to show');
+        const flip = ev => { ev.stopPropagation(); ev.preventDefault(); const on = e.classList.toggle('on'); e.setAttribute('aria-label', on ? 'Spoiler (shown): tap to hide' : 'Spoiler: tap to show'); };
+        e.addEventListener('click', flip); e.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') flip(ev); });
+      }
+      out.push(e); i = j + d.length; hit = true; break;
+    }
+    if (hit) continue;
+    buf += c; i++;
+  }
+  flush(); return out;
+}
+const mdSet = (el, s) => { el.replaceChildren(...mdParse(s)); return el; };
+function mdPlain(s) {   // the same text without the symbols (notifications, tooltips, screen-reader labels); spoilers stay hidden
+  const box = document.createElement('div'); mdParse(s).forEach(n => box.append(n));
+  box.querySelectorAll('.mdsp').forEach(e => { e.textContent = '▒▒▒'; }); return box.textContent;
+}
+// a Kanban card shown in the Time until list: its colour and its number within that colour (kno), set in kanDerived()
+const kpill = t => { const e = document.createElement('span'); e.className = 'kno'; e.textContent = '#' + t.kno; e.style.setProperty('--kc', t.col || '#8ea0d8'); e.title = (t.kcn || 'This colour') + ': number ' + t.kno + (t.kof ? ' of ' + t.kof : '') + ' in the Time until list, in time order'; return e; };
+const tLabel = t => (t.kno ? '#' + t.kno + ' ' : '') + mdPlain(t.title || '');   // plain text for a timer: its number, then its title
+const tNodes = t => [...(t.kno ? [kpill(t)] : []), ...mdParse(t.title || '')];   // the same for display: a coloured number, then the formatted title
+const tCap = t => { const e = document.createElement('div'); e.className = 'tcap md'; mdSet(e, t.kcap); return e; };   // a card's small caption under its title
 const load = () => { try { return JSON.parse(GM_getValue('times', '[]')).map(x => typeof x === 'number' ? { v: x } : x); } catch (e) { return []; } };
 let tracked = load();
 const save = () => { try { GM_setValue('times', JSON.stringify(tracked)); } catch (e) {} };
@@ -373,7 +426,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.skymark{flex:none;font-style:normal;font-weight:400;font-size:17px;line-height:1;color:#fff;opacity:.9;margin-left:8px;padding:0 2px;text-shadow:none;cursor:default;-webkit-app-region:no-drag}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
+.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.md strong{font-weight:800}.md em{font-style:italic}.md u{text-decoration:underline}.md s{text-decoration:line-through}.md mark{background:rgba(255,214,64,.42);color:inherit;border-radius:3px;padding:0 2px}.md code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;background:rgba(127,127,127,.3);border-radius:4px;padding:0 4px}.md .mdsp{background:rgba(127,127,127,.6);border-radius:3px;cursor:pointer;user-select:none}.md .mdsp:not(.on){color:transparent}.md .mdsp.on{background:rgba(127,127,127,.2)}.kno{display:inline-block;min-width:1.8em;margin-right:6px;padding:0 6px;border-radius:999px;font-size:.78em;font-weight:800;font-style:normal;line-height:1.55;text-align:center;vertical-align:.08em;background:var(--kc,#8ea0d8);color:#0d1230;text-decoration:none}.tcap{font-size:11px;opacity:.72;line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kcap{font-size:11px;opacity:.75;line-height:1.3;margin:-2px 0 4px;word-break:break-word}.kcapin{font-size:12px!important;margin:-4px 0 8px}.skymark{flex:none;font-style:normal;font-weight:400;font-size:17px;line-height:1;color:#fff;opacity:.9;margin-left:8px;padding:0 2px;text-shadow:none;cursor:default;-webkit-app-region:no-drag}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.pmh sup{animation:none}}
@@ -650,6 +703,12 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnit{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-top:1px solid rgba(255,255,255,.16);font-size:12px}
 .mnit input[type=checkbox]{flex:none;width:16px;height:16px;padding:0;margin-top:1px;accent-color:#7c83f0}
 .mnib{flex:1;min-width:0}
+.mncap{font-size:10.5px;opacity:.72;line-height:1.3;margin-top:1px;overflow-wrap:anywhere}
+.kit .kitcap{display:block;font-size:12px;line-height:1.3;padding:2px 5px;margin:-2px 0 0;border:1px solid transparent;background:transparent;color:#14173a;opacity:.78}
+.kit .kitcap::placeholder{opacity:.45}
+.kit .kitcap:focus{background:#fff;border-color:var(--kc);opacity:1}
+.kform .kitcapnew{font-size:13px;margin-top:6px;border:1px solid rgba(20,23,58,.35);background:#fff;padding:5px 7px;opacity:1}
+.kclcap{margin:-2px 0 6px}
 .mnix{overflow-wrap:anywhere}.mnit.done .mnix{text-decoration:line-through;opacity:.55}
 .mnic{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:3px 0 4px;font-size:11px;font-variant-numeric:tabular-nums}
 .mnpill{flex:none;padding:0 8px;border-radius:99px;border:1px solid rgba(255,255,255,.4);font-weight:700;font-size:10.5px;white-space:nowrap}
@@ -861,7 +920,7 @@ const pmStats = h('div', null, null, pmDayT,
 const pomoCard = h('section', 'g', null, cmpHdr('Pomodoro (focus timer)', 'pomo'), pmOpts, pmCtl, pmRunBox, pmSum, pmStats);
 [alBox, pmRunBox, pmSum].forEach(e => e.classList.add('keep'));   // these stay visible while the box is compact
 cmpHeads.forEach(x => x.apply());
-const tIn = h('input', 'tin'); tIn.type = 'text'; tIn.maxLength = 60; tIn.placeholder = 'Title (optional), e.g. Laundry'; tIn.setAttribute('aria-label', 'Timer title');
+const tIn = h('input', 'tin'); tIn.type = 'text'; tIn.maxLength = 120; tIn.placeholder = 'Title (optional), e.g. Laundry'; tIn.setAttribute('aria-label', 'Timer title');
 const tip = h('div', 'tip'); tip.setAttribute('role', 'tooltip');
 const phTitle = h('div', 'ttl', 'Day and night in ' + locName());
 const locSel = h('select'); locSel.setAttribute('aria-label', 'Your US time zone');
@@ -1182,9 +1241,9 @@ const kid = () => Math.random().toString(36).slice(2, 9);
 const KTAGS = [["🏠 Home", ["🧹 Cleaning", "🧺 Laundry", "🍽️ Dishes", "🛏️ Bedroom", "🛁 Bathroom", "🍳 Kitchen", "🛋️ Living room", "🔧 Repairs", "🪴 Houseplants", "🗑️ Trash & recycling", "📦 Decluttering", "🛒 Groceries", "💡 Utilities", "🔑 Rent & mortgage", "🪟 Windows", "🧯 Safety checks"]], ["💪 Health & fitness", ["🏃 Running", "🏋️ Strength", "🧘 Yoga", "🚶 Walking", "🚴 Cycling", "🏊 Swimming", "🥗 Healthy eating", "💧 Hydration", "😴 Sleep", "💊 Medication", "🩺 Doctor", "🦷 Dentist", "👁️ Eye care", "🧠 Mental health", "🤸 Stretching", "⚖️ Weight goals"]], ["💼 Work", ["📧 Email", "📞 Calls", "📅 Meetings", "📝 Reports", "📊 Spreadsheets", "🧑‍💻 Coding", "🎯 Goals", "🚀 Projects", "🤝 Clients", "📈 Planning", "🗂️ Filing", "⏰ Deadlines", "🧾 Invoices", "🎤 Presentations", "🧑‍🏫 Training", "🔍 Research"]], ["🎓 School & learning", ["📚 Studying", "✏️ Homework", "📖 Reading", "🧪 Science", "🧮 Math", "🌍 Languages", "🎒 School", "🏫 Class", "📝 Exams", "🔬 Lab work", "🎓 Degree", "💭 Ideas", "🖊️ Essays", "🃏 Flashcards", "🎧 Lectures", "👩‍🏫 Tutoring"]], ["💰 Money", ["💵 Budget", "🏦 Banking", "💳 Credit cards", "🧾 Bills", "📉 Debt", "💹 Investing", "🐷 Savings", "🧮 Taxes", "🛡️ Insurance", "🛍️ Shopping", "🏷️ Sales & deals", "🪙 Side income", "🎁 Donations", "📒 Expenses"]], ["👨‍👩‍👧 Family", ["👶 Kids", "👴 Parents", "🍼 Baby", "🎂 Birthdays", "💞 Partner", "🏡 Family time", "📱 Check-ins", "🧸 Playdates", "🚌 School run", "🎁 Gifts", "👵 Grandparents", "🧑‍🍼 Childcare"]], ["👫 Friends & community", ["🍻 Hangouts", "☎️ Catch up", "💌 Thank-you notes", "🎉 Parties", "🤗 Support a friend", "🗓️ Plans", "🫶 Volunteering", "🗣️ Community", "🏘️ Neighbors", "🤝 Networking"]], ["🐾 Pets", ["🐕 Dog", "🐈 Cat", "🐠 Fish", "🦜 Birds", "🐇 Small pets", "🦴 Pet food", "🧼 Grooming", "💉 Vet", "🦮 Dog walks", "🐴 Horses", "🪣 Litter & cages"]], ["🍎 Food & cooking", ["🥘 Meal prep", "🍲 Cooking", "🥪 Lunch", "🥞 Breakfast", "🍝 Dinner", "🍰 Baking", "🥦 Produce", "🧊 Pantry", "📋 Meal plan", "☕ Coffee", "🍷 Dining out", "🥤 Smoothies", "🍱 Packed lunches"]], ["✈️ Travel", ["✈️ Flights", "🧳 Packing", "🏨 Hotels", "🗺️ Itinerary", "🚗 Road trip", "🛂 Passport & docs", "🏖️ Vacation", "🏕️ Camping", "🥾 Hiking", "📸 Trip photos", "🚆 Trains & buses", "🎟️ Tickets"]], ["🚗 Car & errands", ["🚗 Car care", "⛽ Gas", "🛞 Tires", "🚿 Car wash", "🛠️ Maintenance", "📮 Post office", "🏪 Errands", "🧾 Returns", "📦 Packages", "🏛️ Government & DMV", "✂️ Haircut", "👕 Dry cleaning", "🔋 Battery & charging"]], ["🎨 Hobbies & creative", ["🎨 Art", "✍️ Writing", "📷 Photography", "🎸 Music", "🎹 Practice", "🎮 Gaming", "🧶 Crafts", "🧩 Puzzles", "🎬 Movies", "📺 Shows", "🎲 Board games", "🪡 Sewing", "🏺 Collecting", "📓 Journaling", "🎙️ Podcasting", "🎭 Theater"]], ["🌱 Garden & outdoors", ["🌱 Gardening", "💦 Watering", "🌳 Yard work", "🍅 Vegetables", "🌷 Flowers", "🌿 Herbs", "🚜 Mowing", "🏞️ Outdoors", "🐝 Pollinators", "🍂 Leaves & cleanup"]], ["🧖 Self-care & mind", ["🛀 Self-care", "📵 Screen break", "🙏 Gratitude", "🧘‍♂️ Meditation", "💆 Relaxing", "🎧 Podcasts", "🌅 Morning routine", "🌙 Evening routine", "❤️ Kindness", "🪞 Reflection", "🌬️ Breathing", "☀️ Fresh air"]], ["💻 Tech & admin", ["💾 Backups", "🔐 Passwords", "📱 Phone", "💻 Computer", "🔄 Updates", "🖨️ Printing", "📶 Wi-Fi", "📂 Organizing files", "🗃️ Paperwork", "✉️ Mail", "📲 Apps", "🧑‍🔧 Tech support"]], ["🎉 Celebrations & seasons", ["🎄 Holidays", "🎃 Halloween", "🦃 Thanksgiving", "🎆 New Year", "💝 Valentine's", "🐣 Easter", "🇺🇸 Fourth of July", "🎓 Graduation", "💍 Wedding", "🎁 Gift ideas", "🎈 Party planning", "🌸 Spring cleaning", "🏖️ Summer plans", "🍁 Fall prep", "⛄ Winter prep"]], ["🙏 Faith & values", ["🛐 Prayer", "⛪ Worship", "📜 Scripture", "🤲 Giving", "🕯️ Quiet time", "🕊️ Peace"]], ["⚡ Productivity", ["🔁 Habits", "⭐ Priority", "🧭 Planning ahead", "🕐 Time blocks", "📌 Reminders", "🔥 Streaks", "✅ Quick wins", "🐸 Hard thing first", "🗓️ Weekly review", "🏁 Milestones", "🧠 Brain dump", "🔕 Focus time"]], ["🆘 Urgent & life admin", ["🚨 Urgent", "🩹 First aid", "⚖️ Legal", "🪪 ID & renewals", "🧰 Emergency kit", "🔔 Renewals", "📑 Contracts", "🏥 Appointments", "🧾 Records"]]];   // the tag bank: [group, [tags]], each tag is an emoji and a name (a card keeps up to 8)
 const KD = /^\d{4}-\d{2}-\d{2}$/, KT = /^\d{2}:\d{2}$/, kok = (s, re) => typeof s === 'string' && re.test(s);
 const kdayStr = ms => { const q = ymd.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value; return g('year') + '-' + p2(g('month')) + '-' + p2(g('day')); };
-const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
+const kclean = c => ({ id: String(c.id), tu: !!c.tu, title: String(c.title || '').slice(0, 120), cap: String(c.cap || '').slice(0, 160), cat: KCATS.some(k => k.id === c.cat) ? c.cat : 'backlog', due: kok(c.due, KD) ? c.due : '', time: kok(c.time, KT) ? c.time : '', assigned: kok(c.assigned, KD) ? c.assigned : kdayStr(Date.now()),
   mode: ['date', 'interval', 'none', 'weekly'].includes(c.mode) ? c.mode : '', rep: !!c.rep, fz: Math.max(0, +c.fz || 0), pcat: KCATS.some(k => k.id === c.pcat && c.pcat !== 'done') ? c.pcat : '', rst: kok(c.rst, KD) ? c.rst : '', auto: (Array.isArray(c.auto) ? c.auto : []).filter(s => typeof s === 'string').slice(0, 200), days: [...new Set((Array.isArray(c.days) ? c.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b), wd: kok(c.wd, KD) ? c.wd : '', free: kok(c.free, KD) ? c.free : '', park: !!c.park, start: kok(c.start, KD) ? c.start : '', end: kok(c.end, KD) ? c.end : '', cycle: Math.max(1, Math.min(9999, +c.cycle || 1)), tags: (Array.isArray(c.tags) ? c.tags : []).filter(t => typeof t === 'string' && t.length <= 40).slice(0, 8),
-  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', date: kok(i.date, KD) ? i.date : '', done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
+  items: (Array.isArray(c.items) ? c.items : []).map(i => ({ id: String(i.id || kid()), text: String(i.text || '').slice(0, 200), time: kok(i.time, KT) ? i.time : '', date: kok(i.date, KD) ? i.date : '', cap: String(i.cap || '').slice(0, 160), done: !!i.done, dat: Math.max(0, +i.dat || 0) })) });
 let kan = { cards: [], inc: false, rem: false, side: 'time', sp: {} };   // sp: the saved progress-bar spans of Kanban times on the Time until side, kept with the cards
 try { const v = JSON.parse(GM_getValue('kanban', 'null')); if (v && Array.isArray(v.cards)) kan = { cards: v.cards.filter(c => c && c.id).map(kclean), inc: !!v.inc, rem: !!v.rem, side: v.side === 'kanban' ? 'kanban' : 'time', sp: v.sp && typeof v.sp === 'object' && !Array.isArray(v.sp) ? v.sp : {} }; } catch (e) {}
 const saveKan = () => { try { GM_setValue('kanban', JSON.stringify(kan, (k, v) => (k[0] === '_' ? undefined : v))); } catch (e) {} };
@@ -1219,7 +1278,13 @@ const kmonthName = ds => { const [y, m] = ds.split('-').map(Number), cy = +kdayS
 const ktime = t => hl(+t.slice(0, 2), +t.slice(3));
 let kanDirty = false;
 // the hourly progress-bar gradient for a given moment, so a completed item keeps the colours of the minute it was completed
-const gradAt = ms => { const q = hf.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value, H = g('hour'), M = g('minute'), c = BAR[H], d = BAR[(H + 1) % 24]; return [mix(c[0], d[0], M / 60), mix(c[1], d[1], M / 60)]; };
+const gradMemo = new Map();
+const gradAt = ms => {   // the progress-bar gradient for a moment: the sun-driven colours the live bars use (the hourly table only when there is no usable location), so a completed item keeps exactly what it showed
+  const mk = ms + '|' + LAT + '|' + LON + '|' + skyLocBad; let r = gradMemo.get(mk); if (r) return r;
+  if (skyLocOk()) { try { const k = skySunColors(ms); if (!/NaN/.test(k.l1 + k.l2)) r = [k.l1, k.l2]; } catch (e) {} }
+  if (!r) { const q = hf.formatToParts(new Date(ms)), g = t => +q.find(x => x.type === t).value, H = g('hour'), M = g('minute'), c = BAR[H], d = BAR[(H + 1) % 24]; r = [mix(c[0], d[0], M / 60), mix(c[1], d[1], M / 60)]; }
+  if (gradMemo.size > 400) gradMemo.clear(); gradMemo.set(mk, r); return r;
+};
 function kGrad(el, ms, both) {   // ms set: pin this element's gradient to that moment (static); ms 0: back to the live hourly gradient
   if (!el) return; const key = ms ? ms + (both ? 'b' : '') : ''; if (el._gk === key) return; el._gk = key;
   if (!ms) { ['--l1', '--l2', '--g1', '--g2'].forEach(p => el.style.removeProperty(p)); return; }
@@ -1277,12 +1342,18 @@ const kanSpan = kan.sp; try { const v = JSON.parse(GM_getValue('kanspan', '{}'))
 const saveSlot = t => { if (!t.kan) { save(); return; } kanSpan[t.id] = { v: t.v, span: t.span, dur0: t.dur0, armed: t.armed }; saveKan(); };
 const kanSlot = (id, time, title, col) => { const v = +time.slice(0, 2) * 60 + +time.slice(3); let s = kanSlots.get(id); if (!s || s.v !== v) { s = { v, kan: true, el: false, id }; const st = kanSpan[id]; if (st && st.v === v && st.span) { s.span = st.span; s.dur0 = st.dur0; s.armed = st.armed; } kanSlots.set(id, s); } s.title = title; s.col = col; return s; };
 function kanDerived() {   // only the cards picked with the ⏱ button (or every card, if that switch is on)
-  const out = [];
+  const out = [], groups = [];
   kan.cards.forEach(c => {
     if (!(kan.inc || c.tu)) return;
-    const col = kcat(c.cat).color;
-    if (c.time) { const sl = kanSlot(c.id, c.time, (c.fz ? '✓ ' : '') + '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdatew(kdd(c)) : ''), col); sl.frz = c.fz || 0; out.push(sl); }   // frz: its countdown stands still while the card is complete
-    c.items.forEach(it => { if (!it.time) return; if (it.done && !it.dat) it.dat = Date.now(); const sl = kanSlot(c.id + ':' + it.id, it.time, (it.done ? '✓ ' : '☑ ') + it.text + ' · ' + c.title, col); sl.frz = it.done ? it.dat : 0; out.push(sl); });   // a checked item or a completed card stays listed with its bar frozen where it was completed
+    const col = kcat(c.cat).color, g = { c, sl: [] };
+    if (c.time) { const sl = kanSlot(c.id, c.time, (c.fz ? '✓ ' : '') + '🗂 ' + c.title + (kdd(c) ? ' · due ' + kdatew(kdd(c)) : ''), col); sl.frz = c.fz || 0; sl.kcap = c.cap || ''; out.push(sl); g.sl.push(sl); }   // frz: its countdown stands still while the card is complete
+    c.items.forEach(it => { if (!it.time) return; if (it.done && !it.dat) it.dat = Date.now(); const sl = kanSlot(c.id + ':' + it.id, it.time, (it.done ? '✓ ' : '☑ ') + it.text + ' · ' + c.title, col); sl.frz = it.done ? it.dat : 0; sl.kcap = it.cap || ''; out.push(sl); g.sl.push(sl); });   // a checked item or a completed card stays listed with its bar frozen where it was
+    if (g.sl.length) groups.push(g);
+  });
+  // a number for every card within its colour, in the order the cards come up in the list, so two cards of the same colour can never be mixed up (a card's checklist items carry their card's number)
+  KCATS.forEach(cat => {
+    const gs = groups.filter(g => g.c.cat === cat.id).map((g, i) => ({ g, v: Math.min(...g.sl.map(s => s.v)), i })).sort((a, b) => a.v - b.v || a.i - b.i);
+    gs.forEach((x, n) => x.g.sl.forEach(s => { s.kno = n + 1; s.kof = gs.length; s.kcn = cat.name; }));
   });
   return out;
 }
@@ -1317,7 +1388,7 @@ function kCard(c) {
   const box = h('div', 'kcard'); box.dataset.kid = c.id; box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
   let pctF = null; const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), elp = h('span', 'kov bad'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
-  box.append(h('div', 'kt', c.title || 'Untitled'), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);
+  box.append(mdSet(h('div', 'kt md'), c.title || 'Untitled'), ...(c.cap ? [mdSet(h('div', 'kcap md'), c.cap)] : []), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);   // the title formatted, and the small caption under it
   if (pct != null) { const f = h('div', 'kfill'); pctF = f; f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
   const itRefs = [], timed = c.items.filter(i => i.time || i.date);
   if (timed.length) {   // a small labelled section: each checklist item's due time (gradient border) beside its own progress bar
@@ -1327,7 +1398,7 @@ function kCard(c) {
     const cflip = () => { kColl['cl:' + c.id] = !kColl['cl:' + c.id]; saveColl(); capply(); };
     chd.onclick = e => { e.stopPropagation(); cflip(); }; chd.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cflip(); } });
     cl.append(chd); capply();
-    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), h('div', 'kclb', null, ...kPills(it), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
+    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), ...(it.cap ? [mdSet(h('div', 'kcap kclcap md'), it.cap)] : []), h('div', 'kclb', null, ...kPills(it), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
     box.append(cl);
   }
   if (c.tags.length) box.append(h('div', 'ktagrow', null, ...c.tags.map(t => h('span', 'ktag', t))));
@@ -1485,6 +1556,7 @@ function openKan(id) {
   const col = () => pan.style.setProperty('--kc', kcat(c.cat).color); col();
   const sync = () => { saveKan(); kanRender(); build(); };
   const ti = h('input', 'kin kti'); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
+  const ci = h('input', 'kin kcapin'); ci.type = 'text'; ci.maxLength = 160; ci.value = c.cap || ''; ci.placeholder = 'Caption (optional): a small line under the title'; ci.setAttribute('aria-label', 'Card caption'); ci.onchange = () => { c.cap = ci.value.trim(); sync(); };
   const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
   const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
   const kPopSync = (fn, closeOnDone) => { const was = c.cat; kFlight(c, () => { fn(); sync(); }); sel.value = c.cat; col(); if (closeOnDone && c.cat === 'done' && was !== 'done') { closeKan(); return; } renderList(); showMode(); showAuto(); };   // a card that lands in Done closes this pop-up so you can watch it fly there
@@ -1568,7 +1640,8 @@ function openKan(id) {
     const due = h('button', 'kdueat' + (it.time || it.date ? '' : ' none'), it.time || it.date ? (it.time ? '⏰ due at ' + ktime(it.time) : '⏰ end of day') + (it.date ? ' · 📅 ' + kdatew(it.date) : '') : '+ due time / date'); due.type = 'button';
     due.setAttribute('aria-label', it.time || it.date ? 'Change the due date and time' : 'Add a due date or time');
     const bf = h('div', 'kfill'), brem = h('span', 'kclr'), bw = h('div', 'kitb', null, h('div', 'kbar', null, bf), brem);   // the due time with its progress bar beside it
-    const body = h('div', 'kbody', null, tx, h('div', 'kitr', null, due, ...(it.time || it.date ? [bw] : []))); if (it.time || it.date) kanPop.push({ it, f: bf, rem: brem, g: bw });
+    const cp = h('input', 'kin kitcap'); cp.type = 'text'; cp.maxLength = 160; cp.value = it.cap || ''; cp.placeholder = 'Caption (optional)'; cp.setAttribute('aria-label', 'Item caption'); cp.onchange = () => { it.cap = cp.value.trim(); cp.value = it.cap; sync(); }; cp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cp.blur(); } });
+    const body = h('div', 'kbody', null, tx, cp, h('div', 'kitr', null, due, ...(it.time || it.date ? [bw] : []))); if (it.time || it.date) kanPop.push({ it, f: bf, rem: brem, g: bw });
     cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kPopSettle(); };
     tx.oninput = () => grow(tx);
     tx.onchange = () => { it.text = tx.value.trim() || 'Item'; tx.value = it.text; sync(); };
@@ -1607,6 +1680,7 @@ function openKan(id) {
   function showAddBtn() { const b = h('button', 'kaddbtn', '+ Add an item'); b.type = 'button'; b.onclick = showForm; addWrap.replaceChildren(b); }
   function showForm() {   // the styled "new item" card with a due-at time
     const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item'); ni.oninput = () => grow(ni); requestAnimationFrame(() => grow(ni));
+    const nc = h('input', 'kin kitcap kitcapnew'); nc.type = 'text'; nc.maxLength = 160; nc.placeholder = 'Caption (optional)'; nc.setAttribute('aria-label', 'Caption for the new item');
     const nt = h('input', 'kin kitime'); nt.type = 'time'; nt.setAttribute('aria-label', 'Due time for the new item');
     const nd = h('input', 'kin kitime'); nd.type = 'date'; nd.setAttribute('aria-label', 'Due date for the new item'); nd.style.maxWidth = '150px';
     let nTime = '';   // the time only counts once you press the check mark, never while the picker is still moving
@@ -1614,10 +1688,10 @@ function openKan(id) {
     const nShow = () => { nOk.style.display = nt.value !== nTime ? '' : 'none'; };
     nt.oninput = nt.onchange = nShow; nOk.onclick = () => { nTime = nt.value; nShow(); };
     const add = h('button', 'kfadd', 'Add'), cancel = h('button', 'kfcancel', '×'); add.type = cancel.type = 'button'; cancel.setAttribute('aria-label', 'Cancel');
-    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, time: nTime || '', date: nd.value || '', done: false }); kPopSettle(); showForm(); };   // the form reopens so you can add several in a row
+    const go = () => { const text = ni.value.trim(); if (!text) { ni.focus(); return; } c.items.push({ id: kid(), text, cap: nc.value.trim(), time: nTime || '', date: nd.value || '', done: false }); kPopSettle(); showForm(); };   // the form reopens so you can add several in a row
     add.onclick = go; cancel.onclick = showAddBtn;
     ni.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.stopPropagation(); showAddBtn(); } });
-    addWrap.replaceChildren(h('div', 'kform', null, ni, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt, nOk), h('div', 'kfdue', null, h('span', null, '📅 Due on'), nd), h('div', 'kfact', null, add, cancel)));
+    addWrap.replaceChildren(h('div', 'kform', null, ni, nc, h('div', 'kfdue', null, h('span', null, '⏰ Due at'), nt, nOk), h('div', 'kfdue', null, h('span', null, '📅 Due on'), nd), h('div', 'kfact', null, add, cancel)));
     ni.focus();
   }
   showAddBtn();
@@ -1625,7 +1699,7 @@ function openKan(id) {
   const conf = h('div', 'conf', null, h('span', null, 'Delete this card and its checklist?'), yes, no); conf.style.display = 'none'; del.style.marginTop = '12px';
   del.onclick = () => { del.style.display = 'none'; conf.style.display = 'flex'; }; no.onclick = () => { conf.style.display = 'none'; del.style.display = ''; };
   yes.onclick = () => { kan.cards = kan.cards.filter(z => z !== c); closeKan(); sync(); };
-  pan.append(h('div', 'kphd', null, ti, xb), h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fDays, fTime, fld('Assigned', ai)), h('div', 'kq', null, doneBtn, autoBtn), aoRow, qk, repSw.lab, repNote,
+  pan.append(h('div', 'kphd', null, ti, xb), ci, h('div', 'kgrid', null, fld('Category', sel), fld('Deadline', mSel), fDue, fStart, fEnd, fDays, fTime, fld('Assigned', ai)), h('div', 'kq', null, doneBtn, autoBtn), aoRow, qk, repSw.lab, repNote,
     tuSw.lab, remSw.lab, h('div', 'kchead', null, h('span', null, '🏷 Tags'), tagCnt), tagSel, tagDD, h('div', 'kchead', null, h('span', null, '☑ Checklist'), psub), h('div', 'kpr', null, ptxt, pbar), list, kundo, addWrap, del, conf);
   renderList(); renderTags(); showMode(); showAuto();
   m.addEventListener('keydown', e => { if (e.key === 'Escape') closeKan(); });
@@ -1698,7 +1772,7 @@ let rows = [];
 // Click the card to go back to the normal window. Up / Down or the scroll wheel cycle the timers (the one above and the one below show as a line over the card's
 // top and bottom edge for a moment). Left / Right, a sideways scroll or the switch-view keybind swap a Kanban timer between its Time until card and its Kanban card.
 const MINI_W = 300;
-let miniOn = false, miniSel = null, miniView = 'time', miniIdxLast = 0, miniRefs = null, miniColl = {}, miniAcc = 0, miniWheelAt = 0, miniHintT = 0, miniFitRaf = 0, miniPinned = {}, miniPeekT = 0, miniLastH = 0, miniDrag = null, miniBack = null;
+let miniOn = false, miniSel = null, miniView = 'time', miniIdxLast = 0, miniRefs = null, miniColl = {}, miniAcc = 0, miniWheelAt = 0, miniHintT = 0, miniFitRaf = 0, miniPinned = {}, miniPeekT = 0, miniLastH = 0, miniDrag = null, miniBack = null, miniScroll = 0;
 try { const v = GM_getValue('miniPins', {}); if (v && typeof v === 'object' && !Array.isArray(v)) miniPinned = v; } catch (e) {}
 const savePins = () => { try { GM_setValue('miniPins', { ...miniPinned }); } catch (e) {} };
 const mnPk = h('div', 'mnpk t'), mnPkB = h('div', 'mnpk b'), mnBody = h('div', 'mnbody');
@@ -1715,7 +1789,7 @@ const miniSetEntry = en => { if (en.kind === 'row') miniSet(en.r.t); else miniSe
 const miniLine = (en, a) => {
   if (en.kind === 'alarm') return a + ' ⏰ Alarm · ' + (alLap.style.display !== 'none' ? alLapMain.textContent : alTime.textContent);
   if (en.kind === 'pomo') return a + ' 🍅 Pomodoro ' + (pm.session ? pm.session.n : '') + ' · ' + pmTMain.textContent;
-  const r = en.r; return a + ' ' + hl(Math.floor(r.t.v / 60), r.t.v % 60) + (r.t.title ? ' · ' + r.t.title : '') + ' · ' + r.cdMain.textContent;
+  const r = en.r; return a + ' ' + hl(Math.floor(r.t.v / 60), r.t.v % 60) + (r.t.title ? ' · ' + tLabel(r.t) : '') + ' · ' + r.cdMain.textContent;
 };
 const miniBackOk = () => {   // is there still a countdown to go back to (it exists, and it is not the one on screen)?
   if (!miniBack) return false;
@@ -1723,7 +1797,7 @@ const miniBackOk = () => {   // is there still a countdown to go back to (it exi
   if (bi < 0 || bi === miniIdx()) { miniBack = null; return false; }
   return true;
 };
-const miniName = en => en.kind === 'alarm' ? '⏰ Alarm' : en.kind === 'pomo' ? '🍅 Pomodoro ' + (pm.session ? pm.session.n : '') : hl(Math.floor(en.r.t.v / 60), en.r.t.v % 60) + (en.r.t.title ? ' · ' + en.r.t.title : '');
+const miniName = en => en.kind === 'alarm' ? '⏰ Alarm' : en.kind === 'pomo' ? '🍅 Pomodoro ' + (pm.session ? pm.session.n : '') : hl(Math.floor(en.r.t.v / 60), en.r.t.v % 60) + (en.r.t.title ? ' · ' + tLabel(en.r.t) : '');
 function miniBackSync() {   // the "Back" bar at the top of the small window: shown only while there is a countdown to go back to
   const ok = miniOn && miniBackOk();
   shell.classList.toggle('hasback', ok);
@@ -1763,9 +1837,9 @@ function miniRender() {
     const t = r.t, cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill');
     cdS.style.display = 'none';
     const es = mkSw('Elapsed', true); setSw(es.i, !!t.el); es.i.onchange = () => { r.sw.i.checked = es.i.checked; r.sw.i.onchange(); };
-    const ttl = h('div', 'mnttl', t.title || ''); ttl.title = t.title || ''; if (!t.title) ttl.style.display = 'none';
+    const ttl = h('div', 'mnttl md'); ttl.replaceChildren(...tNodes(t)); ttl.title = t.title ? tLabel(t) : ''; if (!t.title) ttl.style.display = 'none'; const tcp = t.kcap ? tCap(t) : null;
     miniRefs.t = { cdM, cdS, cd, fill };
-    mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, sndMkSil('until'), es.lab));
+    mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl, ...(tcp ? [tcp] : [])), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, sndMkSil('until'), es.lab));
     return;
   }
   const [cid, iid] = String(r.t.id).split(':'), c = kan.cards.find(z => z.id === cid);
@@ -1777,11 +1851,11 @@ function miniRender() {
   const pt = h('span', 'mnpt', '☑ ' + (total ? pct + '% · ' + done + '/' + total + ' done' : 'no checklist items yet'));   // checklist: percentage and how many of the total
   const ipf = h('div', 'fill'), ipt = h('span', 'mnpt'), ipb = h('div', 'mnprog', null, h('div', 'bar', null, ipf), ipt); ipb.style.display = 'none';   // interval: shown only for a card with an interval due date
   miniRefs.ip = { box: ipb, f: ipf, t: ipt };
-  const cl = h('div', 'mncl'), dtl = h('div', 'mncl', kdtText(c)), head = h('div', 'mnch', null, h('div', 'mnct', c.title || 'Untitled'), arr); head.style.setProperty('--mc', kcat(c.cat).color);   // dtl: the card's due date / interval
+  const cl = h('div', 'mncl'), dtl = h('div', 'mncl', kdtText(c)), head = h('div', 'mnch', null, (() => { const e = h('div', 'mnct md'); e.replaceChildren(...(r.t.kno ? [kpill(r.t)] : []), ...mdParse(c.title || 'Untitled')); return e; })(), arr); head.style.setProperty('--mc', kcat(c.cat).color);   // dtl: the card's due date / interval
   miniRefs.c = c; miniRefs.cl = cl; miniRefs.dt = dtl;
   const list = h('div', 'mnlist'), shown = coll ? c.items.filter(x => (x.time || x.date) && pins.has(x.id)) : c.items;
   shown.forEach(it => {
-    const body = h('div', 'mnib', null, h('div', 'mnix', it.text)), row = h('div', 'mnit' + (it.done ? ' done' : ''));
+    const body = h('div', 'mnib', null, h('div', 'mnix', it.text), ...(it.cap ? [mdSet(h('div', 'mncap md'), it.cap)] : [])), row = h('div', 'mnit' + (it.done ? ' done' : ''));
     if (!coll) {
       const cb = h('input'); cb.type = 'checkbox'; cb.checked = it.done; cb.setAttribute('aria-label', 'Done: ' + it.text);
       cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kSettle(c); saveKan(); kanRender(); build(); };
@@ -1866,12 +1940,12 @@ function miniEnter(t) {   // t: a Time until timer, or 'alarm' / 'pomo'
     if (rows.length) { let b = -1; rows.forEach((r, k) => { if (isFinite(r.last) && (b < 0 || r.last < rows[b].last)) b = k; }); miniSet(rows[b < 0 ? 0 : b].t); }
     else { const L = miniList(); if (L.length) miniSetEntry(L[0]); }
   }
-  miniOn = true; miniBack = null; miniLastH = 0; shell.classList.add('mini'); closeKan(); hideTip();
+  if (!miniOn) miniScroll = wrap.scrollTop; miniOn = true; miniBack = null; miniLastH = 0; shell.classList.add('mini');   // remember how far the full window was scrolled: it is hidden while the small one is open, and a hidden list forgets its place closeKan(); hideTip();
   miniRender(); miniTick();
   requestAnimationFrame(() => { miniFit(true); setTimeout(() => miniFit(true), 200); });   // sized once now, and once more after fonts and layout have settled
 }
 function miniAlert(target) {   // an alarm or pomodoro just finished: leave the small window if it is open, then scroll the full window to it if it is not already in view
-  if (miniOn) miniExit();
+  if (miniOn) miniExit(false);
   const go = () => {
     try {
       const wr = wrap.getBoundingClientRect(), tr = target.getBoundingClientRect();
@@ -1882,7 +1956,7 @@ function miniAlert(target) {   // an alarm or pomodoro just finished: leave the 
 }
 function miniJump() {   // clicking the mini card: back to the normal window, scrolled to whatever the card was showing (and highlighted)
   const en = miniList()[miniIdx()], kanView = !!(en && en.kind === 'row' && en.r.t.kan && miniView === 'card'), t = en && en.kind === 'row' ? en.r.t : null;
-  miniExit();
+  miniExit(false);
   if (!en) return;
   const calm = kReduce();
   const show = el => { el.scrollIntoView({ block: 'center', behavior: 'auto' }); };
@@ -1893,7 +1967,11 @@ function miniJump() {   // clicking the mini card: back to the normal window, sc
   const go = (mark) => { const el = find(); if (!el) return; show(el); if (mark) hl2(el); };
   go(false); setTimeout(() => go(false), 150); setTimeout(() => go(true), 500);   // again once the window has grown back to full size
 }
-function miniExit() { if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b', 'hasback'); miniBack = null; miniRefs = null; sk.miniSize(false, 0, 0); }
+function miniExit(keepScroll = true) {   // keepScroll: carry on exactly where the full window was (not wanted when the caller scrolls somewhere on purpose afterwards)
+  if (!miniOn) return; miniOn = false; clearTimeout(miniPeekT); miniPeekT = 0; shell.classList.remove('mini', 'pk-t', 'pk-b', 'hasback'); miniBack = null; miniRefs = null; sk.miniSize(false, 0, 0);
+  const y = miniScroll; miniScroll = 0;
+  if (keepScroll && y > 0) { const put = () => { if (!miniOn && wrap.scrollTop === 0) wrap.scrollTop = y; }; put(); requestAnimationFrame(put); [80, 250, 600].forEach(ms => setTimeout(put, ms)); }   // the contents stay where they were; tried again while the window grows back to full size
+}
 mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, sideways scroll switches the view
   if (!miniOn) return;
   const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY), horiz = ax > ay || (e.shiftKey && ay > 0), amt = horiz ? (e.deltaX || e.deltaY) : e.deltaY;
@@ -1947,17 +2025,17 @@ function build() {
     if (del) return trashRow(t);
     const l = hl(Math.floor(t.v / 60), t.v % 60), x = h('button', 'x', '×'), f = h('div', 'fill');
     const cdMain = h('span'), cdSup = h('sup'), cd = h('b', 'cd', null, cdMain, cdSup); cdSup.style.display = 'none';
-    x.setAttribute('aria-label', 'Remove ' + (t.title || l));
+    x.setAttribute('aria-label', 'Remove ' + (t.title ? tLabel(t) : l));
     const ok = h('button', 'x ok', '✓'); ok.title = 'Got it: hides this check, elapsed time keeps counting'; ok.setAttribute('aria-label', 'Done with ' + l); ok.style.display = 'none';
     // the time with its title under it; long titles are shortened with an ellipsis and hovering shows them in full
-    const tsp = planning && !t.kan ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60) + (t.hist && t.hist.length > 1 ? ' · changed ' + t.hist.length + '×' : ''))] : [])), lblBox = h('div', 'tlb', null, tr1, tt);
-    const showTitle = () => { tt.textContent = t.title || 'add a title'; tt.className = 'tt' + (t.title ? '' : ' empty'); };
+    const tsp = planning && !t.kan ? mkTimeEdit(t) : h('span', null, l), tt = h('span', 'tt'), tr1 = h('div', 'trt', null, tsp, ...(planning && t.prev != null ? [h('span', 'tprev', 'was ' + hl(Math.floor(t.prev / 60), t.prev % 60) + (t.hist && t.hist.length > 1 ? ' · changed ' + t.hist.length + '×' : ''))] : [])), lblBox = h('div', 'tlb', null, tr1, tt, ...(t.kcap ? [tCap(t)] : []));
+    const showTitle = () => { tt.className = 'tt md' + (t.title ? '' : ' empty'); if (t.title) tt.replaceChildren(...tNodes(t)); else tt.textContent = 'add a title'; };   // the title is shown formatted (markdown); editing it shows the symbols
     showTitle();
-    lblBox.addEventListener('mouseenter', () => { if (t.title) showTip(lblBox, t.title); });
+    lblBox.addEventListener('mouseenter', () => { if (t.title) showTip(lblBox, tLabel(t)); });
     lblBox.addEventListener('mouseleave', hideTip);
     tt.onclick = () => {   // click the title to rename it
       hideTip();
-      const ed = h('input', 'tin'); ed.type = 'text'; ed.maxLength = 60; ed.value = t.title || ''; ed.placeholder = 'Title (optional)'; ed.setAttribute('aria-label', 'Timer title');
+      const ed = h('input', 'tin'); ed.type = 'text'; ed.maxLength = 120; ed.value = t.title || ''; ed.placeholder = 'Title (optional)'; ed.setAttribute('aria-label', 'Timer title');
       let closed = false;
       const done = keep => { if (closed) return; closed = true; if (keep) { t.title = ed.value.trim(); save(); } lblBox.replaceChildren(tr1, tt); showTitle(); };
       ed.addEventListener('keydown', e => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); });
@@ -1975,7 +2053,7 @@ function build() {
     if (planning && !t.kan && (t.prev != null || (t.hist && t.hist.length))) { row.classList.add('pchg'); if (t === lastChg) row.classList.add('pnew'); }   // re-planning: a blue outline marks every countdown whose time was changed, and it pulses right after each new change
     x.onclick = () => {   // first tap only asks; nothing is removed until "Remove"
       const yes = h('button', 'cf yes', 'Remove'), no = h('button', 'cf', 'Keep');
-      const conf = h('div', 'conf', null, h('span', null, 'Remove ' + (t.title || l) + '?'), yes, no);
+      const conf = h('div', 'conf', null, h('span', null, 'Remove ' + (t.title ? tLabel(t) : l) + '?'), yes, no);
       let timer = 0;
       const cancel = () => { clearTimeout(timer); conf.remove(); head.style.display = ''; };
       yes.onclick = () => { clearTimeout(timer); removeT(t); };
@@ -2026,10 +2104,10 @@ function mkTimeEdit(t) {   // planning mode: pick a new time, then press the che
 }
 function trashRow(t) {   // the dashed box that stands where a deleted countdown was
   const l = hl(Math.floor(t.v / 60), t.v % 60), live = h('b'), undo = h('button', null, 'Undo');
-  undo.setAttribute('aria-label', 'Undo deleting ' + (t.title || l));
+  undo.setAttribute('aria-label', 'Undo deleting ' + (t.title ? tLabel(t) : l));
   undo.onclick = () => { trash = trash.filter(z => z !== t); saveTrash(); if (!tracked.includes(t)) { tracked.push(t); save(); } build(); };
   trashRows.push({ t, live });
-  return h('div', 'tx', null, h('div', null, null, h('span', null, 'Deleted · ' + (t.title ? t.title + ' · ' : '') + l), live), undo);
+  return h('div', 'tx', null, h('div', null, null, h('span', null, 'Deleted · ' + (t.title ? tLabel(t) + ' · ' : '') + l), live), undo);
 }
 function trashTick(n, sod) {   // keeps each dashed box's countdown or elapsed time running
   const nowS = Math.floor(n / 1000);
@@ -2056,7 +2134,7 @@ function showUndo() {
     if (r && !tracked.includes(r)) { tracked.push(r); save(); build(); }
     showUndo();
   };
-  undoBar.replaceChildren(h('span', null, 'Removed ' + (t.title ? t.title + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60)), b);
+  undoBar.replaceChildren(h('span', null, 'Removed ' + (t.title ? tLabel(t) + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60)), b);
   undoBar.style.display = 'flex';
 }
 // ---------- alarm timer: pick a length, see the clock time it will end ----------
@@ -2122,7 +2200,7 @@ function notifyGo(tg) {   // you clicked a notification (not its close button): 
     const was = miniIdx(), prev = was >= 0 ? { sel: { ...miniSel }, view: miniView } : null;
     if (tg.kind === 'row') miniSet(row.t);
     else if (tg.kind === 'alarm' ? alarm : pm.session) miniSel = { kind: tg.kind };
-    else miniExit();   // nothing for the small window to show (a finished pomodoro session): carry on in the normal window
+    else miniExit(false);   // nothing for the small window to show (a finished pomodoro session): carry on in the normal window
     if (miniOn) {
       if (prev && miniIdx() !== was && !miniBackOk()) miniBack = prev;   // remember where you were (only the first jump is kept), so the Back bar can take you there
       miniRender(); miniTick(); miniPeek(true, true, true); return;
@@ -2969,7 +3047,7 @@ function tick() {
     let d = t.v * 60 - sx; if (d < 0) d += 86400;
     const since = (86400 - d) % 86400, os = nowS - since;          // when this clock time last came round, in whole seconds
     const wrapped = !fz && !isNaN(r.last) && d > r.last + 5;
-    if (wrapped) { beep(2); notify('Time reached', (t.title ? t.title + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60), { kind: 'row', t, id: t.kan ? t.id : null }); }
+    if (wrapped) { beep(2); notify('Time reached', (t.title ? tLabel(t) + ' · ' : '') + hl(Math.floor(t.v / 60), t.v % 60), { kind: 'row', t, id: t.kan ? t.id : null }); }
     if (!t.armed) { t.armed = n; saveSlot(t); }
     if (!t.span) { t.span = Math.max(d, 1); t.dur0 = t.span; saveSlot(t); }
     else if (wrapped || d > t.span) { if (!t.dur0) t.dur0 = t.span; t.span = 86400; saveSlot(t); }
