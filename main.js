@@ -103,14 +103,14 @@ function rebuildMenu() {
 function leaveMini() {                                 // back to the full-size window, exactly where it was
   if (!miniOn || !win) return;
   const target = fullBounds; miniOn = false; fullBounds = null;
-  win.setResizable(true); win.setMinimumSize(280, 360);
+  win.setMaximumSize(0, 0); win.setMinimumSize(280, 360);   // the size lock comes off (setResizable is never touched: flipping it changes the Windows frame, and that is what made the window creep upwards)
   if (!target) return;
   const put = () => {                                  // Windows can nudge a frameless window by a few pixels when it becomes resizable again (it crept upwards): put it back exactly, and check again once the change has settled
     if (!win || win.isDestroyed() || miniOn || win.isMaximized() || win.isMinimized()) return;
     const b = win.getBounds();
     if (b.x !== target.x || b.y !== target.y || b.width !== target.width || b.height !== target.height) win.setBounds(target);
   };
-  win.setBounds(target); put(); setTimeout(put, 60); setTimeout(put, 250);
+  win.setBounds(target); put(); setTimeout(put, 60); setTimeout(put, 250); setTimeout(put, 700);
 }
 
 function createWindow() {
@@ -204,12 +204,14 @@ if (gotLock) {
     if (!miniOn) {
       miniOn = true; fullBounds = win.getBounds();
       const cur = fullBounds, p = cfg.miniPos && onScreen({ x: cfg.miniPos.x, y: cfg.miniPos.y, width: w, height: h }) ? cfg.miniPos : { x: cur.x, y: cur.y };
-      win.setMinimumSize(1, 1); win.setResizable(false);   // resizable first: on Windows, switching it afterwards changes the frame and would clip the card
+      win.setMinimumSize(1, 1); win.setMaximumSize(0, 0);   // the small window is kept from being resized with size limits, not setResizable: changing the resizable flag changes the Windows frame, which nudged the window when it grew back
       win.setBounds({ x: Math.round(p.x), y: Math.round(p.y), width: w, height: h });
     } else {
+      win.setMinimumSize(1, 1); win.setMaximumSize(0, 0);   // free for a moment so it can take its new height
       const b = win.getBounds(); if (b.width !== w || b.height !== h) win.setBounds({ x: b.x, y: b.y, width: w, height: h });
     }
     win.setContentSize(w, h);                           // the page area is exactly the card
+    win.setMinimumSize(w, h); win.setMaximumSize(w, h);   // and locked at that size
   });
   ipcMain.handle('pin:get', () => (win ? win.isAlwaysOnTop() : false));
   ipcMain.handle('pin:toggle', () => setPin(!win.isAlwaysOnTop()));
