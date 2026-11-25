@@ -1341,8 +1341,9 @@ const kanSlots = new Map();
 const kanSpan = kan.sp; try { const v = JSON.parse(GM_getValue('kanspan', '{}')); if (v && typeof v === 'object') Object.keys(v).forEach(k => { if (!kanSpan[k]) kanSpan[k] = v[k]; }); } catch (e) {}   // (an earlier version kept these in their own entry)
 const saveSlot = t => { if (!t.kan) { save(); return; } kanSpan[t.id] = { v: t.v, span: t.span, dur0: t.dur0, armed: t.armed }; saveKan(); };
 const kanSlot = (id, time, title, col) => { const v = +time.slice(0, 2) * 60 + +time.slice(3); let s = kanSlots.get(id); if (!s || s.v !== v) { s = { v, kan: true, el: false, id }; const st = kanSpan[id]; if (st && st.v === v && st.span) { s.span = st.span; s.dur0 = st.dur0; s.armed = st.armed; } kanSlots.set(id, s); } s.title = title; s.col = col; return s; };
+const kanNo = new Map();   // card id -> its colour number (the # beside it in the Time until list), kept so the card on the board can show the very same number
 function kanDerived() {   // only the cards picked with the ⏱ button (or every card, if that switch is on)
-  const out = [], groups = [];
+  const out = [], groups = []; kanNo.clear();
   kan.cards.forEach(c => {
     if (!(kan.inc || c.tu)) return;
     const col = kcat(c.cat).color, g = { c, sl: [] };
@@ -1353,7 +1354,7 @@ function kanDerived() {   // only the cards picked with the ⏱ button (or every
   // a number for every card within its colour, in the order the cards come up in the list, so two cards of the same colour can never be mixed up (a card's checklist items carry their card's number)
   KCATS.forEach(cat => {
     const gs = groups.filter(g => g.c.cat === cat.id).map((g, i) => ({ g, v: Math.min(...g.sl.map(s => s.v)), i })).sort((a, b) => a.v - b.v || a.i - b.i);
-    gs.forEach((x, n) => x.g.sl.forEach(s => { s.kno = n + 1; s.kof = gs.length; s.kcn = cat.name; }));
+    gs.forEach((x, n) => { kanNo.set(x.g.c.id, { kno: n + 1, kof: gs.length, kcn: cat.name, col: cat.color }); x.g.sl.forEach(s => { s.kno = n + 1; s.kof = gs.length; s.kcn = cat.name; }); });
   });
   return out;
 }
@@ -1388,7 +1389,8 @@ function kCard(c) {
   const box = h('div', 'kcard'); box.dataset.kid = c.id; box.style.setProperty('--kc', kcat(c.cat).color); box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-label', 'Open card: ' + c.title);
   let pctF = null; const dd = h('span', 'kd'), tmr = h('span', 'kcy'), ov = h('span', 'kov'), elp = h('span', 'kov bad'), done = c.items.filter(i => i.done).length, pct = c.items.length ? Math.round(100 * done / c.items.length) : null;
   const dt = h('div', 'kdt', kdtText(c)), ipf = h('div', 'kfill'), ipt = h('span'), ipb = h('div', 'kprog', null, h('div', 'kbar', null, ipf), ipt); ipb.style.display = 'none';
-  box.append(mdSet(h('div', 'kt md'), c.title || 'Untitled'), ...(c.cap ? [mdSet(h('div', 'kcap md'), c.cap)] : []), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);   // the title formatted, and the small caption under it
+  const nm = kanNo.get(c.id), kt = h('div', 'kt md'); kt.replaceChildren(...(nm ? [kpill(nm)] : []), ...mdParse(c.title || 'Untitled'));   // the card's # in its colour, then the title: the same number the Time until list shows
+  box.append(kt, ...(c.cap ? [mdSet(h('div', 'kcap md'), c.cap)] : []), h('div', 'kdue', null, dd, tmr, ov, elp), dt, ipb);   // the title formatted, and the small caption under it
   if (pct != null) { const f = h('div', 'kfill'); pctF = f; f.style.width = pct + '%'; box.append(h('div', 'kprog', null, h('div', 'kbar', null, f), h('span', null, pct + '% · ' + done + '/' + c.items.length))); }
   const itRefs = [], timed = c.items.filter(i => i.time || i.date);
   if (timed.length) {   // a small labelled section: each checklist item's due time (gradient border) beside its own progress bar
@@ -1430,7 +1432,7 @@ function kanGoto(id) {   // the 🗂 icon on a Time until row: flip to the Kanba
   setTimeout(go, matchMedia('(prefers-reduced-motion: reduce)').matches ? 30 : 520);   // after the board has finished flipping over
 }
 function kanRender() {
-  kanRefs = [];
+  kanRefs = []; kanDerived();   // the numbers are worked out first, so every card on the board shows its current #
   kSecs.forEach(s => { const cards = kan.cards.filter(c => c.cat === s.cat.id).sort((a, b) => (kdue(a) == null ? 9e15 : kdue(a)) - (kdue(b) == null ? 9e15 : kdue(b))); s.cnt.textContent = cards.length; s.list.replaceChildren(...cards.map(kCard), s.tpl); });
   if (miniOn) miniRender();
   kanTick(Date.now(), true);
