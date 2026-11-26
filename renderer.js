@@ -440,6 +440,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .ev b.pmv{font-variant-numeric:tabular-nums}
 .ev.sess{padding-left:12px;font-size:12px;opacity:.8}
 .ev.sess .conf{flex:1 1 100%;margin:0}.ev.sess .x{flex:none}
+.ev.pent{padding-left:24px;font-size:11.5px;opacity:.85}.ev.pent.early b{color:#ffd84d}.pments{margin:6px 0 2px}.pments .ev:first-child{border-top:0}
 .zkey{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:11px;padding:0 4px}
 .zk{padding:2px 9px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);white-space:nowrap}
 .locbox summary{cursor:pointer;font-weight:600;font-size:12.8px;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -912,7 +913,7 @@ const pmCMsg = h('span'), pmC1 = h('button', 'cf yes', 'Yes'), pmC2 = h('button'
 const pmConf = h('div', 'conf big', null, pmCMsg, pmC1, pmC2, pmC3); pmConf.style.display = 'none';
 const pmMini = h('button', 'add sm2', '⌚ Mini'); pmMini.title = 'Show only this pomodoro in a small window'; pmMini.setAttribute('aria-label', 'Show only this pomodoro in a small window'); pmMini.onclick = () => miniEnter('pomo'); if (!hasMini) pmMini.style.display = 'none';
 const pmBtns = h('div', 'ctl', null, sndMkSil('pomo'), pmPause, pmHalt, pmDone, pmQuit, pmExit, pmStop, pmMini); pmBtns.style.marginTop = '10px'; pmBtns.style.flexWrap = 'wrap';
-const pmOt = h('div', 'pmot'); pmOt.style.display = 'none'; const pmRunBox = h('div', null, null, pmHead, pmTime, pmEnd, pmOt, pmBar, pmWork, pmKeepBox, pmBtns, pmConf);
+const pmOt = h('div', 'pmot'); pmOt.style.display = 'none'; const pmEntries = h('div', 'pments'); pmEntries.style.display = 'none'; const pmRunBox = h('div', null, null, pmHead, pmTime, pmEnd, pmOt, pmBar, pmWork, pmEntries, pmKeepBox, pmBtns, pmConf);
 const pmSumTxt = h('div', 'pmt'), pmSumOk = h('button', 'add sm2', 'OK'), pmSum = h('div', 'pmsum', null, pmSumTxt, pmSumOk); pmSum.style.display = 'none';
 const pmDayT = h('div', 'pms'), pmFull = h('b', 'pmv'), pmPart = h('b', 'pmv'), pmRate = h('b', 'pmv'), pmTot = h('b', 'pmv'), pmWeek = h('div', 'note'), pmIns = h('div', 'note'), pmCons = h('div', 'note');
 const pmHistBtn = h('button', 'add sm2', 'Show history'), pmClear = h('button', 'add sm2', 'Clear history'), pmPdfBtn = h('button', 'add sm2', '📄 Save PDF'), pmPdfMsg = h('p', 'note', 'Only about four months of history are kept. Save a PDF now and then to keep your older days.'), pmHist = h('div'); pmHist.style.display = 'none';
@@ -2474,6 +2475,12 @@ function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
   }
   pmOt.textContent = txt; pmOt.className = 'pmot ' + cls; pmOt.style.display = txt ? '' : 'none';
 }              // seconds counted since the last pomodoro ended
+const pmKindTxt = k => k === 'early' ? 'done early' : k === 'quit' ? 'quit early' : 'completed';
+const pmEntryTxt = e => '#' + e.n + ' · ' + clk.format(e.start) + ' – ' + clk.format(e.end) + ' · worked ' + fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) + ' · ' + pmKindTxt(e.kind);   // one pomodoro's entry: when, how long you actually worked, and how it ended
+function pmWorkedNote(s) {   // after Done early (or a quit): how much of that pomodoro you actually worked
+  if (s.cur || !s.pomos || !s.pomos.length) return '';
+  const e = s.pomos[s.pomos.length - 1]; return e.n === s.n && e.kind !== 'full' ? ' · worked ' + fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) : '';
+}
 // kind: 'full' (ran out) | 'early' (you marked it done early: counts as completed) | 'quit' (stopped early) | 'discard' (never mind: not recorded)
 function pmEndCur(kind, endMs) {
   const s = pm.session, c = s && s.cur; if (!c) return;
@@ -2492,6 +2499,7 @@ function pmEndCur(kind, endMs) {
   s.worked += secs;
   s.t = s.t || {}; const t = s.t[c.day] = s.t[c.day] || { fc: 0, fs: 0, pc: 0, ps: 0, pn: 0, pp: 0, pf: 0 };   // this session's own share of the day's sums, so it can be taken out again later
   if (kind === 'quit') { t.pc++; t.ps += secs; t.pn++; t.pp += plan; t.pf += secs / plan; } else { t.fc++; t.fs += secs; }
+  (s.pomos = s.pomos || []).push({ n: s.n, kind, start: c.start, end: endMs, worked: secs, plan });   // an entry for this pomodoro, with the time you actually worked in it
 }
 function pmEndSession(endMs) {
   const s = pm.session; if (!s) return;
@@ -2499,8 +2507,8 @@ function pmEndSession(endMs) {
   const recorded = s.full + s.part > 0;                // a session in which nothing was recorded is not counted (no "ghost sessions")
   if (recorded) { const d = pm.days[s.day] = Object.assign(pmEmpty(), pm.days[s.day]); d.ss++; }
   const span = Math.max(0, Math.round((pmSpanEnd(s, endMs) - s.startAt - (s.pausedTotal || 0)) / 1000));
-  pm.last = { day: s.day, startAt: s.startAt, endAt: endMs, span, n: s.n, full: s.full, part: s.part, worked: s.worked, lost: Math.round(s.lost || 0), plost: Math.round(s.pls || 0), ptime: Math.round(s.ptime || 0), empty: !recorded };
-  if (recorded) { pm.log = pm.log || []; const sumF = f => Object.values(s.t || {}).reduce((a, x) => a + x[f], 0), whole = sumF('fc') === s.full && sumF('pc') === s.part; pm.log.push({ day: s.day, startAt: s.startAt, endAt: endMs, span, worked: Math.round(s.worked), n: s.n, full: s.full, part: s.part, sums: whole ? s.t : undefined }); }   // one entry per finished session: when it started and how long it lasted
+  pm.last = { pomos: (s.pomos || []).slice(), day: s.day, startAt: s.startAt, endAt: endMs, span, n: s.n, full: s.full, part: s.part, worked: s.worked, lost: Math.round(s.lost || 0), plost: Math.round(s.pls || 0), ptime: Math.round(s.ptime || 0), empty: !recorded };
+  if (recorded) { pm.log = pm.log || []; const sumF = f => Object.values(s.t || {}).reduce((a, x) => a + x[f], 0), whole = sumF('fc') === s.full && sumF('pc') === s.part; pm.log.push({ day: s.day, startAt: s.startAt, endAt: endMs, span, worked: Math.round(s.worked), n: s.n, full: s.full, part: s.part, sums: whole ? s.t : undefined, pomos: (s.pomos || []).slice() }); }   // one entry per finished session: when it started and how long it lasted
   pm.session = null;
 }
 function pmDeleteSession(e) {                         // take one session out of the log and out of the daily totals
@@ -2908,7 +2916,7 @@ function pmStatsRender() {
       const x = dayOf(k), p = k.split('-').map(Number), dc = pmConsist([k]);
       const row = h('div', 'ev', null, h('span', null, pmFmtDay.format(Date.UTC(p[0], p[1] - 1, p[2], 12))),
         h('b', 'pmv', (x.fc ? x.fc + ' full avg ' + fmt(avgOf(x.fs, x.fc)) : '0 full') + ' · ' + (x.pc ? x.pc + ' quit avg ' + fmt(avgOf(x.ps, x.pc)) : '0 quit') , ...(dc ? [' · ', pmSevEl(fmt(Math.round(dc.TS - dc.TW)) + ' not worked', dc.TS - dc.TW, dc.TS), ' · ' + Math.round(100 * dc.ratio) + '% focus'] : [])));
-      const sess = (logByDay[k] || []).sort((a, b) => a.startAt - b.startAt).map(e => {
+      const sess = (logByDay[k] || []).sort((a, b) => a.startAt - b.startAt).flatMap(e => {
         const rowEl = h('div', 'ev sess'), x = h('button', 'x', '×'); x.title = 'Delete this session'; x.setAttribute('aria-label', 'Delete the session that started at ' + clk.format(e.startAt));
         const info = [h('span', null, clk.format(e.startAt) + ' – ' + clk.format(e.endAt)), h('b', 'pmv', fmt(e.span) + ' session · ' + fmt(e.worked) + ' worked · ' + e.n + (e.n === 1 ? ' pomodoro' : ' pomodoros'), ...(e.span > 0 ? [' · ', pmSevEl(fmt(pmGapOf(e)) + ' not worked', pmGapOf(e), e.span), ' · ' + pmFocus(e.worked, e.span) + '% focus'] : []))];
         const showRow = () => rowEl.replaceChildren(...info, x);
@@ -2920,7 +2928,7 @@ function pmStatsRender() {
           yes.onclick = () => { clearTimeout(timer); pmDeleteSession(e); };
           rowEl.replaceChildren(conf);
         };
-        showRow(); return rowEl;
+        showRow(); return [rowEl, ...(e.pomos || []).map(q => { const r = h('div', 'ev pent' + (q.kind === 'early' ? ' early' : '')); r.append(h('span', null, '#' + q.n + ' · ' + clk.format(q.start) + ' – ' + clk.format(q.end)), h('b', 'pmv', fmt(Math.round(q.worked)) + ' of ' + fmt(Math.round(q.plan)) + ' · ' + pmKindTxt(q.kind))); return r; })];
       });
       return [row, ...sess];
     }) : [h('p', 'note', 'No history yet.')]));
@@ -2931,7 +2939,7 @@ function pmRender() {                                  // layout: which parts ar
   pmCtl.style.display = running ? 'none' : 'block';
   pmLbl.textContent = between ? 'Start pomodoro ' + (s.n + 1) + ' of ' + PM_MAX : 'Start a pomodoro (a session is up to ' + PM_MAX + ')';
   pmRunBox.style.display = s ? 'block' : 'none';
-  pmHeadTxt.textContent = !s ? '' : 'Pomodoro ' + s.n + ' of ' + PM_MAX + (running ? ' · ' + pmLen(s.cur.dur) : (s.lastKind === 'quit' ? ' stopped early' : s.lastKind === 'discard' ? ' · the last one was discarded' : ' complete') + (s.lastDur ? ' · ' + pmLen(s.lastDur) : ''));   // the planned length shows while it runs and after it ends
+  pmHeadTxt.textContent = !s ? '' : 'Pomodoro ' + s.n + ' of ' + PM_MAX + (running ? ' · ' + pmLen(s.cur.dur) : (s.lastKind === 'quit' ? ' stopped early' : s.lastKind === 'discard' ? ' · the last one was discarded' : ' complete') + (s.lastDur ? ' · ' + pmLen(s.lastDur) : '') + pmWorkedNote(s));   // the planned length shows while it runs and after it ends
   pmBar.style.display = running ? '' : 'none';
   pmKeepBox.style.display = between ? '' : 'none';                       // only after a pomodoro has finished
   setSw(pmKeepSw.i, pmKeep);
@@ -2946,12 +2954,15 @@ function pmRender() {                                  // layout: which parts ar
   pmDone.style.display = pmQuit.style.display = pmExit.style.display = running ? '' : 'none'; pmStop.style.display = between ? '' : 'none';
   pmConf.style.display = 'none'; pmBtns.style.display = '';
   pmWork.style.display = s && pmShow ? '' : 'none';
+  const pl = s && s.pomos ? s.pomos : []; pmEntries.style.display = pl.length ? '' : 'none';
+  pmEntries.replaceChildren(...pl.map(e => { const i = e.kind === 'full' ? e.worked / e.plan : 1, r = h('div', 'ev pent' + (e.kind === 'early' ? ' early' : '')); r.append(h('span', null, '#' + e.n + ' · ' + clk.format(e.start) + ' – ' + clk.format(e.end)), h('b', 'pmv', fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) + ' · ' + pmKindTxt(e.kind))); return r; }));   // every pomodoro of this session with the time you worked in it
   const l = pm.last;
   pmSum.style.display = !s && l ? 'block' : 'none';
   if (!s && l) {
     pmSumTxt.textContent = l.empty ? 'Nothing was recorded: the pomodoro was stopped in under ' + PM_SLIP + ' seconds, so it was treated as a slip and not counted.'
       : 'Session finished · ' + l.n + (l.n === 1 ? ' pomodoro' : ' pomodoros') + ' (' + l.full + ' completed, ' + l.part + ' quit early)\n' +
         'You worked ' + fmt(Math.round(l.worked)) + '\nStarted ' + clk.format(l.startAt) + ' · session length ' + fmt(l.span != null ? l.span : Math.round((l.endAt - l.startAt) / 1000));
+    if (!l.empty && l.pomos && l.pomos.length) pmSumTxt.append('\nPomodoros:\n' + l.pomos.map(pmEntryTxt).join('\n'));
     if (!l.empty && l.lost > 0) pmSumTxt.append('\nOvertime penalty: ' + fmt(l.lost) + ' of extra time was not credited (overtime is credited at ' + pmRules.r + '%).'); if (!l.empty && l.ptime > 0) pmSumTxt.append('\nPaused time: ' + fmt(l.ptime) + ' kept the session running, and ' + fmt(l.plost || 0) + ' of it was not credited (paused time is credited at ' + pmRules.p + '%).'); if (!l.empty && l.span > 0) { const g = Math.max(0, Math.round(l.span - Math.min(l.worked, l.span))); pmSumTxt.append('\nNot worked ', pmSevEl(fmt(g), g, l.span), ' of the session · focus ' + pmFocus(l.worked, l.span) + '%'); }
   }
   pmStatsRender();
