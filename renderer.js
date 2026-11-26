@@ -74,6 +74,8 @@ function mdParse(s, depth = 0) {   // text -> a list of DOM nodes
   for (let i = 0; i < s.length;) {
     const c = s[i];
     if (c === '\\' && i + 1 < s.length && '\\`*_~=|'.includes(s[i + 1])) { buf += s[i + 1]; i += 2; continue; }
+    if (c === '\\' && s[i + 1] === '-' && s[i + 2] === '>') { buf += '->'; i += 3; continue; }   // \-> stays as typed
+    if (c === '-' && s[i + 1] === '>') { buf += '→'; i += 2; continue; }   // -> becomes an arrow
     if (c === '`') { const j = s.indexOf('`', i + 1); if (j > i + 1) { flush(); const e = document.createElement('code'); e.textContent = s.slice(i + 1, j); out.push(e); i = j + 1; continue; } }
     let hit = false;
     if (depth < 6) for (const [d, tag] of MD_PAIRS) {
@@ -107,6 +109,7 @@ function mdParse(s, depth = 0) {   // text -> a list of DOM nodes
   flush(); return out;
 }
 const mdSet = (el, s) => { el.replaceChildren(...mdParse(s)); return el; };
+const mdArrow = el => { el.addEventListener('input', e => { if (e.isComposing) return; const v = el.value; if (!v.includes('->')) return; const f = x => x.replace(/(?<!\\)->/g, '→'), pos = el.selectionStart; el.value = f(v); if (pos != null) { const q = f(v.slice(0, pos)).length; try { el.setSelectionRange(q, q); } catch (e2) {} } }); return el; };   // typing -> turns it into an arrow right away (a backslash before it keeps the two characters)
 function mdPlain(s) {   // the same text without the symbols (notifications, tooltips, screen-reader labels); spoilers stay hidden
   const box = document.createElement('div'); mdParse(s).forEach(n => box.append(n));
   box.querySelectorAll('.mdsp').forEach(e => { e.textContent = '▒▒▒'; }); return box.textContent;
@@ -171,7 +174,7 @@ const BAR = [['#5b4bff','#9a6bff'],['#5b4bff','#8a6bff'],['#4f5bff','#7a7bff'],[
 // The colour tables above hold one entry per clock hour. Instead of reading them by the clock, the sun's real height is turned into a position in those same tables
 // (0 to 24, like an hour): the dawn glow shows when the sun is really at the horizon, golden when it is about 6 degrees up, and so on, on every day of the year and at any latitude.
 let skyLocBad = false;   // set when looking up your location fails; until a location is found (or you pick a time zone) the sky falls back to the clock hour, the original sky
-const skyLocOk = () => !skyLocBad && isFinite(LAT) && isFinite(LON) && Math.abs(LAT) <= 90 && Math.abs(LON) <= 180;
+const skyLocOk = () => isFinite(LAT) && isFinite(LON) && Math.abs(LAT) <= 90 && Math.abs(LON) <= 180;
 let skyMark = null, skyMarkKey = '';   // the small white symbol in the top right corner
 function skyMarkSet(on) {   // a sun with rays when the sky follows the real sun, a plain circle when it has fallen back to the clock hour
   if (!skyMark) return;
@@ -921,7 +924,7 @@ const pmStats = h('div', null, null, pmDayT,
 const pomoCard = h('section', 'g', null, cmpHdr('Pomodoro (focus timer)', 'pomo'), pmOpts, pmCtl, pmRunBox, pmSum, pmStats);
 [alBox, pmRunBox, pmSum].forEach(e => e.classList.add('keep'));   // these stay visible while the box is compact
 cmpHeads.forEach(x => x.apply());
-const tIn = h('input', 'tin'); tIn.type = 'text'; tIn.maxLength = 120; tIn.placeholder = 'Title (optional), e.g. Laundry'; tIn.setAttribute('aria-label', 'Timer title');
+const tIn = mdArrow(h('input', 'tin')); tIn.type = 'text'; tIn.maxLength = 120; tIn.placeholder = 'Title (optional), e.g. Laundry'; tIn.setAttribute('aria-label', 'Timer title');
 const tip = h('div', 'tip'); tip.setAttribute('role', 'tooltip');
 const phTitle = h('div', 'ttl', 'Day and night in ' + locName());
 const locSel = h('select'); locSel.setAttribute('aria-label', 'Your US time zone');
@@ -1367,7 +1370,7 @@ incSw.i.onchange = () => { kan.inc = incSw.i.checked; incSw.i.setAttribute('aria
 const REP_TIP = 'A repeating card starts over by itself instead of being finished once. An interval card begins a new cycle of the same length as soon as its end date passes, and the cycle number goes up. It never shows the ⚠ old-month warning; you get a friendly reminder of when it was made instead.';
 const kTip = (el, text) => { el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') showTip(el, text); }); el.addEventListener('pointerleave', hideTip); };   // hover pop-up (computers only)
 function kTpl(catId) {   // the dashed template for a new card
-  const t = h('input'); t.type = 'text'; t.maxLength = 120; t.placeholder = '+ New card…'; t.setAttribute('aria-label', 'New card text, ' + kcat(catId).name);
+  const t = mdArrow(h('input')); t.type = 'text'; t.maxLength = 120; t.placeholder = '+ New card…'; t.setAttribute('aria-label', 'New card text, ' + kcat(catId).name);
   const d = h('input'); d.type = 'date'; d.setAttribute('aria-label', 'Due date'); const tm = h('input'); tm.type = 'time'; tm.setAttribute('aria-label', 'Due time');
   const add = h('button', 'add sm2', 'Add card'), rp = catId === 'proactive' ? mkSw('🔁 Repeating card', true) : null; if (rp) kTip(rp.lab, REP_TIP);
   const go = () => { const title = t.value.trim(); if (!title) { t.focus(); return; } kan.cards.push({ id: kid(), title, cat: catId, due: d.value || '', time: tm.value || '', assigned: kdayStr(Date.now()), mode: '', rep: !!(rp && rp.i.checked), start: '', end: '', cycle: 1, tags: [], items: [] }); t.value = ''; d.value = ''; tm.value = ''; if (rp) setSw(rp.i, false); saveKan(); kanRender(); if (kan.inc) build(); };
@@ -1401,7 +1404,7 @@ function kCard(c) {
     const cflip = () => { kColl['cl:' + c.id] = !kColl['cl:' + c.id]; saveColl(); capply(); };
     chd.onclick = e => { e.stopPropagation(); cflip(); }; chd.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cflip(); } });
     cl.append(chd); capply();
-    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, h('div', 'kclt', it.text), ...(it.cap ? [mdSet(h('div', 'kcap kclcap md'), it.cap)] : []), h('div', 'kclb', null, ...kPills(it), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
+    timed.forEach(it => { const f = h('div', 'kfill'), rem = h('span', 'kclr'), rw = h('div', 'kclrow' + (it.done ? ' done' : ''), null, mdSet(h('div', 'kclt md'), it.text), ...(it.cap ? [mdSet(h('div', 'kcap kclcap md'), it.cap)] : []), h('div', 'kclb', null, ...kPills(it), h('div', 'kbar', null, f)), rem); rw.dataset.iid = it.id; cl.append(rw); itRefs.push({ it, f, rem, g: rw }); });
     box.append(cl);
   }
   if (c.tags.length) box.append(h('div', 'ktagrow', null, ...c.tags.map(t => h('span', 'ktag', t))));
@@ -1570,8 +1573,8 @@ function openKan(id) {
   const m = h('div', 'kmod'), pan = h('div', 'kpan'); m.append(pan); kmod = m; m.tabIndex = -1; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Card details');
   const col = () => pan.style.setProperty('--kc', kcat(c.cat).color); col();
   const sync = () => { saveKan(); kanRender(); build(); };
-  const ti = h('input', 'kin kti'); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
-  const ci = h('input', 'kin kcapin'); ci.type = 'text'; ci.maxLength = 160; ci.value = c.cap || ''; ci.placeholder = 'Caption (optional): a small line under the title'; ci.setAttribute('aria-label', 'Card caption'); ci.onchange = () => { c.cap = ci.value.trim(); sync(); };
+  const ti = mdArrow(h('input', 'kin kti')); ti.type = 'text'; ti.maxLength = 120; ti.value = c.title; ti.setAttribute('aria-label', 'Card text'); ti.onchange = () => { c.title = ti.value.trim() || 'Untitled'; ti.value = c.title; sync(); };
+  const ci = mdArrow(h('input', 'kin kcapin')); ci.type = 'text'; ci.maxLength = 160; ci.value = c.cap || ''; ci.placeholder = 'Caption (optional): a small line under the title'; ci.setAttribute('aria-label', 'Card caption'); ci.onchange = () => { c.cap = ci.value.trim(); sync(); };
   const xb = h('button', 'kclose', '×'); xb.type = 'button'; xb.setAttribute('aria-label', 'Close'); xb.onclick = closeKan;
   const sel = h('select', 'kin'); KCATS.forEach(k => { const o = h('option', null, k.name); o.value = k.id; sel.append(o); }); sel.value = c.cat; sel.setAttribute('aria-label', 'Category');
   const kPopSync = (fn, closeOnDone) => { const was = c.cat; kFlight(c, () => { fn(); sync(); }); sel.value = c.cat; col(); if (closeOnDone && c.cat === 'done' && was !== 'done') { closeKan(); return; } renderList(); showMode(); showAuto(); };   // a card that lands in Done closes this pop-up so you can watch it fly there
@@ -1650,12 +1653,12 @@ function openKan(id) {
   function timeKundo() { clearTimeout(kundoT); if (undoItems.length) kundoT = setTimeout(() => { undoItems.length = 0; showKundo(); }, 8000); }   // brief: the warning fades after 8 seconds
   function itemRow(it) {
     const cb = h('input'); cb.type = 'checkbox'; cb.checked = it.done; cb.setAttribute('aria-label', 'Done: ' + it.text);
-    const tx = h('textarea', 'kin kx'); tx.rows = 1; tx.maxLength = 200; tx.value = it.text; tx.setAttribute('aria-label', 'Item text');
+    const tx = mdArrow(h('textarea', 'kin kx')); tx.rows = 1; tx.maxLength = 200; tx.value = it.text; tx.setAttribute('aria-label', 'Item text');
     const rm = h('button', 'kdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove item: ' + it.text);
     const due = h('button', 'kdueat' + (it.time || it.date ? '' : ' none'), it.time || it.date ? (it.time ? '⏰ due at ' + ktime(it.time) : '⏰ end of day') + (it.date ? ' · 📅 ' + kdatew(it.date) : '') : '+ due time / date'); due.type = 'button';
     due.setAttribute('aria-label', it.time || it.date ? 'Change the due date and time' : 'Add a due date or time');
     const bf = h('div', 'kfill'), brem = h('span', 'kclr'), bw = h('div', 'kitb', null, h('div', 'kbar', null, bf), brem);   // the due time with its progress bar beside it
-    const cp = h('input', 'kin kitcap'); cp.type = 'text'; cp.maxLength = 160; cp.value = it.cap || ''; cp.placeholder = 'Caption (optional)'; cp.setAttribute('aria-label', 'Item caption'); cp.onchange = () => { it.cap = cp.value.trim(); cp.value = it.cap; sync(); }; cp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cp.blur(); } });
+    const cp = mdArrow(h('input', 'kin kitcap')); cp.type = 'text'; cp.maxLength = 160; cp.value = it.cap || ''; cp.placeholder = 'Caption (optional)'; cp.setAttribute('aria-label', 'Item caption'); cp.onchange = () => { it.cap = cp.value.trim(); cp.value = it.cap; sync(); }; cp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cp.blur(); } });
     const body = h('div', 'kbody', null, tx, cp, h('div', 'kitr', null, due, ...(it.time || it.date ? [bw] : []))); if (it.time || it.date) kanPop.push({ it, f: bf, rem: brem, g: bw });
     cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kPopSettle(); };
     tx.oninput = () => grow(tx);
@@ -1694,8 +1697,8 @@ function openKan(id) {
   const addWrap = h('div', 'kaddwrap');
   function showAddBtn() { const b = h('button', 'kaddbtn', '+ Add an item'); b.type = 'button'; b.onclick = showForm; addWrap.replaceChildren(b); }
   function showForm() {   // the styled "new item" card with a due-at time
-    const ni = h('textarea', 'kin kfx'); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item'); ni.oninput = () => grow(ni); requestAnimationFrame(() => grow(ni));
-    const nc = h('input', 'kin kitcap kitcapnew'); nc.type = 'text'; nc.maxLength = 160; nc.placeholder = 'Caption (optional)'; nc.setAttribute('aria-label', 'Caption for the new item');
+    const ni = mdArrow(h('textarea', 'kin kfx')); ni.rows = 2; ni.maxLength = 200; ni.placeholder = 'Add an item…'; ni.setAttribute('aria-label', 'New checklist item'); ni.oninput = () => grow(ni); requestAnimationFrame(() => grow(ni));
+    const nc = mdArrow(h('input', 'kin kitcap kitcapnew')); nc.type = 'text'; nc.maxLength = 160; nc.placeholder = 'Caption (optional)'; nc.setAttribute('aria-label', 'Caption for the new item');
     const nt = h('input', 'kin kitime'); nt.type = 'time'; nt.setAttribute('aria-label', 'Due time for the new item');
     const nd = h('input', 'kin kitime'); nd.type = 'date'; nd.setAttribute('aria-label', 'Due date for the new item'); nd.style.maxWidth = '150px';
     let nTime = '';   // the time only counts once you press the check mark, never while the picker is still moving
@@ -1870,7 +1873,7 @@ function miniRender() {
   miniRefs.c = c; miniRefs.cl = cl; miniRefs.dt = dtl;
   const list = h('div', 'mnlist'), shown = coll ? c.items.filter(x => (x.time || x.date) && pins.has(x.id)) : c.items;
   shown.forEach(it => {
-    const body = h('div', 'mnib', null, h('div', 'mnix', it.text), ...(it.cap ? [mdSet(h('div', 'mncap md'), it.cap)] : [])), row = h('div', 'mnit' + (it.done ? ' done' : ''));
+    const body = h('div', 'mnib', null, mdSet(h('div', 'mnix md'), it.text), ...(it.cap ? [mdSet(h('div', 'mncap md'), it.cap)] : [])), row = h('div', 'mnit' + (it.done ? ' done' : ''));
     if (!coll) {
       const cb = h('input'); cb.type = 'checkbox'; cb.checked = it.done; cb.setAttribute('aria-label', 'Done: ' + it.text);
       cb.onchange = () => { it.done = cb.checked; it.dat = cb.checked ? Date.now() : 0; kSettle(c); saveKan(); kanRender(); build(); };
@@ -2052,7 +2055,7 @@ function build() {
     lblBox.addEventListener('mouseleave', hideTip);
     tt.onclick = () => {   // click the title to rename it
       hideTip();
-      const ed = h('input', 'tin'); ed.type = 'text'; ed.maxLength = 120; ed.value = t.title || ''; ed.placeholder = 'Title (optional)'; ed.setAttribute('aria-label', 'Timer title');
+      const ed = mdArrow(h('input', 'tin')); ed.type = 'text'; ed.maxLength = 120; ed.value = t.title || ''; ed.placeholder = 'Title (optional)'; ed.setAttribute('aria-label', 'Timer title');
       let closed = false;
       const done = keep => { if (closed) return; closed = true; if (keep) { t.title = ed.value.trim(); save(); } lblBox.replaceChildren(tr1, tt); showTitle(); };
       ed.addEventListener('keydown', e => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); });
