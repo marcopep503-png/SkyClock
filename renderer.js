@@ -680,7 +680,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .shell.mini>.hd,.shell.mini>.wrap{display:none}
 .shell.mini>.mini{display:block}
 .shell.mini{box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
-.mnbody{padding:10px 12px 10px;cursor:pointer}
+.mnbody{padding:10px 12px 10px;cursor:pointer;position:relative}
+.mntip{position:absolute;left:6px;right:6px;top:42px;z-index:5;padding:6px 8px;border-radius:6px;background:rgba(8,10,30,.96);color:#fff;font-size:11px;line-height:1.35;white-space:pre-line;overflow-wrap:anywhere;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
 .mntop{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mnl{min-width:0;flex:1}
 .mnlab{font:700 14px system-ui,'Segoe UI',sans-serif}
@@ -1909,8 +1910,9 @@ function miniTimerRender(kind) {   // the alarm and the pomodoro share one small
   setSw(es.i, al ? alEl : pmKeep);
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
-  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
-  mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, endEl, ...(head ? [head] : [])), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab));   // same layout and height as a Time until card; the pomodoro's heading sits under the end time like a title   // room for the Silence button even when it is not showing (pomodoro)
+  miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work, tip: null, tipOn: false };
+  if (head) { const x = miniRefs.a, tip = x.tip = h('div', 'mntip'); tip.style.display = 'none'; head.onmouseenter = () => { x.tipOn = true; tip.textContent = x.tipTxt || ''; tip.style.display = x.tipTxt ? '' : 'none'; }; head.onmouseleave = () => { x.tipOn = false; tip.style.display = 'none'; }; }
+  mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, endEl, ...(head ? [head] : [])), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab), ...(miniRefs.a.tip ? [miniRefs.a.tip] : []));   // same layout and height as a Time until card; the pomodoro's heading sits under the end time like a title   // room for the Silence button even when it is not showing (pomodoro)
   miniTick();
 }
 function miniTick() {
@@ -1934,12 +1936,12 @@ function miniTick() {
       const cls = pmTime.className;
       const otTxt = pmOt.style.display === 'none' ? '' : pmOt.textContent, post = !s.cur && !!otTxt;   // post: the countdown has finished and the penalty system has begun
       const note = pmWorkedNote(s), headTxt = pmHeadTxt.textContent.endsWith(note) ? pmHeadTxt.textContent.slice(0, pmHeadTxt.textContent.length - note.length) : pmHeadTxt.textContent;   // the small window keeps its short heading (the full window shows the worked-so-far note)
-      x.head.textContent = headTxt + (pmHeadSup.style.display === 'none' ? '' : ' ' + pmHeadSup.textContent) + (post ? ' ⚠' : ''); x.head.title = post ? otTxt : ''; x.endEl.textContent = pmEnd.textContent;   // all the small window shows of the penalty system is the caution symbol (the full text is its tooltip), so it never changes size
+      x.head.textContent = headTxt + (pmHeadSup.style.display === 'none' ? '' : ' ' + pmHeadSup.textContent) + (post ? ' ⚠' : '');  x.endEl.textContent = pmEnd.textContent;   // all the small window shows of the penalty system is the caution symbol (the full text is its tooltip), so it never changes size
       x.cdM.textContent = pmTMain.textContent; const supOn = pmTSup.style.display !== 'none'; x.cdS.textContent = supOn ? pmTSup.textContent : '\u00a0'; x.cdS.style.display = ''; x.cdS.style.visibility = supOn ? '' : 'hidden';   // the small line under the countdown keeps its place even when empty, so the pomodoro card never changes height
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
       x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
-      if (x.work) { const ot = post ? '' : (pmOt.style.display === 'none' ? '' : pmOt.textContent), wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = 'none'; mnBody.title = x.work.textContent; }   // started / worked so far / session length, same as the full window
+      if (x.work) { const ot = post ? '' : (pmOt.style.display === 'none' ? '' : pmOt.textContent), wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = 'none'; x.tipTxt = (post ? otTxt + '\n' : '') + x.work.textContent; if (x.tip && x.tipOn) { x.tip.textContent = x.tipTxt; x.tip.style.display = x.tipTxt ? '' : 'none'; } }   // the hover note is drawn by the page and rewritten every tick, so it stays up while the numbers change (a native tooltip vanishes each time its text changes)   // started / worked so far / session length, same as the full window
     }
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
