@@ -693,6 +693,7 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 .mnbody .bar{margin-top:8px}
 .mnfoot{display:flex;align-items:center;gap:8px;margin-top:6px;min-height:22px}
 .mnfoot .sw{margin-left:auto}
+.mnfoot .sndsil{padding:1px 8px;font-size:11px;line-height:1.3;height:22px;box-sizing:border-box}
 .mnok{padding:2px 10px}
 .mnb{background:transparent;font-size:14px;line-height:1;padding:2px 8px;border-radius:7px;opacity:.85;text-shadow:none;cursor:pointer}
 .mnb:hover{background:rgba(255,255,255,.16);opacity:1}
@@ -1903,13 +1904,13 @@ function miniRender() {
 function miniTimerRender(kind) {   // the alarm and the pomodoro share one small layout: end time top left, countdown top right, bar, length bottom left, Elapsed switch bottom right
   const al = kind === 'alarm';
   const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true), work = al ? null : h('div', 'mnwork');
-  const head = al ? null : h('div', 'mnsess');   // pomodoro: the session number in a black header (not clickable)
+  const head = al ? null : h('div', 'mnttl mnhd');   // pomodoro: the session number in a black header (not clickable)
   cdS.style.display = 'none';
   setSw(es.i, al ? alEl : pmKeep);
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
   miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
-  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), (() => { const f = h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab); if (!al) f.style.minHeight = '30px'; return f; })());   // room for the Silence button even when it is not showing (pomodoro)
+  mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, endEl, ...(head ? [head] : [])), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab));   // same layout and height as a Time until card; the pomodoro's heading sits under the end time like a title   // room for the Silence button even when it is not showing (pomodoro)
   miniTick();
 }
 function miniTick() {
@@ -1938,7 +1939,7 @@ function miniTick() {
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
       x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
-      if (x.work) { const ot = post ? '' : (pmOt.style.display === 'none' ? '' : pmOt.textContent), wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = x.work.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
+      if (x.work) { const ot = post ? '' : (pmOt.style.display === 'none' ? '' : pmOt.textContent), wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = 'none'; mnBody.title = x.work.textContent; }   // started / worked so far / session length, same as the full window
     }
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
@@ -2012,7 +2013,7 @@ mini.addEventListener('wheel', e => {   // vertical scroll cycles the timers, si
 }, { passive: false });
 // press and release on the card = back to the normal window; press, move and release = drag the small window
 mini.addEventListener('pointerdown', e => {
-  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk,.mnsess,.mnback')) return;
+  if (!miniOn || !sk || e.button > 0 || e.target.closest('button,input,label,.mnlist,.mnpk,.mnhd,.mnback')) return;
   const st = { x: e.screenX, y: e.screenY, p: null, moved: false }; miniDrag = st; mini.setPointerCapture(e.pointerId);
   sk.getPos().then(p => { st.p = p; });
 });
