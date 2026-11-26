@@ -1420,18 +1420,16 @@ function kCard(c) {
   box.onclick = () => openKan(c.id); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKan(c.id); } });
   kanRefs.push({ c, dd, tmr, ov, elp, dt, pf: pctF, ip: { box: ipb, f: ipf, t: ipt }, its: itRefs }); return box;
 }
-function kanToTime(cid) {   // the # pill on a card: flip over to Time until, start at the top of the list, then scroll smoothly down to that card's countdown and highlight it
+function kanToTime(cid) {   // the # pill on a card: flip over to Time until, then glide to that card's countdown and highlight it (the same motion kanGoto uses going the other way)
   const calm = kReduce();
   flipTo('time');
   const find = () => { const r = rows.find(z => z.t && z.t.kan && String(z.t.id) === cid) || rows.find(z => z.t && z.t.kan && String(z.t.id).split(':')[0] === cid); return r && r.row; };
-  const mark = el => { el.classList.remove('khl'); void el.offsetWidth; el.classList.add('khl'); setTimeout(() => el.classList.remove('khl'), 3200); };
   const go = () => {
     const el = find(); if (!el) return;
-    if (calm) { el.scrollIntoView({ block: 'center', behavior: 'auto' }); mark(el); return; }
-    const first = rows.length ? rows[0].row : null; if (first && first !== el) first.scrollIntoView({ block: 'start', behavior: 'auto' });   // start from the top of the list
-    setTimeout(() => { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => mark(el), 750); }, 60);   // then glide down to the card's countdown
+    el.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+    el.classList.remove('khl'); void el.offsetWidth; el.classList.add('khl'); setTimeout(() => el.classList.remove('khl'), 3200);
   };
-  setTimeout(go, calm ? 30 : 560);   // after the box has finished turning over
+  setTimeout(go, calm ? 30 : 520);   // after the box has finished turning over
 }
 function kPillLink(p, cid) {   // makes a card's # pill a button that takes you to its countdown in the Time until list (without opening the card)
   p.tabIndex = 0; p.setAttribute('role', 'button'); p.title = (p.title || '').replace(/ in the Time until list.*$/, '') + ' · tap to see it in the Time until list'; p.setAttribute('aria-label', 'Go to this card in the Time until list');
