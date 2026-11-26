@@ -317,8 +317,8 @@ const CSS = `
 .ph{opacity:.6}.ph.on{opacity:1}
 .ph i{display:block;font-style:normal;font-size:16px}.ph span{display:block;font-size:10.9px}
 .ph small{display:block;font-size:9.9px;opacity:.85;font-variant-numeric:tabular-nums}
-.bar{height:8px;border-radius:9px;background:rgba(0,0,0,.35);overflow:hidden}.bar.sm{height:5px}
-.fill{height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--g1,#f5a623),var(--g2,#8b8ff5));transition:width .6s linear}
+.bar{height:8px;border-radius:9px;background:rgba(0,0,0,.35);overflow:hidden;isolation:isolate;transform:translateZ(0)}.bar.sm{height:5px}
+.fill{height:100%;width:0;border-radius:inherit;backface-visibility:hidden;will-change:width;background:linear-gradient(90deg,var(--g1,#f5a623),var(--g2,#8b8ff5));transition:width .6s linear}
 .row{display:flex;justify-content:space-between;margin-top:8px;font-size:12.5px}
 .ev{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.16);font-size:12.8px;font-variant-numeric:tabular-nums}
 .ev:first-of-type{border-top:0}
@@ -1909,7 +1909,7 @@ function miniTimerRender(kind) {   // the alarm and the pomodoro share one small
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
   miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work };
-  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab));
+  mnBody.replaceChildren(...(head ? [head] : []), h('div', 'mntop', null, h('div', 'mnl', null, endEl), cd), h('div', 'bar', null, fill), ...(work ? [work] : []), (() => { const f = h('div', 'mnfoot', null, lens, sndMkSil(al ? 'alarm' : 'pomo'), es.lab); if (!al) f.style.minHeight = '30px'; return f; })());   // room for the Silence button even when it is not showing (pomodoro)
   miniTick();
 }
 function miniTick() {
@@ -1931,12 +1931,14 @@ function miniTick() {
     } else {
       const s = pm.session; if (!s) return;
       const cls = pmTime.className;
-      x.head.textContent = pmHeadTxt.textContent + (pmHeadSup.style.display === 'none' ? '' : ' ' + pmHeadSup.textContent); x.endEl.textContent = pmEnd.textContent;
-      x.cdM.textContent = pmTMain.textContent; x.cdS.textContent = pmTSup.textContent; x.cdS.style.display = pmTSup.style.display;
+      const otTxt = pmOt.style.display === 'none' ? '' : pmOt.textContent, post = !s.cur && !!otTxt;   // post: the countdown has finished and the penalty system has begun
+      const note = pmWorkedNote(s), headTxt = pmHeadTxt.textContent.endsWith(note) ? pmHeadTxt.textContent.slice(0, pmHeadTxt.textContent.length - note.length) : pmHeadTxt.textContent;   // the small window keeps its short heading (the full window shows the worked-so-far note)
+      x.head.textContent = headTxt + (pmHeadSup.style.display === 'none' ? '' : ' ' + pmHeadSup.textContent) + (post ? ' ⚠' : ''); x.head.title = post ? otTxt : ''; x.endEl.textContent = pmEnd.textContent;   // all the small window shows of the penalty system is the caution symbol (the full text is its tooltip), so it never changes size
+      x.cdM.textContent = pmTMain.textContent; const supOn = pmTSup.style.display !== 'none'; x.cdS.textContent = supOn ? pmTSup.textContent : '\u00a0'; x.cdS.style.display = ''; x.cdS.style.visibility = supOn ? '' : 'hidden';   // the small line under the countdown keeps its place even when empty, so the pomodoro card never changes height
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
       x.lens.textContent = 'Lasts ' + lenWords(s.cur ? s.cur.dur : s.lastDur || 0);
-      if (x.work) { const ot = pmOt.style.display === 'none' ? '' : pmOt.textContent, wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = x.work.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
+      if (x.work) { const ot = post ? '' : (pmOt.style.display === 'none' ? '' : pmOt.textContent), wk = pmShow ? pmWork.textContent : ''; x.work.style.whiteSpace = 'pre-line'; x.work.textContent = wk + (wk && ot ? ' · ' : '') + ot; x.work.style.display = x.work.textContent ? '' : 'none'; }   // started / worked so far / session length, same as the full window
     }
   } else if (m.c) {
     const ref = kanRefs.find(z => z.c === m.c);
@@ -2480,7 +2482,8 @@ function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
   pmOt.textContent = txt; pmOt.className = 'pmot ' + cls; pmOt.style.display = txt ? '' : 'none';
 }              // seconds counted since the last pomodoro ended
 const pmKindTxt = k => k === 'early' ? 'done early' : k === 'quit' ? 'quit early' : 'completed';
-const pmEntryTxt = e => '#' + e.n + ' · ' + clk.format(e.start) + ' – ' + clk.format(e.end) + ' · worked ' + fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) + ' · ' + pmKindTxt(e.kind);   // one pomodoro's entry: when, how long you actually worked, and how it ended
+const pmRank = l => { const g = k => k === 'early' ? 0 : k === 'full' ? 1 : 2; return (l || []).slice().sort((a, b) => g(a.kind) - g(b.kind) || (a.kind === 'early' ? a.worked - b.worked : 0) || a.n - b.n).map((e, i) => Object.assign({}, e, { rank: i + 1 })); };   // done early first (quickest = #1), then completed on time, then quit early
+const pmEntryTxt = e => '#' + e.rank + ' · pomodoro ' + e.n + ' · ' + clk.format(e.start) + ' – ' + clk.format(e.end) + ' · worked ' + fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) + ' · ' + pmKindTxt(e.kind);   // one pomodoro's entry: when, how long you actually worked, and how it ended
 function pmWorkedNote(s) {   // after Done early (or a quit): how much of that pomodoro you actually worked
   if (s.cur || !s.pomos || !s.pomos.length) return '';
   const e = s.pomos[s.pomos.length - 1]; return e.n === s.n && e.kind !== 'full' ? ' · worked ' + fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) : '';
@@ -2932,7 +2935,7 @@ function pmStatsRender() {
           yes.onclick = () => { clearTimeout(timer); pmDeleteSession(e); };
           rowEl.replaceChildren(conf);
         };
-        showRow(); return [rowEl, ...(e.pomos || []).map(q => { const r = h('div', 'ev pent' + (q.kind === 'early' ? ' early' : '')); r.append(h('span', null, '#' + q.n + ' · ' + clk.format(q.start) + ' – ' + clk.format(q.end)), h('b', 'pmv', fmt(Math.round(q.worked)) + ' of ' + fmt(Math.round(q.plan)) + ' · ' + pmKindTxt(q.kind))); return r; })];
+        showRow(); return [rowEl, ...pmRank(e.pomos).map(q => { const r = h('div', 'ev pent' + (q.kind === 'early' ? ' early' : '')); r.append(h('span', null, '#' + q.rank + ' · pomodoro ' + q.n + ' · ' + clk.format(q.start) + ' – ' + clk.format(q.end)), h('b', 'pmv', fmt(Math.round(q.worked)) + ' of ' + fmt(Math.round(q.plan)) + ' · ' + pmKindTxt(q.kind))); return r; })];
       });
       return [row, ...sess];
     }) : [h('p', 'note', 'No history yet.')]));
@@ -2959,14 +2962,14 @@ function pmRender() {                                  // layout: which parts ar
   pmConf.style.display = 'none'; pmBtns.style.display = '';
   pmWork.style.display = s && pmShow ? '' : 'none';
   const pl = s && s.pomos ? s.pomos : []; pmEntries.style.display = pl.length ? '' : 'none';
-  pmEntries.replaceChildren(...pl.map(e => { const i = e.kind === 'full' ? e.worked / e.plan : 1, r = h('div', 'ev pent' + (e.kind === 'early' ? ' early' : '')); r.append(h('span', null, '#' + e.n + ' · ' + clk.format(e.start) + ' – ' + clk.format(e.end)), h('b', 'pmv', fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) + ' · ' + pmKindTxt(e.kind))); return r; }));   // every pomodoro of this session with the time you worked in it
+  pmEntries.replaceChildren(...pmRank(pl).map(e => { const i = e.kind === 'full' ? e.worked / e.plan : 1, r = h('div', 'ev pent' + (e.kind === 'early' ? ' early' : '')); r.append(h('span', null, '#' + e.rank + ' · pomodoro ' + e.n + ' · ' + clk.format(e.start) + ' – ' + clk.format(e.end)), h('b', 'pmv', fmt(Math.round(e.worked)) + ' of ' + fmt(Math.round(e.plan)) + ' · ' + pmKindTxt(e.kind))); return r; }));   // every pomodoro of this session with the time you worked in it
   const l = pm.last;
   pmSum.style.display = !s && l ? 'block' : 'none';
   if (!s && l) {
     pmSumTxt.textContent = l.empty ? 'Nothing was recorded: the pomodoro was stopped in under ' + PM_SLIP + ' seconds, so it was treated as a slip and not counted.'
       : 'Session finished · ' + l.n + (l.n === 1 ? ' pomodoro' : ' pomodoros') + ' (' + l.full + ' completed, ' + l.part + ' quit early)\n' +
         'You worked ' + fmt(Math.round(l.worked)) + '\nStarted ' + clk.format(l.startAt) + ' · session length ' + fmt(l.span != null ? l.span : Math.round((l.endAt - l.startAt) / 1000));
-    if (!l.empty && l.pomos && l.pomos.length) pmSumTxt.append('\nPomodoros:\n' + l.pomos.map(pmEntryTxt).join('\n'));
+    if (!l.empty && l.pomos && l.pomos.length) pmSumTxt.append('\nPomodoros:\n' + pmRank(l.pomos).map(pmEntryTxt).join('\n'));
     if (!l.empty && l.lost > 0) pmSumTxt.append('\nOvertime penalty: ' + fmt(l.lost) + ' of extra time was not credited (overtime is credited at ' + pmRules.r + '%).'); if (!l.empty && l.ptime > 0) pmSumTxt.append('\nPaused time: ' + fmt(l.ptime) + ' kept the session running, and ' + fmt(l.plost || 0) + ' of it was not credited (paused time is credited at ' + pmRules.p + '%).'); if (!l.empty && l.span > 0) { const g = Math.max(0, Math.round(l.span - Math.min(l.worked, l.span))); pmSumTxt.append('\nNot worked ', pmSevEl(fmt(g), g, l.span), ' of the session · focus ' + pmFocus(l.worked, l.span) + '%'); }
   }
   pmStatsRender();
