@@ -2206,7 +2206,7 @@ function alarmTick(n) {
 alGo.onclick = () => startAlarm((Math.max(0, +alH.value || 0) * 60 + Math.max(0, +alM.value || 0)) * 6e4);
 [alH, alM].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') alGo.click(); }));
 [[5, '5 min', '5 minutes'], [10, '10 min', '10 minutes'], [15, '15 min', '15 minutes'], [25, '25 min', '25 minutes'], [45, '45 min', '45 minutes'], [60, '1 hr', '1 hour']].forEach(([m, l, long]) => { const b = h('button', 'chip', l); b.onclick = () => startAlarm(m * 6e4, 'Lasts ' + long); alChips.append(b); });
-alSilence.onclick = () => { ringOff(); sndStopFile('alarm'); alarmTick(Date.now()); }; alTest.onclick = () => { unlockAudio(true); const t = sndCfg.test === 'same' ? 'alarm' : 'test'; if (sndActive(t) && (t !== 'alarm' || !ringTimer)) { sndSilence(t); } else { sndPlay(t, false); } sndSilSync(); };   // pressing it again while it plays stops it
+alSilence.onclick = () => { ringOff(); sndStopFile('alarm'); alarmTick(Date.now()); }; alTest.onclick = () => { unlockAudio(true); const t = sndCfg.test === 'same' ? 'alarm' : 'test'; if (sndActive(t) && (t !== 'alarm' || !ringTimer)) { sndSilence(t); } else { sndCycNext(t); sndPlay(t, false); } sndSilSync(); };   // pressing it again while it plays stops it
 alCancel.onclick = endAlarm; alDone.onclick = endAlarm; alAgain.onclick = () => { if (alarm) startAlarm(alarm.dur, alarm.cap); };
 
 function addT(v) {
@@ -2265,6 +2265,7 @@ try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); } 
 function beep(n = 1) {                                 // the Time until beep: loud (about double the alarm ring), n rounds
   try {
     if (Date.now() - (+GM_getValue('lock', 0)) < 5000) return;
+    sndCycNext('until');
     if (sndIsFile('until') && sndAud.until) { if (sndPlayFile('until', true)) GM_setValue('lock', Date.now()); else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || sndPlayFile('until', true)); } return; }
     const p = sndOf('until'); if (!p.list) return;
     const list = []; for (let k = 0; k < n; k++) p.list.forEach(([st, d, f]) => list.push([st + k * p.span, d, f]));
@@ -2314,11 +2315,11 @@ const SND_PERIODS = [   // the four stretches of the day a sound can change at: 
   { id: 'eg', name: 'Evening golden hour', ico: '🌇', col: '#ff7a45', band: 'gold', k: 'evening' },
   { id: 'eb', name: 'Evening blue hour', ico: '🌃', col: '#7a5cff', band: 'blue', k: 'evening' }];
 const sndLoadedId = {};   // which sound id each audio element currently holds ('custom' or 'smp:...')
-const sndFileId = id => id === 'custom' || sndSmpOk(id) || /^up:(mb|mg|eg|eb)$/.test(id);   // ids that play a file: your main upload, a sample, or the file uploaded for one time of day
+const sndFileId = id => id === 'custom' || sndSmpOk(id) || /^up:(mb|mg|eg|eb)$/.test(id) || /^cu:(main|mb|mg|eg|eb):[012]$/.test(id);   // ids that play a file: your main upload, a sample, or the file uploaded for one time of day
 const sndIsFile = k => sndFileId(sndEffId(k));   // an uploaded file or a built-in sample
 const sndHasUp = {};   // the file name you uploaded for each sound (saved on this device)
-let sndCfg = { alarm: 'classic', test: 'same', pomo: 'classic', until: 'classic', vol: 100, tod: Object.fromEntries(['alarm', 'test', 'pomo', 'until'].map(k => [k, { on: false, mb: '', mg: '', eg: '', eb: '' }])) };   // tod: per sound, the time-of-day switch and the pick for each period ('' = same as the main sound)
-try { const v = JSON.parse(GM_getValue('sndCfg', 'null')); if (v) { ['alarm', 'test', 'pomo', 'until'].forEach(k => { if (typeof v[k] === 'string' && (SOUNDS[v[k]] || v[k] === 'custom' || sndSmpOk(v[k]) || (k === 'test' && v[k] === 'same'))) sndCfg[k] = v[k]; }); sndCfg.vol = Math.min(100, Math.max(10, +v.vol || 100)); if (v.tod && typeof v.tod === 'object') ['alarm', 'test', 'pomo', 'until'].forEach(k => { const t = v.tod[k]; if (!t || typeof t !== 'object') return; sndCfg.tod[k].on = t.on === true; SND_PERIODS.forEach(p => { const x = t[p.id]; if (typeof x === 'string' && (x === '' || SOUNDS[x] || x === 'custom' || sndSmpOk(x) || /^up:(mb|mg|eg|eb)$/.test(x))) sndCfg.tod[k][p.id] = x; }); }); } } catch (e) {}
+let sndCfg = { alarm: 'classic', test: 'same', pomo: 'classic', until: 'classic', vol: 100, tod: Object.fromEntries(['alarm', 'test', 'pomo', 'until'].map(k => [k, { on: false, mb: '', mg: '', eg: '', eb: '' }])), cyc: Object.fromEntries(['alarm', 'test', 'pomo', 'until'].map(k => [k, { on: false, l: { main: ['', '', ''], mb: ['', '', ''], mg: ['', '', ''], eg: ['', '', ''], eb: ['', '', ''] }, pos: {} }])) };   // tod: per sound, the time-of-day switch and the pick for each period ('' = same as the main sound)
+try { const v = JSON.parse(GM_getValue('sndCfg', 'null')); if (v) { ['alarm', 'test', 'pomo', 'until'].forEach(k => { if (typeof v[k] === 'string' && (SOUNDS[v[k]] || v[k] === 'custom' || sndSmpOk(v[k]) || (k === 'test' && v[k] === 'same'))) sndCfg[k] = v[k]; }); sndCfg.vol = Math.min(100, Math.max(10, +v.vol || 100)); sndCycLoad(v); if (v.tod && typeof v.tod === 'object') ['alarm', 'test', 'pomo', 'until'].forEach(k => { const t = v.tod[k]; if (!t || typeof t !== 'object') return; sndCfg.tod[k].on = t.on === true; SND_PERIODS.forEach(p => { const x = t[p.id]; if (typeof x === 'string' && (x === '' || SOUNDS[x] || x === 'custom' || sndSmpOk(x) || /^up:(mb|mg|eg|eb)$/.test(x))) sndCfg.tod[k][p.id] = x; }); }); } } catch (e) {}
 const sndOf = k => SOUNDS[sndEffId(k)] || SOUNDS.classic;
 const sndSave = () => { try { GM_setValue('sndCfg', JSON.stringify(sndCfg)); } catch (e) {} };
 const sndRetrying = {};
@@ -2420,7 +2421,7 @@ function ringOff() { clearInterval(ringTimer); ringTimer = 0; }
 function ringOn() {
   ringOff();
   try { if (+GM_getValue('ringFor', 0) === alarm.end) return; GM_setValue('ringFor', alarm.end); } catch (e) {}   // one ring per alarm
-  ringUntil = Date.now() + 60000;
+  ringUntil = Date.now() + 60000; sndCycNext('alarm');
   const once = () => { if (!alarm || !alarm.done || Date.now() > ringUntil) { ringOff(); return; } if (!ringCycle()) ringUntil = Date.now() + 60000; };   // while audio is still blocked the 60 seconds do not start counting down
   once(); ringTimer = setInterval(once, 2400);
 }
@@ -2481,7 +2482,7 @@ function pmOtUpdate(s, n) {   // the note under the timer, plus the warnings
     if (raw >= cap) { txt = '⏹ Counting stopped by itself (you were away, or went far past the pomodoro). Nothing past this point is counted. Start the next pomodoro or end the session.'; cls = 'sevr'; }
     else if (raw > g) { txt = '⚠ Overtime: extra time ' + pmRateTxt() + '. Counting stops by itself in ' + clockFmt(Math.ceil(cap - raw)) + '. A break or the next pomodoro beats pushing on.'; cls = 'sevo'; }
     else txt = 'Full credit for ' + clockFmt(Math.ceil(g - raw)) + ' more, then ' + (pmRules.r === 0 ? 'no credit' : pmRules.r + '% credit') + '.';
-    if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time ' + pmRateTxt() + '. Take a break or start the next pomodoro.', { kind: 'pomo' }); pmChime(); }
+    if (raw > g && !s.ot1) { s.ot1 = 1; savePm(); notify('Overtime on your pomodoro', 'Extra time ' + pmRateTxt() + '. Take a break or start the next pomodoro.', { kind: 'pomo' }); pmChime(true); }
     if (raw >= cap && !s.ot2) { s.ot2 = 1; savePm(); notify('Counting stopped', 'Time past this point is no longer counted. Start the next pomodoro or end the session.', { kind: 'pomo' }); }
   }
   pmOt.textContent = txt; pmOt.className = 'pmot ' + cls; pmOt.style.display = txt ? '' : 'none';
@@ -2570,7 +2571,8 @@ function pmResume() {                                  // the end time moves lat
   if (s.cur) s.cur.shift = (s.cur.shift || 0) + dt; else if (pmKeep) s.mark = now;
   s.pauseAt = null; savePm(); pmRender(); pmTick(now);
 }
-function pmChime() {
+function pmChime(over) {
+  if (!over) sndCycNext('pomo');   // the overtime warning chime is not a finish
   const born = Date.now(), go = () => { if (Date.now() - born > 6e5) return true; if (!pmSnd()) return false; pmChimeT = [setTimeout(pmSnd, 2400), setTimeout(pmSnd, 4800)]; pmChimeUntil = Date.now() + 7500; return true; };
   if (!go()) pendingSounds.push(go);   // audio blocked (screen was off): chime as soon as it is back
 }
@@ -2664,18 +2666,55 @@ sndStopBtn.onclick = () => { ringOff(); Object.keys(sndAud).forEach(sndStopFile)
 // ---------- sounds by time of day (🔔 Sounds panel): each of the three sounds can change when a blue or golden hour begins ----------
 // The four periods run back to back around the clock: morning blue hour begins, morning golden hour begins, evening golden hour begins, evening blue hour begins.
 // A period's sound stays on until the next period begins (golden hour ending changes nothing), so the evening blue hour sound plays all night, until the morning blue hour begins.
-const sndResolve = (k, id) => (id === 'same' || (id === 'custom' && !sndHasUp[k]) || (/^up:/.test(id) && !sndHasUp[k + '@' + id.slice(3)]) ? 'classic' : id);   // "my uploaded file" with no file uploaded plays the classic beeps, as before
+const sndCuKey = (k, id) => { const p = id.split(':'); return k + '@cu' + p[2] + '@' + p[1]; };   // where a cycle slot's uploaded file is kept
+const sndResolve = (k, id) => (id === 'same' || (/^cu:/.test(id) && !sndHasUp[sndCuKey(k, id)]) || (id === 'custom' && !sndHasUp[k]) || (/^up:/.test(id) && !sndHasUp[k + '@' + id.slice(3)]) ? 'classic' : id);   // "my uploaded file" with no file uploaded plays the classic beeps, as before
 function sndTodPeriod(n) {   // the period a moment is in: the one that began most recently (null when the sun has no blue or golden hour here)
   const r = rangesFor(n); let best = null;
   SND_PERIODS.forEach(p => r[p.band].forEach(b => { const s = Math.floor(b.s / 6e4) * 6e4; if (b.k === p.k && isFinite(s) && s <= n && (!best || s > best.s)) best = { s, id: p.id }; }));
   return best && best.id;
 }
-function sndEffId(k, n = Date.now()) {   // the sound id that plays for k right now: the time-of-day pick when that is on, otherwise the main sound
-  let id = sndCfg[k]; const t = sndCfg.tod[k];
-  if (t.on) { const p = sndTodPeriod(n); if (p && t[p]) id = t[p]; }
+const SND_CSEGS = ['mb', 'mg', 'eg', 'eb'];
+function sndCuSrc(k, seg, i) {   // which stretch's uploaded file slot i uses here: its own, otherwise the nearest earlier stretch's (a file uploaded after the morning blue hour carries through the day until a later stretch gets its own)
+  const order = seg === 'main' ? ['main'] : SND_CSEGS; for (let j = order.indexOf(seg); j >= 0; j--) if (sndHasUp[k + '@cu' + i + '@' + order[j]]) return order[j]; return null;
+}
+function sndCycIdFor(k, seg, i, val) { if (val === 'cup') { const s = sndCuSrc(k, seg, i); return s ? 'cu:' + s + ':' + i : ''; } return val; }
+function sndCycPropagate(k, seg, i) {   // after an upload: later stretches that have not been given a sound of their own for this slot follow it
+  const cd = sndCfg.cyc[k]; cd.l[seg][i] = 'cup'; if (seg === 'main') return;
+  for (let j = SND_CSEGS.indexOf(seg) + 1; j < SND_CSEGS.length; j++) { const q = SND_CSEGS[j]; if (sndHasUp[k + '@cu' + i + '@' + q]) break; if (cd.l[q][i] === '') cd.l[q][i] = 'cup'; }
+}
+async function sndCycUpload(k, seg, i, file, row) {
+  const key = k + '@cu' + i + '@' + seg; if (!file) return;
+  if (file.size > SND_MAX_BYTES) { row.msg.textContent = 'That file is over 100 MB. Pick a smaller one.'; return; }
+  let r; try { r = await sndMakeAud(file, sndDec(file)); } catch (e) { row.msg.textContent = 'Could not read that audio file. Try an mp3, wav, flac, ogg, opus, m4a or aac.'; return; }
+  if (isFinite(r.a.duration) && r.a.duration > SND_MAX_SEC) { try { URL.revokeObjectURL(r.url); } catch (e) {} row.msg.textContent = 'That clip is longer than 7 minutes 30 seconds. Pick a shorter one.'; return; }
+  try { URL.revokeObjectURL(r.url); } catch (e) {}
+  sndHasUp[key] = file.name; sndCycPropagate(k, seg, i); sndSave(); sndTodSync(); sndCycUiSync();
+  try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, key)); row.msg.textContent = 'Saved on this device.'; } catch (e) { row.msg.textContent = 'Loaded, but this browser would not save it, so it will be gone after a reload.'; }
+}
+function sndCycRemove(k, seg, i, row) {
+  const key = k + '@cu' + i + '@' + seg; (async () => { try { await sndIdb('readwrite', s => s.delete(key)); } catch (e) {} })(); delete sndHasUp[key]; sndLoadedId[k] === 'cu:' + seg + ':' + i && sndDrop(k);
+  const cd = sndCfg.cyc[k]; if (cd.l[seg][i] === 'cup' && !sndCuSrc(k, seg, i)) cd.l[seg][i] = '';
+  SND_CSEGS.forEach(q => { if (cd.l[q][i] === 'cup' && !sndCuSrc(k, q, i)) cd.l[q][i] = ''; });
+  sndSave(); row.msg.textContent = 'Removed.'; sndTodSync(); sndCycUiSync();
+}
+function sndCycSeg(k, n = Date.now()) { const t = sndCfg.tod[k]; return t.on ? (sndTodPeriod(n) || 'main') : 'main'; }   // which stretch of the day a cycle list belongs to
+function sndEffId(k, n = Date.now(), peek) {   // the sound id that plays for k right now: the time-of-day pick when that is on, otherwise the main sound; with cycling on, the slot whose turn it is (peek = the one after it)
+  let id = sndCfg[k]; const t = sndCfg.tod[k], p = t.on ? sndTodPeriod(n) : null;
+  if (t.on && p && t[p]) id = t[p];
+  const c = sndCfg.cyc[k];
+  if (c.on) { const seg = sndCycSeg(k, n), pos = c.pos[seg] == null ? -1 : c.pos[seg], i = peek ? (pos + 1) % 3 : Math.max(pos, 0) % 3, pick = c.l[seg] && c.l[seg][i]; if (pick === 'cup') { const src = sndCuSrc(k, seg, i); if (src) id = 'cu:' + src + ':' + i; } else if (pick) id = pick; }
   return sndResolve(k, id);
 }
-function sndNameOf(k, id) { id = sndResolve(k, id); if (SOUNDS[id]) return SOUNDS[id].name; if (id === 'custom') return 'Your file: ' + (sndHasUp[k] || 'none'); if (/^up:/.test(id)) return 'Your file: ' + (sndHasUp[k + '@' + id.slice(3)] || 'none'); const s = SND_SAMPLES.find(x => 'smp:' + x.id === id); return s ? s.name : id; }
+function sndCycNext(k) {   // a countdown of this type has just finished: the cycle moves on to its next sound (the first finish uses the first sound)
+  if (k === 'test' && sndCfg.test === 'same') k = 'alarm';
+  const c = sndCfg.cyc[k]; if (!c || !c.on) return; const seg = sndCycSeg(k); c.pos[seg] = ((c.pos[seg] == null ? -1 : c.pos[seg]) + 1) % 3; sndSave(); try { sndCycUiSync(); } catch (e) {}
+}
+function sndCycLoad(v) {   // reads the saved cycle settings, keeping only sounds that exist
+  if (!v || !v.cyc || typeof v.cyc !== 'object') return;
+  ['alarm', 'test', 'pomo', 'until'].forEach(k => { const c = v.cyc[k], d = sndCfg.cyc[k]; if (!c || typeof c !== 'object') return; d.on = c.on === true;
+    ['main', ...SND_PERIODS.map(p => p.id)].forEach(seg => { const a = c.l && c.l[seg]; if (Array.isArray(a)) for (let i = 0; i < 3; i++) { const x = a[i]; if (typeof x === 'string' && (x === '' || x === 'cup' || SOUNDS[x] || x === 'custom' || sndSmpOk(x) || /^up:(mb|mg|eg|eb)$/.test(x))) d.l[seg][i] = x; } const p = c.pos && c.pos[seg]; if (Number.isInteger(p) && p >= 0 && p < 3) d.pos[seg] = p; }); });
+}
+function sndNameOf(k, id) { id = sndResolve(k, id); if (SOUNDS[id]) return SOUNDS[id].name; if (id === 'custom') return 'Your file: ' + (sndHasUp[k] || 'none'); if (/^up:/.test(id)) return 'Your file: ' + (sndHasUp[k + '@' + id.slice(3)] || 'none'); if (/^cu:/.test(id)) return 'Your file: ' + (sndHasUp[sndCuKey(k, id)] || 'none'); const s = SND_SAMPLES.find(x => 'smp:' + x.id === id); return s ? s.name : id; }
 function sndTodDay(n) {   // today's four period starts (null where the sun has none) and when tomorrow's morning blue hour begins
   const r = rangesFor(n), day = ymd.format(n), st = {};
   const first = (list, kind, ok) => list.filter(b => b.k === kind && isFinite(b.s) && ok(b)).sort((x, y) => x.s - y.s)[0];
@@ -2687,7 +2726,7 @@ const sndLoadQ = {}, sndFailT = {};
 function sndSetFor(k, id) {   // makes k's audio hold the file behind a sound id ('custom' = your upload, 'smp:...' = a sample); resolves true when it is ready. Loads run one after another
   const run = async () => {
     if (sndLoadedId[k] === id && sndAud[k]) return true;
-    let ok = false; try { const load = sndSmpOk(id) ? sndLoadSample(k, id) : id === 'custom' ? sndReloadUpload(k) : /^up:/.test(id) ? sndReloadSlot(k, k + '@' + id.slice(3)) : Promise.resolve(false); ok = await Promise.race([load, new Promise(r => setTimeout(() => r(false), 25000))]); } catch (e) {}   // a load that never finishes must not block the ones queued behind it
+    let ok = false; try { const load = sndSmpOk(id) ? sndLoadSample(k, id) : id === 'custom' ? sndReloadUpload(k) : /^up:/.test(id) ? sndReloadSlot(k, k + '@' + id.slice(3)) : /^cu:/.test(id) ? sndReloadSlot(k, sndCuKey(k, id)) : Promise.resolve(false); ok = await Promise.race([load, new Promise(r => setTimeout(() => r(false), 25000))]); } catch (e) {}   // a load that never finishes must not block the ones queued behind it
     if (ok) { sndLoadedId[k] = id; delete sndFailT[k + '|' + id]; }
     if (!ok) sndFailT[k + '|' + id] = Date.now();
     return ok;
@@ -2696,7 +2735,7 @@ function sndSetFor(k, id) {   // makes k's audio hold the file behind a sound id
 }
 function sndTodSync() {   // keeps each sound's file ready for the period it is in: files swap in when a blue or golden hour begins (never while one is playing)
   ['alarm', 'test', 'pomo', 'until'].forEach(k => {
-    const id = sndEffId(k), a = sndAud[k];
+    const id = sndEffId(k, Date.now(), true), a = sndAud[k];   // the sound that plays at the next finish is made ready ahead of time
     if (sndFileId(id) && sndLoadedId[k] !== id && !(a && !a.ended && (!a.paused || a.currentTime > 0)) && Date.now() - (sndFailT[k + '|' + id] || 0) > 6e4) sndSetFor(k, id).then(() => sndUiSync());
   });
 }
@@ -2735,6 +2774,27 @@ const sndTodFill = sel => {
   });
   sw.i.onchange = () => { td.on = sw.i.checked; sw.i.setAttribute('aria-checked', String(td.on)); sndSave(); sndTodSync(); sndTodUiSync(); };
   const swRow = h('div', 'pmr', null, sw.lab); f.tod.swRow = swRow; box.append(strip, tip, sched); f.row.append(swRow, box);
+  // cycling: up to 3 different sounds per stretch of the day, taken in turn each time this kind of countdown finishes
+  const cd = sndCfg.cyc[k], csw = mkSw('Cycle through 3 sounds each time this finishes', true), cbox = h('div', 'sndtod'), cnote = h('div', 'note'), crows = [];
+  setSw(csw.i, cd.on); csw.lab.title = 'Each time a ' + f.label + ' countdown finishes, the next of three sounds plays';
+  cbox.append(h('div', 'note', 'Pick up to three sounds for each stretch of the day. Every time this kind of countdown finishes, the next one plays, then it starts over. A slot left on "Same as the main sound" plays the sound that would play anyway.'));
+  ['main', ...SND_PERIODS.map(p => p.id)].forEach(seg => {
+    const P = SND_PERIODS.find(p => p.id === seg), lab = h('div', 'unit', P ? P.ico + ' After ' + P.name.toLowerCase() + ' begins' : 'All day'), sels = [];
+    cbox.append(lab);
+    for (let i = 0; i < 3; i++) {
+      const sel = h('select'), test = h('button', 'add sm2', '▶'), cust = sndTodFill(sel); sel.setAttribute('aria-label', f.label + ' sound ' + (i + 1) + ' of 3 for ' + (P ? P.name.toLowerCase() : 'all day')); test.type = 'button'; test.title = 'Hear this sound';
+      sel.onchange = () => { cd.l[seg][i] = sel.value; sndSave(); sndTodSync(); sndCycUiSync(); unlockAudio(true); sndPreview(k, sndResolve(k, sndCycIdFor(k, seg, i, sel.value) || (P && td[seg]) || sndCfg[k])); };
+      test.onclick = () => { unlockAudio(true); sndPreview(k, sndResolve(k, sndCycIdFor(k, seg, i, sel.value) || (P && td[seg]) || sndCfg[k])); };
+      const cuo = h('option', null, '📁 My uploaded file for this slot'); cuo.value = 'cup'; sel.append(cuo);
+      const nm = h('span', 'unit sndnm'), up = h('button', 'add sm2', '📁 Upload'), rm = h('button', 'add sm2', 'Remove'), fin = h('input'), msg = h('div', 'note'); up.type = 'button'; rm.type = 'button'; fin.type = 'file'; fin.accept = 'audio/*,.mp3,.wav,.flac,.ogg,.oga,.opus,.m4a,.aac,.weba,.webm'; fin.style.display = 'none'; fin.setAttribute('aria-label', 'Upload ' + f.label + ' sound ' + (i + 1) + ' for ' + (P ? P.name.toLowerCase() : 'all day'));
+      up.title = 'Upload your own file for this slot. Later times of day use it too, until you upload a different one for them'; up.onclick = () => fin.click(); fin.onchange = () => { const file = fin.files && fin.files[0]; fin.value = ''; sndCycUpload(k, seg, i, file, { msg }); }; rm.onclick = () => sndCycRemove(k, seg, i, { msg });
+      cbox.append(h('div', 'pmr', null, h('span', null, 'Sound ' + (i + 1)), sel, test), h('div', 'pmr', null, nm, up, rm, fin), msg); sels.push({ sel, cust, cuo, nm, rm, pr: cbox.lastChild.previousSibling.previousSibling, pr2: cbox.lastChild.previousSibling, msg });
+    }
+    crows.push({ seg, lab, sels, P });
+  });
+  cbox.append(cnote);
+  csw.i.onchange = () => { cd.on = csw.i.checked; csw.i.setAttribute('aria-checked', String(cd.on)); sndSave(); sndTodSync(); sndCycUiSync(); };
+  f.cyc = { sw: csw, box: cbox, rows: crows, note: cnote, row: h('div', 'pmr', null, csw.lab) }; f.row.append(f.cyc.row, cbox);
 });
 // Per-time-of-day uploads: every segment of the day can have its own uploaded file, saved under the key "<sound>@<period>" (e.g. alarm@mb). The sound id for such a file is 'up:<period>',
 // and any segment can pick any file uploaded for that sound type (so one file can serve several segments).
@@ -2743,6 +2803,7 @@ async function sndReloadSlot(k, key) { try { const rec = await sndIdb('readonly'
 async function sndSlotNames(tries = 0) {   // at start-up: which segments already have an uploaded file (names only; the file itself loads when its time of day comes). A read that fails is tried again
   let bad = false;
   for (const k of ['alarm', 'test', 'pomo', 'until']) for (const p of SND_PERIODS) { try { const rec = await sndIdb('readonly', s => s.get(k + '@' + p.id)); if (rec && rec.blob) sndHasUp[k + '@' + p.id] = rec.name; } catch (e) { bad = true; } }
+  for (const k of ['alarm', 'test', 'pomo', 'until']) for (const seg of ['main', ...SND_CSEGS]) for (let i = 0; i < 3; i++) { try { const rec = await sndIdb('readonly', s => s.get(k + '@cu' + i + '@' + seg)); if (rec && rec.blob) sndHasUp[k + '@cu' + i + '@' + seg] = rec.name; } catch (e) { bad = true; } }
   sndUiSync(); sndTodSync(); if (bad && tries < 5) setTimeout(() => sndSlotNames(tries + 1), 10000);
 }
 async function sndUploadSlot(f, p, file, row) {
@@ -2760,7 +2821,27 @@ function sndStripTip(T, el, text) {   // the pop-up over a coloured segment: sho
   tip.style.left = x + 'px'; tip.style.top = (st.top - b.top - 6) + 'px';
 }
 function sndLoadNote(k, id) { return sndFileId(id) && sndLoadedId[k] !== id ? (sndFailT[k + '|' + id] ? ' (could not be opened, retrying)' : ' (loading...)') : ''; }   // shown next to "Right now" so a file that is not ready can be seen
-function sndTodUiSync() {   // the time-of-day rows, today's times, and the all-day schedule for each countdown type
+function sndCycUiSync() {   // the cycle rows: which stretches are shown, the files that can be picked, and which sound is next
+  const n = Date.now();
+  [sndA, sndT, sndP, sndU].forEach(f => {
+    const C = f.cyc; if (!C) return; const k = f.k, cd = sndCfg.cyc[k], td = sndCfg.tod[k], same = k === 'test' && sndCfg.test === 'same';
+    C.row.style.display = same ? 'none' : ''; setSw(C.sw.i, cd.on); C.box.style.display = cd.on && !same ? '' : 'none'; if (!cd.on || same) return;
+    const cur = sndCycSeg(k, n);
+    C.rows.forEach(r => {
+      const show = r.seg === 'main' ? !td.on : td.on; r.lab.style.display = show ? '' : 'none';
+      r.lab.textContent = (r.P ? r.P.ico + ' After ' + r.P.name.toLowerCase() + ' begins' : 'All day') + (cur === r.seg ? ' · now' : '');
+      r.sels.forEach(({ sel, cust, cuo, nm, rm, pr2, msg }, i) => {
+        sel.parentNode.style.display = show ? '' : 'none'; pr2.style.display = show ? '' : 'none'; msg.style.display = show ? '' : 'none';
+        const own = sndHasUp[k + '@cu' + i + '@' + r.seg], src = sndCuSrc(k, r.seg, i), SP = src && SND_PERIODS.find(p => p.id === src);
+        nm.textContent = own ? 'Your file for this slot: ' + own : src ? 'Uses the file from ' + (SP ? SP.name.toLowerCase() : 'all day') + ': ' + sndHasUp[k + '@cu' + i + '@' + src] : 'No file uploaded for this slot yet'; rm.disabled = !own; cuo.textContent = src ? '📁 ' + sndHasUp[k + '@cu' + i + '@' + src] : '📁 (no file uploaded)'; cuo.disabled = !src;   // the pick shows the name of the file cust.disabled = !sndHasUp[k]; cust._ups.forEach(([o, q]) => { const fn = sndHasUp[k + '@' + q.id]; o.disabled = o.hidden = !fn; o.textContent = fn ? '📁 ' + fn + ' (' + q.name.toLowerCase() + ')' : '📁 (none)'; });
+        const cv = cd.l[r.seg][i]; sel.value = (cv === 'cup' && !sndCuSrc(k, r.seg, i)) || (cv === 'custom' && !sndHasUp[k]) || (/^up:/.test(cv) && !sndHasUp[k + '@' + cv.slice(3)]) ? '' : cv;
+      });
+    });
+    const p = cd.pos[cur], nx = ((p == null ? -1 : p) + 1) % 3; C.note.textContent = 'Next time this finishes: sound ' + (nx + 1) + ' of 3 (' + sndNameOf(k, sndEffId(k, n, true)) + ')';
+  });
+}
+function sndTodUiSync() {
+  try { sndCycUiSync(); } catch (e) {}   // the time-of-day rows, today's times, and the all-day schedule for each countdown type
   const n = Date.now(), d = sndTodDay(n), cur = sndTodPeriod(n), pct = ms => sodOf(ms) / 864, valid = SND_PERIODS.filter(p => d.st[p.id] != null);
   [sndA, sndT, sndP, sndU].forEach(f => {
     if (!f.tod) return;
