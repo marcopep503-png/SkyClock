@@ -784,6 +784,8 @@ const alSilence = h('button', 'add sm2', 'Silence'), alLapMain = h('span'), alLa
 alSilence.style.display = 'none'; alLap.style.display = 'none';
 const alTestRow = h('div', 'ctl', null, alTest, sndMkSil('alarm'), sndMkSil('test')); alTestRow.style.marginTop = '10px'; alTestRow.style.flexWrap = 'wrap';   // the test button plus a Silence button that shows while the sound plays
 const mkSw = (text, small) => { const i = h('input'); i.type = 'checkbox'; i.setAttribute('role', 'switch'); return { i, lab: h('label', 'sw' + (small ? ' sm' : ''), null, i, h('span', 'tk'), h('span', 'sl', text)) }; };
+const miniSwPrev = {};   // the small window is rebuilt when a switch flips, so the new switch starts where the old one was and then slides, like every other toggle
+const miniSwSet = (key, i, v) => { v = !!v; const p = miniSwPrev[key]; miniSwPrev[key] = v; if (p === undefined || p === v) { setSw(i, v); return; } setSw(i, p); requestAnimationFrame(() => requestAnimationFrame(() => { if (i.isConnected) setSw(i, v); })); };
 const setSw = (i, v) => { i.checked = !!v; i.setAttribute('aria-checked', String(!!v)); };
 const alElSw = mkSw('Show elapsed time after it rings'); setSw(alElSw.i, alEl);
 alElSw.i.onchange = () => { alEl = alElSw.i.checked; alElSw.i.setAttribute('aria-checked', String(alEl)); try { GM_setValue('alEl', alEl); } catch (e) {} tick(); };
@@ -1861,7 +1863,7 @@ function miniRender() {
   if (view === 'time') {
     const t = r.t, cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill');
     cdS.style.display = 'none';
-    const es = mkSw('Elapsed', true); setSw(es.i, !!t.el); es.i.onchange = () => { r.sw.i.checked = es.i.checked; r.sw.i.onchange(); };
+    const es = mkSw('Elapsed', true); miniSwSet('t' + (t.id || ''), es.i, !!t.el); es.i.onchange = () => { r.sw.i.checked = es.i.checked; r.sw.i.onchange(); };
     const ttl = h('div', 'mnttl md'); ttl.replaceChildren(...tNodes(t)); ttl.title = t.title ? tLabel(t) : ''; if (!t.title) ttl.style.display = 'none'; const tcp = t.kcap ? tCap(t) : null;
     miniRefs.t = { cdM, cdS, cd, fill };
     mnBody.replaceChildren(h('div', 'mntop', null, h('div', 'mnl', null, h('div', 'mnlab', hl(Math.floor(t.v / 60), t.v % 60)), ttl, ...(tcp ? [tcp] : [])), cd), h('div', 'bar', null, fill), h('div', 'mnfoot', null, sndMkSil('until'), es.lab));
@@ -1907,7 +1909,7 @@ function miniTimerRender(kind) {   // the alarm and the pomodoro share one small
   const endEl = h('div', 'mnlab'), cdM = h('span'), cdS = h('sup'), cd = h('div', 'mncd', null, cdM, cdS), fill = h('div', 'fill'), lens = h('span', 'mnlen'), es = mkSw('Elapsed', true), work = al ? null : h('div', 'mnwork');
   const head = al ? null : h('div', 'mnttl mnhd');   // pomodoro: the session number in a black header (not clickable)
   cdS.style.display = 'none';
-  setSw(es.i, al ? alEl : pmKeep);
+  miniSwSet(al ? 'alarm' : 'pomo', es.i, al ? alEl : pmKeep);
   es.i.onchange = () => { const sw = al ? alElSw : pmKeepSw; sw.i.checked = es.i.checked; sw.i.onchange(); };
   es.lab.title = al ? 'Show how long ago the alarm went off' : 'Keep counting time after a pomodoro ends';
   miniRefs.a = { al, endEl, cdM, cdS, cd, fill, lens, head, work, tip: null, tipOn: false };
@@ -1936,7 +1938,7 @@ function miniTick() {
       const cls = pmTime.className;
       const otTxt = pmOt.style.display === 'none' ? '' : pmOt.textContent, post = !s.cur && !!otTxt;   // post: the countdown has finished and the penalty system has begun
       const note = pmWorkedNote(s), headTxt = pmHeadTxt.textContent.endsWith(note) ? pmHeadTxt.textContent.slice(0, pmHeadTxt.textContent.length - note.length) : pmHeadTxt.textContent;   // the small window keeps its short heading (the full window shows the worked-so-far note)
-      x.head.textContent = headTxt + (pmHeadSup.style.display === 'none' ? '' : pmKeep && !s.cur ? (() => { const raw = pmRawC(s, Date.now()), cap = pmCap(s); return raw >= cap ? ' · counting stopped' : ' · stops ' + clk.format(Math.round((Date.now() + (cap - raw) * 1000) / 60000) * 60000); })() : ' ' + pmHeadSup.textContent) + (post ? ' ⚠' : '');  x.endEl.textContent = pmEnd.textContent;   // all the small window shows of the penalty system is the caution symbol (the full text is its tooltip), so it never changes size
+      const ovrOn = pmHeadSup.style.display !== 'none', stopTxt = ovrOn && pmKeep && !s.cur ? (() => { const rw = pmRawC(s, Date.now()), cp = pmCap(s); return rw >= cp ? 'Counting stopped' : 'Stops: ' + clockFmt(Math.ceil(cp - rw)); })() : ''; x.head.textContent = stopTxt ? headTxt.replace(/ · [^·]*$/, '') + ' · ' + stopTxt : headTxt + (ovrOn ? ' ' + pmHeadSup.textContent : '');  x.endEl.textContent = pmEnd.textContent + (post ? ' ⚠' : '');   // all the small window shows of the penalty system is the caution symbol (the full text is its tooltip), so it never changes size
       x.cdM.textContent = pmTMain.textContent; const supOn = pmTSup.style.display !== 'none'; x.cdS.textContent = supOn ? pmTSup.textContent : '\u00a0'; x.cdS.style.display = ''; x.cdS.style.visibility = supOn ? '' : 'hidden';   // the small line under the countdown keeps its place even when empty, so the pomodoro card never changes height
       x.cd.className = 'mncd' + (cls.includes('lapc') ? ' lap' + (cls.includes('over') ? ' over' : '') : cls.includes('ring') ? ' ring' : '');
       x.fill.style.width = s.cur ? pmFill.style.width : '100%';
