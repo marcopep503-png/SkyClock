@@ -68,12 +68,103 @@ const clockFmt = x => { const H = Math.floor(x / 3600), M = Math.floor(x % 3600 
 // A backslash before a symbol shows the symbol itself. Everything is built from text nodes and elements, never from HTML, so a title can not inject anything.
 const MD_PAIRS = [['***', 'strong'], ['**', 'strong'], ['__', 'u'], ['~~', 's'], ['==', 'mark'], ['||', 'span'], ['*', 'em'], ['_', 'em']];
 const mdWord = c => !!c && /[\p{L}\p{N}]/u.test(c);
+// ---------- inline LaTeX: $...$ in any title or caption (a small built-in renderer, no downloads, nothing is ever treated as HTML) ----------
+const TEX_SYM = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', varepsilon: 'ɛ', zeta: 'ζ', eta: 'η', theta: 'θ', vartheta: 'ϑ', iota: 'ι', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', pi: 'π', varpi: 'ϖ', rho: 'ρ', varrho: 'ϱ', sigma: 'σ', varsigma: 'ς', tau: 'τ', upsilon: 'υ', phi: 'φ', varphi: 'ϕ', chi: 'χ', psi: 'ψ', omega: 'ω', Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ', Pi: 'Π', Sigma: 'Σ', Upsilon: 'Υ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω',
+  times: '×', div: '÷', pm: '±', mp: '∓', cdot: '·', ast: '∗', star: '⋆', circ: '∘', bullet: '•', oplus: '⊕', otimes: '⊗', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠', approx: '≈', equiv: '≡', sim: '∼', simeq: '≃', cong: '≅', propto: '∝', ll: '≪', gg: '≫', infty: '∞', partial: '∂', nabla: '∇', hbar: 'ℏ', ell: 'ℓ', Re: 'ℜ', Im: 'ℑ', aleph: 'ℵ', emptyset: '∅', varnothing: '∅', degree: '°', prime: '′', angle: '∠', perp: '⊥', parallel: '∥', triangle: '△', square: '□',
+  to: '→', rightarrow: '→', leftarrow: '←', gets: '←', leftrightarrow: '↔', Rightarrow: '⇒', Leftarrow: '⇐', Leftrightarrow: '⇔', iff: '⇔', implies: '⇒', mapsto: '↦', uparrow: '↑', downarrow: '↓', longrightarrow: '⟶', longleftarrow: '⟵',
+  in: '∈', notin: '∉', ni: '∋', subset: '⊂', supset: '⊃', subseteq: '⊆', supseteq: '⊇', cup: '∪', cap: '∩', setminus: '∖', forall: '∀', exists: '∃', nexists: '∄', neg: '¬', lnot: '¬', land: '∧', wedge: '∧', lor: '∨', vee: '∨', therefore: '∴', because: '∵',
+  sum: '∑', prod: '∏', coprod: '∐', int: '∫', iint: '∬', iiint: '∭', oint: '∮', bigcup: '⋃', bigcap: '⋂', ldots: '…', dots: '…', cdots: '⋯', vdots: '⋮', ddots: '⋱', langle: '⟨', rangle: '⟩', lfloor: '⌊', rfloor: '⌋', lceil: '⌈', rceil: '⌉', checkmark: '✓', dagger: '†', S: '§', P: '¶', copyright: '©', euro: '€', pounds: '£', yen: '¥', cent: '¢', colon: ':', lbrace: '{', rbrace: '}', vert: '|', Vert: '‖', mid: '∣', backslash: '\\', lt: '<', gt: '>', top: '⊤', bot: '⊥', angstrom: 'Å', micro: 'µ', ohm: 'Ω' };
+const TEX_FN = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'lg', 'exp', 'lim', 'liminf', 'limsup', 'max', 'min', 'sup', 'inf', 'det', 'dim', 'ker', 'deg', 'gcd', 'arg', 'mod', 'Pr', 'hom']);
+const TEX_BB = { R: 'ℝ', N: 'ℕ', Z: 'ℤ', Q: 'ℚ', C: 'ℂ', P: 'ℙ', H: 'ℍ', E: '𝔼' };
+const TEX_ACC = { vec: '⃗', hat: '̂', tilde: '̃', dot: '̇', ddot: '̈', bar: '̄', check: '̌', acute: '́', grave: '̀', widehat: '̂', widetilde: '̃' };
+const TEX_SP = { ',': ' ', ';': ' ', ':': ' ', ' ': ' ', '!': '', quad: ' ', qquad: '  ', enspace: ' ', thinspace: ' ' };
+function texLex(src) {   // source text -> tokens: commands, braces, ^ _ and single characters (spaces are dropped; \text{...} reads the raw text)
+  const t = []; for (let i = 0; i < src.length;) {
+    const c = src[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === '\\') { const m = /^\\([A-Za-z]+)/.exec(src.slice(i)); if (m) { t.push({ k: 'cmd', v: m[1], a: i, b: i + m[0].length }); i += m[0].length; } else if (i + 1 < src.length) { t.push({ k: 'cmd', v: src[i + 1], a: i, b: i + 2 }); i += 2; } else i++; continue; }
+    t.push({ k: '{}^_&'.includes(c) ? c : 'ch', v: c, a: i, b: i + 1 }); i++;
+  }
+  return t;
+}
+function texRender(src) {   // returns { nodes, plain } for the text between the dollar signs
+  const T = texLex(src); let p = 0;
+  const el = (tag, cls, ...kids) => { const e = document.createElement(tag); if (cls) e.className = cls; kids.forEach(k => e.append(k)); return e; };
+  const txt = s => document.createTextNode(s);
+  const wrap = (cls, r) => { const e = el('span', cls); r.nodes.forEach(n => e.append(n)); return e; };
+  const group = () => { if (T[p] && T[p].k === '{') { p++; const r = seq(true); if (T[p] && T[p].k === '}') p++; return r; } return atom(); };   // {…} or just the next single thing
+  const rawGroup = () => { if (!T[p] || T[p].k !== '{') return ''; const a = T[p].b; let d = 0, q = p; for (; q < T.length; q++) { if (T[q].k === '{') d++; else if (T[q].k === '}') { d--; if (!d) break; } } const e = q < T.length ? T[q].a : src.length; p = Math.min(q + 1, T.length); return src.slice(a, e); };
+  const word = (cls, s, plain) => ({ nodes: [(() => { const e = el('span', cls); e.textContent = s; return e; })()], plain: plain == null ? s : plain });
+  const atom = () => {
+    const t = T[p++]; if (!t) return { nodes: [], plain: '' };
+    if (t.k === '{') { p--; return group(); }
+    if (t.k === '}' || t.k === '&') return { nodes: [], plain: '' };
+    if (t.k === 'ch') {
+      const c = t.v;
+      if (/[A-Za-z]/.test(c)) return word('mi', c);
+      if (/[0-9.,]/.test(c)) return word('mn', c);
+      if (c === '-') return word('mdop', '−', '-');
+      if ('+=<>'.includes(c)) return word('mdop', c);
+      if (c === '*') return word('mn', '∗', '*');
+      if (c === "'") return word('mn', '′', "'");
+      if (c === '~') return word('mn', ' ', ' ');
+      return word('mn', c);
+    }
+    const v = t.v;
+    if (v in TEX_SP) return word('mn', TEX_SP[v], ' ');
+    if (/^[{}%&#_$|]$/.test(v)) return word('mn', v);
+    if (v === '\\') return word('mn', ' ', ' ');
+    if (v === 'frac' || v === 'dfrac' || v === 'tfrac') { const a = group(), b = group(); return { nodes: [el('span', 'mdfr', wrap('mdnu', a), wrap('mdde', b))], plain: '(' + a.plain + ')/(' + b.plain + ')' }; }
+    if (v === 'binom') { const a = group(), b = group(); return { nodes: [txt('('), el('span', 'mdfr', wrap('mdnu2', a), wrap('mdde', b)), txt(')')], plain: 'C(' + a.plain + ',' + b.plain + ')' }; }
+    if (v === 'sqrt') { let n = null; if (T[p] && T[p].v === '[') { p++; const q = []; while (T[p] && T[p].v !== ']') q.push(T[p++]); p++; n = q.map(x => src.slice(x.a, x.b)).join(''); } const a = group(); const e = el('span', 'mdsq'); if (n) { const s = el('sup', 'mdrt'); s.textContent = n; e.append(s); } const rs = el('span', 'mdrs'); rs.textContent = '√'; e.append(rs, wrap('mdrad', a)); return { nodes: [e], plain: (n ? n + '-th root of ' : '√') + '(' + a.plain + ')' }; }
+    if (v === 'text' || v === 'textrm' || v === 'mathrm' || v === 'textit' || v === 'textbf' || v === 'mathbf' || v === 'mathit' || v === 'operatorname' || v === 'mbox' || v === 'boldsymbol' || v === 'bm' || v === 'mathsf' || v === 'mathtt' || v === 'mathcal' || v === 'mathscr') {
+      if (T[p] && T[p].k === '{' && (v === 'text' || v === 'textrm' || v === 'textit' || v === 'textbf' || v === 'mbox')) { const s = rawGroup(); return word(v === 'textit' ? 'mi' : v === 'textbf' ? 'mb' : 'mn', s); }
+      const r = group(); const e = wrap(v === 'mathbf' || v === 'boldsymbol' || v === 'bm' ? 'mb mr' : v === 'mathit' || v === 'mathcal' || v === 'mathscr' ? 'mi' : 'mr', r); return { nodes: [e], plain: r.plain };
+    }
+    if (v === 'mathbb') { const s = (T[p] && T[p].k === '{' ? rawGroup() : (T[p++] || {}).v) || ''; return word('mn', s.split('').map(c => TEX_BB[c] || c).join(''), s); }
+    if (v === 'overline') { const a = group(); return { nodes: [wrap('mdov', a)], plain: a.plain }; }
+    if (v === 'underline') { const a = group(); return { nodes: [wrap('mdun', a)], plain: a.plain }; }
+    if (v in TEX_ACC) { const a = group(); return { nodes: [...a.nodes, txt(TEX_ACC[v])], plain: a.plain }; }
+    if (v === 'left' || v === 'right' || v === 'big' || v === 'Big' || v === 'bigg' || v === 'Bigg' || v === 'bigl' || v === 'bigr' || v === 'middle') { const d = T[p++]; if (!d || d.v === '.') return { nodes: [], plain: '' }; return d.k === 'cmd' ? (d.v in TEX_SYM ? word('mn', TEX_SYM[d.v]) : word('mn', d.v)) : word('mn', d.v); }
+    if (v === 'displaystyle' || v === 'textstyle' || v === 'scriptstyle' || v === 'limits' || v === 'nolimits' || v === 'not') return { nodes: [], plain: '' };
+    if (TEX_FN.has(v)) return word('mr mdfn', v);
+    if (v in TEX_SYM) { const s = TEX_SYM[v]; return word(/^[=<>≤≥≠≈≡∼≃≅∝≪≫→←↔⇒⇐⇔↦∈∉∋⊂⊃⊆⊇∪∩∖∧∨×÷±∓·∗⋆∘⊕⊗⟶⟵]$/.test(s) ? 'mdop' : 'mn', s); }
+    return word('mn mdbad', '\\' + v);   // an unknown command is shown as typed
+  };
+  const withScripts = () => {   // an atom followed by any ^ and _ marks
+    let r = atom(), sup = null, sub = null;
+    while (T[p] && (T[p].k === '^' || T[p].k === '_')) { const up = T[p++].k === '^', g = group(); if (up) sup = g; else sub = g; }
+    if (!sup && !sub) return r;
+    const nodes = r.nodes.slice();
+    if (sup && sub) { const s = el('span', 'mdss'); s.append(wrap('mdsp1', sup), wrap('mdsp2', sub)); nodes.push(s); }
+    else if (sup) nodes.push(wrap('mdsupe', sup)); else nodes.push(wrap('mdsube', sub));
+    return { nodes, plain: r.plain + (sup ? '^' + (sup.plain.length > 1 ? '(' + sup.plain + ')' : sup.plain) : '') + (sub ? '_' + (sub.plain.length > 1 ? '(' + sub.plain + ')' : sub.plain) : '') };
+  };
+  function seq(inBrace) { const nodes = []; let plain = ''; while (p < T.length && !(inBrace && T[p].k === '}')) { if (T[p].k === '}') { p++; continue; } const r = withScripts(); nodes.push(...r.nodes); plain += r.plain; } return { nodes, plain }; }
+  return seq(false);
+}
+function texNode(src) {
+  const box = document.createElement('span'); box.className = 'mdtex'; box.setAttribute('role', 'math');
+  try { const r = texRender(src); r.nodes.forEach(n => box.append(n)); box.dataset.plain = r.plain; box.setAttribute('aria-label', r.plain); } catch (e) { box.textContent = src; box.dataset.plain = src; }
+  return box;
+}
+function texFind(s, i) {   // the end of a $...$ run that starts at i (null when it is just a dollar sign, as in "$5 and $6")
+  const dbl = s[i + 1] === '$', d = dbl ? '$$' : '$', a = i + d.length;
+  if (a >= s.length || /\s/.test(s[a])) return null;
+  for (let j = a; j < s.length; j++) {
+    if (s[j] === '\\') { j++; continue; }
+    if (s.startsWith(d, j) && j > a && !/\s/.test(s[j - 1]) && !(!dbl && /[0-9]/.test(s[j + 1] || ''))) return { a, j, end: j + d.length };
+  }
+  return null;
+}
+
 function mdParse(s, depth = 0) {   // text -> a list of DOM nodes
   s = String(s || ''); const out = []; let buf = '';
   const flush = () => { if (buf) { out.push(document.createTextNode(buf)); buf = ''; } };
   for (let i = 0; i < s.length;) {
     const c = s[i];
-    if (c === '\\' && i + 1 < s.length && '\\`*_~=|'.includes(s[i + 1])) { buf += s[i + 1]; i += 2; continue; }
+    if (c === '\\' && i + 1 < s.length && '\\`*_~=|$'.includes(s[i + 1])) { buf += s[i + 1]; i += 2; continue; }
+    if (c === '$') { const m = texFind(s, i); if (m) { flush(); out.push(texNode(s.slice(m.a, m.j))); i = m.end; continue; } }   // $x^2$: inline LaTeX
     if (c === '\\' && s[i + 1] === '-' && s[i + 2] === '>') { buf += '->'; i += 3; continue; }   // \-> stays as typed
     if (c === '-' && s[i + 1] === '>') { buf += '→'; i += 2; continue; }   // -> becomes an arrow
     if (c === '`') { const j = s.indexOf('`', i + 1); if (j > i + 1) { flush(); const e = document.createElement('code'); e.textContent = s.slice(i + 1, j); out.push(e); i = j + 1; continue; } }
@@ -112,7 +203,7 @@ const mdSet = (el, s) => { el.replaceChildren(...mdParse(s)); return el; };
 const mdArrow = el => { el.addEventListener('input', e => { if (e.isComposing) return; const v = el.value; if (!v.includes('->')) return; const f = x => x.replace(/(?<!\\)->/g, '→'), pos = el.selectionStart; el.value = f(v); if (pos != null) { const q = f(v.slice(0, pos)).length; try { el.setSelectionRange(q, q); } catch (e2) {} } }); return el; };   // typing -> turns it into an arrow right away (a backslash before it keeps the two characters)
 function mdPlain(s) {   // the same text without the symbols (notifications, tooltips, screen-reader labels); spoilers stay hidden
   const box = document.createElement('div'); mdParse(s).forEach(n => box.append(n));
-  box.querySelectorAll('.mdsp').forEach(e => { e.textContent = '▒▒▒'; }); return box.textContent;
+  box.querySelectorAll('.mdsp').forEach(e => { e.textContent = '▒▒▒'; }); box.querySelectorAll('.mdtex').forEach(e => { e.textContent = e.dataset.plain || ''; }); return box.textContent;
 }
 // a Kanban card shown in the Time until list: its colour and its number within that colour (kno), set in kanDerived()
 const kpill = t => { const e = document.createElement('span'); e.className = 'kno'; e.textContent = '#' + t.kno; e.style.setProperty('--kc', t.col || '#8ea0d8'); e.title = (t.kcn || 'This colour') + ': number ' + t.kno + (t.kof ? ' of ' + t.kof : '') + ' in the Time until list, in time order'; return e; };
@@ -429,7 +520,8 @@ select{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,25
 @media (prefers-reduced-motion:reduce){.add.endbtn.calc{animation:none}.alt.lapc.over,.cd.lap.over,.alp.over{animation:none}}
 .pmkeep{margin:12px 0 2px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,rgba(124,131,240,.3),rgba(95,180,255,.16));border:1px solid rgba(160,190,255,.42);box-shadow:0 0 14px rgba(124,131,240,.28)}
 .pmkd{margin-top:6px;font-size:11px;opacity:.82;line-height:1.4}
-.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.md strong{font-weight:800}.md em{font-style:italic}.md u{text-decoration:underline}.md s{text-decoration:line-through}.md mark{background:rgba(255,214,64,.42);color:inherit;border-radius:3px;padding:0 2px}.md code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;background:rgba(127,127,127,.3);border-radius:4px;padding:0 4px}.md .mdsp{background:rgba(127,127,127,.6);border-radius:3px;cursor:pointer;user-select:none}.md .mdsp:not(.on){color:transparent}.md .mdsp.on{background:rgba(127,127,127,.2)}.kcard .kno{cursor:pointer}.kcard .kno:hover,.kcard .kno:focus-visible{box-shadow:0 0 0 2px rgba(20,23,58,.35);filter:brightness(1.08);outline:none}
+.pmopts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin:-2px 0 4px}.mdtex{font-family:'Cambria Math','STIX Two Math','Latin Modern Math','Times New Roman',serif;font-size:1.08em;white-space:nowrap;font-style:normal;font-weight:400}.mdtex .mi{font-style:italic}.mdtex .mb{font-weight:700}.mdtex .mr{font-style:normal}.mdtex .mdfn{padding-right:.16em}.mdtex .mdop{padding:0 .2em}.mdtex .mdbad{color:#ff8a8a}.mdtex .mdsupe,.mdtex .mdsube{font-size:.72em;line-height:0}.mdtex .mdsupe{vertical-align:.6em}.mdtex .mdsube{vertical-align:-.35em}.mdtex .mdss{display:inline-block;vertical-align:-.62em;font-size:.72em;line-height:1.05;margin-left:.05em;text-align:left}.mdtex .mdsp1,.mdtex .mdsp2{display:block}.mdtex .mdfr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .14em;font-size:.88em;line-height:1.1}.mdtex .mdnu,.mdtex .mdnu2{padding:0 .15em}.mdtex .mdnu{border-bottom:1px solid currentColor}.mdtex .mdde{padding:0 .15em}.mdtex .mdsq{display:inline-block;white-space:nowrap}.mdtex .mdrs{font-family:system-ui,'Segoe UI Symbol','Segoe UI',sans-serif;font-size:1.05em;vertical-align:baseline}.mdtex .mdrad{display:inline-block;border-top:1px solid currentColor;padding:0 .1em;line-height:1.05;margin-left:-.04em}.mdtex .mdrt{display:inline-block;font-size:.6em;margin-right:-.25em;vertical-align:.8em}.mdtex .mdov{border-top:1px solid currentColor}.mdtex .mdun{border-bottom:1px solid currentColor}
+.md strong{font-weight:800}.md em{font-style:italic}.md u{text-decoration:underline}.md s{text-decoration:line-through}.md mark{background:rgba(255,214,64,.42);color:inherit;border-radius:3px;padding:0 2px}.md code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;background:rgba(127,127,127,.3);border-radius:4px;padding:0 4px}.md .mdsp{background:rgba(127,127,127,.6);border-radius:3px;cursor:pointer;user-select:none}.md .mdsp:not(.on){color:transparent}.md .mdsp.on{background:rgba(127,127,127,.2)}.kcard .kno{cursor:pointer}.kcard .kno:hover,.kcard .kno:focus-visible{box-shadow:0 0 0 2px rgba(20,23,58,.35);filter:brightness(1.08);outline:none}
 .kno{display:inline-block;min-width:1.8em;margin-right:6px;padding:0 6px;border-radius:999px;font-size:.78em;font-weight:800;font-style:normal;line-height:1.55;text-align:center;vertical-align:.08em;background:var(--kc,#8ea0d8);color:#0d1230;text-decoration:none}.tcap{font-size:11px;opacity:.72;line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kcap{font-size:11px;opacity:.75;line-height:1.3;margin:-2px 0 4px;word-break:break-word}.kcapin{font-size:12px!important;margin:-4px 0 8px}.skymark{flex:none;font-style:normal;font-weight:400;font-size:17px;line-height:1;color:#fff;opacity:.9;margin-left:8px;padding:0 2px;text-shadow:none;cursor:default;-webkit-app-region:no-drag}.add.pmhalt,.fsb.pmhalt{background:rgba(229,57,53,.22);border-color:rgba(229,57,53,.6)}.add.pmhalt.on,.fsb.pmhalt.on{background-image:repeating-linear-gradient(45deg,rgba(229,57,53,.55) 0 3px,rgba(229,57,53,.1) 3px 6px);background-size:8.4853px 8.4853px;animation:pmstripe 1s linear infinite}@keyframes pmstripe{to{background-position:8.4853px 0}}@media (prefers-reduced-motion:reduce){.add.pmhalt.on,.fsb.pmhalt.on{animation:none}}.sndtod{position:relative;margin:6px 0 4px;padding-left:10px;border-left:2px solid rgba(128,128,128,.45)}.sndsch{white-space:pre-line;line-height:1.5}.sndstrip{position:relative;display:flex;height:14px;border-radius:5px;overflow:hidden;margin:8px 0 4px}.sndstrip i{display:block;height:100%;min-width:6px;cursor:help;outline:none}.sndstrip i:hover,.sndstrip i:focus{filter:brightness(1.25)}.sndtip{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-100%);width:max-content;max-width:min(260px,92%);padding:6px 10px;border-radius:8px;background:#161a24;color:#fff;font-size:12px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.45)}.sndstrip b{position:absolute;pointer-events:none;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}.pmrules{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(160,190,255,.3)}.pmr{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.pmr>span:first-child{flex:1}.pmr input{flex:none;width:70px}.pmr input[type=range]{width:110px;padding:0}.pmr select{flex:none;width:150px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;color-scheme:dark;font:inherit}.pmr .add{flex:none}.sndnm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;opacity:.8}.sndbar{display:flex;align-items:center;gap:10px;font-size:13px}.sndbar span{flex:1}
 .pmh{text-align:center;font-weight:600;font-size:12.8px;margin:8px 0 0}.pmot{margin:0 0 8px;text-align:center;font-size:12px;line-height:1.4}
 .pmh sup{font-size:.65em;font-weight:700;margin-left:6px;color:#ff3b4e;line-height:0;font-variant-numeric:tabular-nums;animation:pulseT 1.1s ease-in-out infinite}
@@ -2266,7 +2358,7 @@ function beep(n = 1) {                                 // the Time until beep: l
   try {
     if (Date.now() - (+GM_getValue('lock', 0)) < 5000) return;
     sndCycNext('until');
-    if (sndIsFile('until') && sndAud.until) { if (sndPlayFile('until', true)) GM_setValue('lock', Date.now()); else { const born = Date.now(); pendingSounds.push(() => Date.now() - born > 6e5 || sndPlayFile('until', true)); } return; }
+    if (sndIsFile('until')) { sndFilePlay('until', true); GM_setValue('lock', Date.now()); return; }
     const p = sndOf('until'); if (!p.list) return;
     const list = []; for (let k = 0; k < n; k++) p.list.forEach(([st, d, f]) => list.push([st + k * p.span, d, f]));
     const play = () => tones(list, Math.min(1, .65 * (p.g || 1) * sndCfg.vol / 100), p, 'until');
@@ -2328,19 +2420,27 @@ function sndRetryFile(k, loud) {   // a few quick retries while the audio engine
   const go = () => { const r = sndPlayFile(k, loud); if (r === false && ++n < 12) setTimeout(go, 250); else sndRetrying[k] = false; };
   setTimeout(go, 250);
 }
+const sndDiag = {}, sndStopT = {}; let sndLastErr = '';
+function sndDiagSet(k, msg) { sndDiag[k] = new Date().toLocaleTimeString() + ': ' + msg; try { sndCycUiSync(); } catch (e) {} }
+function sndFilePlay(k, loud) {   // plays the file chosen for k and always makes sure something is heard: if it cannot be opened or will not start, the classic beeps play and the reason is noted in the cycle panel
+  const id = sndEffId(k), nm = sndNameOf(k, id);
+  const fb = why => { sndDiagSet(k, '"' + nm + '" ' + why + '. The classic beeps played instead.'); try { tones(SOUNDS.classic.list, Math.min(1, (loud ? .65 : .3) * sndCfg.vol / 100), SOUNDS.classic, k); } catch (e) {} };
+  const start = () => {
+    let n = 0; const go = () => {
+      const a = sndAud[k], r = sndPlayFile(k, loud);
+      if (r === true) { const t0 = a ? a.currentTime : 0, ts = Date.now(); setTimeout(() => { const b = sndAud[k]; if (!a || b !== a) return; if (a.ended || (!a.paused && a.currentTime > t0 + .15)) { sndDiagSet(k, '"' + nm + '" played.'); return; } if ((sndStopT[k] || 0) >= ts) return; fb('would not start playing'); }, 1600); return; }
+      if (r === null) { fb('was not loaded'); return; }
+      if (++n > 24) { pendingSounds.push(() => sndPlayFile(k, loud) === true); fb('was blocked by the audio engine'); return; }
+      setTimeout(go, 250);
+    }; go();
+  };
+  if (sndLoadedId[k] === id && sndAud[k]) { start(); return true; }
+  sndSetFor(k, id).then(ok => ok ? start() : fb('could not be opened' + (sndLastErr ? ' (' + sndLastErr + ')' : '')), () => fb('could not be opened'));
+  return true;
+}
 function sndPlay(k, loud) {   // plays the sound chosen for k: 'alarm', 'pomo' or 'until'. loud = the Time until beep (about double the alarm ring)
   if (k === 'test' && sndCfg.test === 'same') k = 'alarm';   // the Test alarm sound follows the Alarm sound until it gets a sound of its own
-  if (sndIsFile(k)) {
-    const id = sndEffId(k);
-    if (sndLoadedId[k] !== id) {   // the file for this time of day is not loaded yet: load it, then play it (trying again while the audio engine wakes up, and falling back to beeps so something is always heard)
-      const beep = () => tones(SOUNDS.classic.list, Math.min(1, (loud ? .65 : .3) * sndCfg.vol / 100), SOUNDS.classic, k);
-      sndSetFor(k, id).then(ok => { if (!ok) return beep(); let n = 0; const go = () => { if (sndPlayFile(k, loud) === true) return; if (++n > 24) { pendingSounds.push(() => sndPlayFile(k, loud) === true); return beep(); } setTimeout(go, 250); }; go(); });
-      return true;
-    }
-    const r = sndPlayFile(k, loud);
-    if (r === false) sndRetryFile(k, loud);   // the audio engine was asleep (it is waking up now): try again in a moment, so a one-shot sound is not lost
-    if (r !== null) return r;
-  }   // no file loaded: falls back to the classic beeps below
+  if (sndIsFile(k)) return sndFilePlay(k, loud);
   const p = sndOf(k); if (!p.list) return true;
   return tones(p.list, Math.min(1, (loud ? .65 : .3) * (p.g || 1) * sndCfg.vol / 100), p, k);
 }
@@ -2352,7 +2452,7 @@ const sndOsc = {}, sndEndT = {}; let pmChimeT = [], pmChimeUntil = 0;   // the b
 const sndDB = () => new Promise((res, rej) => { try { const r = indexedDB.open('skyclock-sounds', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
 const sndIdb = (mode, fn) => sndDB().then(db => new Promise((res, rej) => { const t = db.transaction('files', mode), q = fn(t.objectStore('files')); t.oncomplete = () => { res(q && q.result); db.close(); }; t.onerror = t.onabort = () => { rej(t.error); db.close(); }; }));
 const sndBarSync = () => { try { sndBar.style.display = Object.values(sndAud).some(a => a && !a.paused && !a.ended) ? '' : 'none'; [sndA, sndT, sndP, sndU].forEach(f => { const a = sndAud[f.k], on = !!(a && !a.paused && !a.ended); f.test.textContent = on ? '⏸' : '▶'; }); } catch (e) {} };
-function sndStopFile(k) { const a = sndAud[k]; if (!a) return; try { a.pause(); a.currentTime = 0; } catch (e) {} sndBarSync(); }
+function sndStopFile(k) { sndStopT[k] = Date.now(); const a = sndAud[k]; if (!a) return; try { a.pause(); a.currentTime = 0; } catch (e) {} sndBarSync(); }
 function sndDrop(k) {   // forget a loaded file (before replacing or removing it)
   sndStopFile(k);
   try { if (sndNode[k]) sndNode[k].disconnect(); if (sndGain[k]) sndGain[k].disconnect(); } catch (e) {}
@@ -2360,17 +2460,23 @@ function sndDrop(k) {   // forget a loaded file (before replacing or removing it
   delete sndAud[k]; delete sndGain[k]; delete sndNode[k]; delete sndUrl[k]; delete sndMeta[k]; delete sndLoadedId[k];
 }
 function sndBufPlayer(buf) {   // stand-in for an audio element that plays a fully decoded file (used when the page may not stream files, e.g. a strict security policy)
-  const o = { paused: true, ended: false, duration: buf.duration, currentTime: 0, _s: null, _t0: 0, _out: null, onplay: null, onpause: null, onended: null,
-    play() { const s = AC.createBufferSource(), from = o.currentTime > 0 && o.currentTime < buf.duration ? o.currentTime : 0; s.buffer = buf; s.connect(o._out || AC.destination); s.onended = () => { if (o._s === s) { o._s = null; o.paused = true; o.ended = true; o.currentTime = 0; if (o.onended) o.onended(); } }; o._s = s; o._t0 = AC.currentTime - from; o.paused = false; o.ended = false; s.start(0, from); if (o.onplay) o.onplay(); return Promise.resolve(); },
+  const o = { paused: true, ended: false, duration: buf.duration, _ct: 0, _s: null, _t0: 0, _w: 0, _out: null, onplay: null, onpause: null, onended: null,
+    get currentTime() { return o._s ? Math.max(0, Math.min(buf.duration, AC.currentTime - o._t0)) : o._ct; },   // live while it plays
+    set currentTime(v) { o._ct = +v || 0; },
+    play() { o._w = Date.now(); const s = AC.createBufferSource(), from = o.currentTime > 0 && o.currentTime < buf.duration ? o.currentTime : 0; s.buffer = buf; s.connect(o._out || AC.destination); s.onended = () => { if (o._s === s) { o._s = null; o.paused = true; o.ended = true; o.currentTime = 0; if (o.onended) o.onended(); } }; o._s = s; o._t0 = AC.currentTime - from; o.paused = false; o.ended = false; s.start(0, from); if (o.onplay) o.onplay(); return Promise.resolve(); },
     pause() { const s = o._s; o._s = null; if (s) { o.currentTime = Math.max(0, AC.currentTime - o._t0); s.onended = null; try { s.stop(); } catch (e) {} } o.paused = true; if (o.onpause) o.onpause(); } };
   return o;
 }
-function sndMakeAud(blob) {   // resolves once the file is ready to play; tries streaming first, then decoding it; rejects if it is not audio this browser can play
+const SND_DECODE_MAX = 6e7;
+function sndMakeAud(blob, decodeFirst) {
+  if (decodeFirst === undefined) decodeFirst = blob.size <= SND_DECODE_MAX;   // the desktop app decodes files up to 60 MB right away too: its security policy does not allow streaming a file from memory, so trying that first only caused a wait and then a failure   // resolves once the file is ready to play; decodeFirst = decode it into memory right away (short clips), otherwise tries streaming first, then decoding it; rejects if it is not audio this browser can play
+  const decode = async () => { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); return { a: sndBufPlayer(await AC.decodeAudioData(await blob.arrayBuffer())), url: '' }; };
   return new Promise((res, rej) => {
+    if (decodeFirst) { decode().then(res, () => sndMakeAud(blob, false).then(res, rej)); return; }
     const url = URL.createObjectURL(blob), a = new Audio(); a.preload = 'auto'; let done = false;
     const fallback = async () => {
       if (done) return; done = true; try { URL.revokeObjectURL(url); } catch (e) {}
-      try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); const buf = await AC.decodeAudioData(await blob.arrayBuffer()); res({ a: sndBufPlayer(buf), url: '' }); } catch (e) { rej(new Error('unreadable')); }
+      try { res(await decode()); } catch (e) { sndLastErr = 'this device could not decode the file' + (e && e.name ? ' - ' + e.name : ''); rej(new Error('unreadable')); }
     };
     a.onloadedmetadata = () => { if (!done) { done = true; res({ a, url }); } };
     a.onerror = fallback; setTimeout(fallback, 8000);
@@ -2378,6 +2484,7 @@ function sndMakeAud(blob) {   // resolves once the file is ready to play; tries 
   });
 }
 function sndAttach(k, a, url, name) {
+  const cx = sndCtx[k]; if (cx && cx.bg && ((sndTok[k] || 0) !== cx.tok || sndFilePlaying(k))) { cx.skipped = true; try { if (url) URL.revokeObjectURL(url); } catch (e) {} return; }   // a background load must never cut off a sound that is playing
   sndDrop(k);
   try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); const g = AC.createGain(); g.connect(AC.destination); sndGain[k] = g; if (typeof HTMLMediaElement !== 'undefined' && a instanceof HTMLMediaElement) { const n = AC.createMediaElementSource(a); n.connect(g); sndNode[k] = n; } else a._out = g; } catch (e) {}
   a.onplay = a.onpause = a.onended = sndBarSync;
@@ -2388,7 +2495,7 @@ function sndPlayFile(k, loud) {   // plays the uploaded file for k from the star
   try {
     if (AC && AC.state === 'suspended') AC.resume();
     if (AC && sndGain[k] && AC.state !== 'running') return false;
-    if (!a.paused && !a.ended) return true;   // a long file is not started again on top of itself
+    if (!a.paused && !a.ended) { if (a._w && Date.now() - a._w > ((a.duration || 0) + 3) * 1000) { try { a.pause(); a.currentTime = 0; } catch (e) {} } else return true; }   // a long file is not started again on top of itself (unless it has been "playing" for longer than the file lasts: the audio engine was interrupted, so it starts afresh)
     const v = Math.min(1, (loud ? 1 : .8) * sndCfg.vol / 100); if (sndGain[k]) sndGain[k].gain.value = v; else a.volume = v;
     a.currentTime = 0; const born = Date.now(), pr = a.play();
     if (pr && pr.catch) pr.catch(() => { pendingSounds.push(() => Date.now() - born > 6e5 || sndPlayFile(k, loud) === true); });   // the browser wanted a tap first: try again when one comes
@@ -2688,8 +2795,9 @@ async function sndCycUpload(k, seg, i, file, row) {
   let r; try { r = await sndMakeAud(file, sndDec(file)); } catch (e) { row.msg.textContent = 'Could not read that audio file. Try an mp3, wav, flac, ogg, opus, m4a or aac.'; return; }
   if (isFinite(r.a.duration) && r.a.duration > SND_MAX_SEC) { try { URL.revokeObjectURL(r.url); } catch (e) {} row.msg.textContent = 'That clip is longer than 7 minutes 30 seconds. Pick a shorter one.'; return; }
   try { URL.revokeObjectURL(r.url); } catch (e) {}
-  sndHasUp[key] = file.name; sndCycPropagate(k, seg, i); sndSave(); sndTodSync(); sndCycUiSync();
+  sndHasUp[key] = file.name; sndCycPropagate(k, seg, i); sndSave(); sndCycUiSync();
   try { await sndIdb('readwrite', s => s.put({ name: file.name, blob: file }, key)); row.msg.textContent = 'Saved on this device.'; } catch (e) { row.msg.textContent = 'Loaded, but this browser would not save it, so it will be gone after a reload.'; }
+  sndTodSync();   // only now (the file is saved) is the next sound made ready
 }
 function sndCycRemove(k, seg, i, row) {
   const key = k + '@cu' + i + '@' + seg; (async () => { try { await sndIdb('readwrite', s => s.delete(key)); } catch (e) {} })(); delete sndHasUp[key]; sndLoadedId[k] === 'cu:' + seg + ':' + i && sndDrop(k);
@@ -2729,20 +2837,28 @@ function sndTodDay(n) {   // today's four period starts (null where the sun has 
   return { st, tom: nb ? Math.floor(nb.s / 6e4) * 6e4 : null };
 }
 const sndLoadQ = {}, sndFailT = {};
-function sndSetFor(k, id) {   // makes k's audio hold the file behind a sound id ('custom' = your upload, 'smp:...' = a sample); resolves true when it is ready. Loads run one after another
+const sndTok = {}, sndCtx = {}, sndInfl = {};   // sndTok: counts the plays/previews asked for a sound; sndCtx: the load now running for it; sndInfl: background loads already under way
+const sndFilePlaying = k => { const a = sndAud[k]; return !!(a && !a.ended && (!a.paused || a.currentTime > 0)); };
+function sndSetFor(k, id, bg) {   // bg: a background get-ready (the next sound in the cycle): it never replaces a file that is playing, or one that was asked for after it started loading   // makes k's audio hold the file behind a sound id ('custom' = your upload, 'smp:...' = a sample); resolves true when it is ready. Loads run one after another
   const run = async () => {
     if (sndLoadedId[k] === id && sndAud[k]) return true;
+    sndCtx[k] = { bg: !!bg, tok: sndTok[k] || 0, skipped: false };
     let ok = false; try { const load = sndSmpOk(id) ? sndLoadSample(k, id) : id === 'custom' ? sndReloadUpload(k) : /^up:/.test(id) ? sndReloadSlot(k, k + '@' + id.slice(3)) : /^cu:/.test(id) ? sndReloadSlot(k, sndCuKey(k, id)) : Promise.resolve(false); ok = await Promise.race([load, new Promise(r => setTimeout(() => r(false), 25000))]); } catch (e) {}   // a load that never finishes must not block the ones queued behind it
+    const cx = sndCtx[k]; sndCtx[k] = null;
+    if (cx && cx.skipped) return false;   // a newer request or a playing sound took priority; this one is simply tried again later
     if (ok) { sndLoadedId[k] = id; delete sndFailT[k + '|' + id]; }
     if (!ok) sndFailT[k + '|' + id] = Date.now();
     return ok;
   };
-  const p = (sndLoadQ[k] || Promise.resolve()).then(run, run); sndLoadQ[k] = p.catch(() => {}); return p;
+  if (!bg) sndTok[k] = (sndTok[k] || 0) + 1; else { if (sndInfl[k + '|' + id]) return sndInfl[k + '|' + id]; }
+  const p = (sndLoadQ[k] || Promise.resolve()).then(run, run); sndLoadQ[k] = p.catch(() => {});
+  if (bg) { sndInfl[k + '|' + id] = p; const done = () => { delete sndInfl[k + '|' + id]; }; p.then(done, done); }
+  return p;
 }
 function sndTodSync() {   // keeps each sound's file ready for the period it is in: files swap in when a blue or golden hour begins (never while one is playing)
   ['alarm', 'test', 'pomo', 'until'].forEach(k => {
     const id = sndEffId(k, Date.now(), true), a = sndAud[k];   // the sound that plays at the next finish is made ready ahead of time
-    if (sndFileId(id) && sndLoadedId[k] !== id && !(a && !a.ended && (!a.paused || a.currentTime > 0)) && Date.now() - (sndFailT[k + '|' + id] || 0) > 6e4) sndSetFor(k, id).then(() => sndUiSync());
+    if (sndFileId(id) && sndLoadedId[k] !== id && !(a && !a.ended && (!a.paused || a.currentTime > 0)) && Date.now() - (sndFailT[k + '|' + id] || 0) > 6e4) sndSetFor(k, id, true).then(() => sndUiSync());
   });
 }
 async function sndPreview(k, id) {   // plays one specific sound for k (the ▶ beside each time of day)
@@ -2806,7 +2922,7 @@ const sndTodFill = sel => {
 // Per-time-of-day uploads: every segment of the day can have its own uploaded file, saved under the key "<sound>@<period>" (e.g. alarm@mb). The sound id for such a file is 'up:<period>',
 // and any segment can pick any file uploaded for that sound type (so one file can serve several segments).
 const sndDec = blob => (typeof SND_DECODE_MAX !== 'undefined' ? blob.size <= SND_DECODE_MAX : undefined);   // the website decodes uploads into memory (exact pause and resume); the desktop app streams them
-async function sndReloadSlot(k, key) { try { const rec = await sndIdb('readonly', s => s.get(key)); if (rec && rec.blob) { const r = await sndMakeAud(rec.blob, sndDec(rec.blob)); sndAttach(k, r.a, r.url, rec.name); return true; } } catch (e) {} return false; }
+async function sndReloadSlot(k, key) { try { const rec = await sndIdb('readonly', s => s.get(key)); if (rec && rec.blob) { const r = await sndMakeAud(rec.blob, sndDec(rec.blob)); sndAttach(k, r.a, r.url, rec.name); return true; } sndLastErr = 'the saved file was not found on this device'; } catch (e) { sndLastErr = (e && (e.name || e.message)) ? String(e.name || '') + ' ' + String(e.message || '') : 'the browser could not decode it'; } return false; }
 async function sndSlotNames(tries = 0) {   // at start-up: which segments already have an uploaded file (names only; the file itself loads when its time of day comes). A read that fails is tried again
   let bad = false;
   for (const k of ['alarm', 'test', 'pomo', 'until']) for (const p of SND_PERIODS) { try { const rec = await sndIdb('readonly', s => s.get(k + '@' + p.id)); if (rec && rec.blob) sndHasUp[k + '@' + p.id] = rec.name; } catch (e) { bad = true; } }
@@ -2844,7 +2960,7 @@ function sndCycUiSync() {   // the cycle rows: which stretches are shown, the fi
         const cv = cd.l[r.seg][i]; sel.value = (cv === 'cup' && !sndCuSrc(k, r.seg, i)) || (cv === 'custom' && !sndHasUp[k]) || (/^up:/.test(cv) && !sndHasUp[k + '@' + cv.slice(3)]) ? '' : cv;
       });
     });
-    const nx = sndCycPeekIdx(cd, cur); C.note.textContent = 'Next time this finishes: sound ' + (nx + 1) + ' of 3 (' + sndNameOf(k, sndEffId(k, n, true)) + ')';
+    const nx = sndCycPeekIdx(cd, cur); C.note.style.whiteSpace = 'pre-line'; C.note.textContent = 'Next time this finishes: sound ' + (nx + 1) + ' of 3 (' + sndNameOf(k, sndEffId(k, n, true)) + ')' + (sndDiag[k] ? '\nLast time: ' + sndDiag[k] : '');
   });
 }
 function sndTodUiSync() {
